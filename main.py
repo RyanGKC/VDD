@@ -50,71 +50,83 @@ def build_engine(openai: OpenAIClient) -> tuple[FlowEngine, SummaryAgent]:
 
 async def run_dd_with_ctx(ctx: DDContext) -> DDReport:
     openai = OpenAIClient(model="gpt-4o-mini")
-    engine, summary_agent = build_engine(openai)
-    # 1. Run the adaptive pipeline asynchronously.
-    ctx = await engine.run(ctx)
+    try:
+        engine, summary_agent = build_engine(openai)
+        # 1. Run the adaptive pipeline asynchronously.
+        ctx = await engine.run(ctx)
 
-    # 2. Synthesise the final report from all accumulated results.
-    report = await summary_agent.synthesise(ctx)
-    
-    # --- Supply Chain Graph & Recursion ---
-    neo4j = Neo4jClient()
-    await neo4j.setup_constraints()
-    await neo4j.save_company_node(ctx.company_details.company_name, report.overall_risk.value)
-
-    # Track visitation
-    ctx.visited_companies.add(ctx.company_details.company_name.lower())
-
-    if ctx.tiers_to_search > 1:
-        suppliers = []
-        if StepName.RESILIENCE in ctx.results:
-            suppliers = ctx.results[StepName.RESILIENCE].structured_data.get("suppliers", [])
+        # 2. Synthesise the final report from all accumulated results.
+        report = await summary_agent.synthesise(ctx)
         
-        # Cap the number of suppliers per tier to prevent API quota exhaustion
-        suppliers = suppliers[:ctx.max_suppliers_per_node]
-        
-        tasks = []
-        for supplier_name in suppliers:
-            # Skip if we already mapped this supplier
-            if supplier_name.lower() in ctx.visited_companies:
-                continue
+        # --- Supply Chain Graph & Recursion ---
+        neo4j = Neo4jClient()
+        await neo4j.setup_constraints()
+        await neo4j.save_company_node(ctx.company_details.company_name, report.overall_risk.value)
+
+        # Track visitation
+        ctx.visited_companies.add(ctx.company_details.company_name.lower())
+
+        if ctx.tiers_to_search > 1:
+            suppliers = []
+            if StepName.RESILIENCE in ctx.results:
+                suppliers = ctx.results[StepName.RESILIENCE].structured_data.get("suppliers", [])
             
-            # Record the edge: supplier -> current target
-            await neo4j.save_supply_edge(supplier_name, ctx.company_details.company_name)
+            # Cap the number of suppliers per tier to prevent API quota exhaustion
+            suppliers = suppliers[:ctx.max_suppliers_per_node]
             
-            # Spawn child pipeline
-            child_ctx = DDContext(
-                company_details=CompanyDetails(company_name=supplier_name),
-                use_mock=ctx.use_mock,
-                tiers_to_search=ctx.tiers_to_search - 1,
-                max_suppliers_per_node=ctx.max_suppliers_per_node,
-                visited_companies=ctx.visited_companies
-            )
-            ctx.log(f"SYSTEM: Spawning sub-pipeline for supplier: {supplier_name}")
+            tasks = []
+            for supplier_name in suppliers:
+                # Skip if we already mapped this supplier
+                if supplier_name.lower() in ctx.visited_companies:
+                    continue
+                
+                # Record the edge: supplier -> current target
+                await neo4j.save_supply_edge(supplier_name, ctx.company_details.company_name)
+                
+                # Spawn child pipeline
+                child_ctx = DDContext(
+                    company_details=CompanyDetails(company_name=supplier_name),
+                    use_mock=ctx.use_mock,
+                    tiers_to_search=ctx.tiers_to_search - 1,
+                    max_suppliers_per_node=ctx.max_suppliers_per_node,
+                    visited_companies=ctx.visited_companies
+                )
+                ctx.log(f"SYSTEM: Spawning sub-pipeline for supplier: {supplier_name}")
+                
+                # Execute concurrently
+                tasks.append(run_dd_with_ctx(child_ctx))
             
-            # Execute concurrently
-            tasks.append(run_dd_with_ctx(child_ctx))
-        
-        if tasks:
-            ctx.log(f"SYSTEM: Awaiting {len(tasks)} sub-pipelines for suppliers...")
-            await asyncio.gather(*tasks)
+            if tasks:
+                ctx.log(f"SYSTEM: Awaiting {len(tasks)} sub-pipelines for suppliers...")
+                sub_reports = await asyncio.gather(*tasks)
+                report.supply_chain.extend(sub_reports)
 
-    await neo4j.close()
-    
-    # 3. Compile the full audit log using the chronological detailed_audit_log
-    audit_lines = [
-        f"=== AUDIT LOG FOR {ctx.company_details.company_name} ===",
-        "Generated: " + datetime.now().isoformat(),
-        "-" * 60,
-        ""
-    ]
-    
-    # Append the chronological events, rationales, and raw data
-    audit_lines.extend(ctx.detailed_audit_log)
+        await neo4j.close()
         
-    report.audit_log = "\n".join(audit_lines)
-    
-    return report
+        # 3. Compile the full audit log using the chronological detailed_audit_log
+        audit_lines = [
+            f"=== AUDIT LOG FOR {ctx.company_details.company_name} ===",
+            "Generated: " + datetime.now().isoformat(),
+            "-" * 60,
+            ""
+        ]
+        
+        # Append the chronological events, rationales, and raw data
+        audit_lines.extend(ctx.detailed_audit_log)
+        
+        # Append sub-report audit logs if any exist
+        for sub_report in report.supply_chain:
+            audit_lines.append("")
+            audit_lines.append("=" * 60)
+            audit_lines.append(f"=== SUPPLY CHAIN AUDIT: {sub_report.vendor_name} ===")
+            audit_lines.append("=" * 60)
+            audit_lines.append(sub_report.audit_log)
+            
+        report.audit_log = "\n".join(audit_lines)
+        
+        return report
+    finally:
+        await openai.close()
 
 async def run_dd(
     vendor_name: str,

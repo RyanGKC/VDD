@@ -95,6 +95,7 @@ const InputForm = ({ onSubmit }) => {
     website: '',
     tax_id: '',
     use_mock: false,
+    enable_supply_chain: false,
     tiers_to_search: 1,
     max_suppliers_per_node: 3
   });
@@ -147,16 +148,32 @@ const InputForm = ({ onSubmit }) => {
               <input name="address" value={formData.address} onChange={handleChange} className="w-full pl-9 pr-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:dark:ring-blue-500 outline-none transition" />
             </div>
           </div>
-          <div className="md:col-span-2 flex items-center gap-6">
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Supply Chain Tiers to Search</label>
-              <input type="number" min="1" max="5" name="tiers_to_search" value={formData.tiers_to_search} onChange={handleChange} className="w-32 px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:dark:ring-blue-500 outline-none transition rounded-lg" />
+          <div className="md:col-span-2">
+            <div className="flex items-center gap-2 mb-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  name="enable_supply_chain" 
+                  checked={formData.enable_supply_chain} 
+                  onChange={(e) => setFormData({ ...formData, enable_supply_chain: e.target.checked })} 
+                  className="w-5 h-5 text-blue-600 rounded border-slate-300 dark:border-slate-700 focus:ring-blue-500 bg-white dark:bg-slate-800 transition"
+                />
+                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Research entire supply chain</span>
+              </label>
             </div>
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Max Suppliers Per Node</label>
-              <input type="number" min="1" max="10" name="max_suppliers_per_node" value={formData.max_suppliers_per_node} onChange={handleChange} className="w-32 px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:dark:ring-blue-500 outline-none transition rounded-lg" />
-            </div>
-            <div className="flex items-center gap-2 mt-6">
+            {formData.enable_supply_chain && (
+              <div className="flex items-center gap-6 mb-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Supply Chain Tiers to Search</label>
+                  <input type="number" min="1" max="5" name="tiers_to_search" value={formData.tiers_to_search} onChange={handleChange} className="w-32 px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:dark:ring-blue-500 outline-none transition rounded-lg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Max Suppliers Per Node</label>
+                  <input type="number" min="1" max="10" name="max_suppliers_per_node" value={formData.max_suppliers_per_node} onChange={handleChange} className="w-32 px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:dark:ring-blue-500 outline-none transition rounded-lg" />
+                </div>
+              </div>
+            )}
+            <div className="flex items-center gap-2 mt-2">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input 
                   type="checkbox" 
@@ -239,8 +256,8 @@ const ProcessingTerminal = ({ onComplete, onError, onCancel, companyDetails }) =
             website: companyDetails.website,
             tax_id: companyDetails.tax_id,
             use_mock: companyDetails.use_mock,
-            tiers_to_search: parseInt(companyDetails.tiers_to_search, 10) || 1,
-            max_suppliers_per_node: parseInt(companyDetails.max_suppliers_per_node, 10) || 3,
+            tiers_to_search: companyDetails.enable_supply_chain ? (parseInt(companyDetails.tiers_to_search, 10) || 1) : 1,
+            max_suppliers_per_node: companyDetails.enable_supply_chain ? (parseInt(companyDetails.max_suppliers_per_node, 10) || 3) : 3,
             job_id: jobId
           }),
           signal: abortControllerRef.current.signal

@@ -195,4 +195,6 @@ class DDReport(BaseModel):
     # Per-step risk scores (0–100) derived from actual agent findings.
     step_risk_scores: dict[str, int] = Field(default_factory=dict)
     generated_at: datetime = Field(default_factory=lambda:datetime.now(timezone.utc))
+    # Supply chain recursive reports
+    supply_chain: list['DDReport'] = Field(default_factory=list)
 

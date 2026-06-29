@@ -29,6 +29,9 @@ class OpenAIClient:
         self._client = AsyncOpenAI(api_key=api_key)
         self._model = model
 
+    async def close(self) -> None:
+        await self._client.close()
+
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=2, max=20),
