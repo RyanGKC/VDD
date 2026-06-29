@@ -1,0 +1,6 @@
+.env
+cache.db
+/graphify-out
+/venv
+/.agents
+node_modules/
