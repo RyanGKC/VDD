@@ -3,12 +3,15 @@ import {
   ShieldAlert, ShieldCheck, Shield, AlertTriangle, 
   CheckCircle, Info, Building2, Globe, FileText, 
   MapPin, Landmark, ArrowRight, Loader2, PlaySquare,
-  Activity, FileSearch, ShieldX, Sun, Moon
+  Activity, FileSearch, ShieldX, Sun, Moon, ChevronLeft, ChevronRight, Home
 } from 'lucide-react';
 import { 
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, 
   CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar
 } from 'recharts';
+import ReactFlow, { Controls, Background, MarkerType } from 'reactflow';
+import 'reactflow/dist/style.css';
+import dagre from 'dagre';
 
 // --- Enums mimicking the Python backend ---
 const Severity = {
@@ -85,6 +88,16 @@ const generateMockReport = (companyDetails) => {
 };
 
 // --- Components ---
+export const getSeverityIcon = (sev) => {
+  switch(sev) {
+    case Severity.CRITICAL: return <ShieldX className="w-8 h-8 text-red-900" />;
+    case Severity.HIGH: return <ShieldAlert className="w-8 h-8 text-red-500" />;
+    case Severity.MEDIUM: return <AlertTriangle className="w-8 h-8 text-amber-500" />;
+    case Severity.LOW: return <Info className="w-8 h-8 text-green-500" />;
+    default: return <ShieldCheck className="w-8 h-8 text-blue-500" />;
+  }
+};
+
 
 const InputForm = ({ onSubmit }) => {
   const [formData, setFormData] = useState({
@@ -346,17 +359,117 @@ const ProcessingTerminal = ({ onComplete, onError, onCancel, companyDetails }) =
   );
 };
 
-const Dashboard = ({ report, onReset, theme }) => {
-  const getSeverityIcon = (sev) => {
-    switch(sev) {
-      case Severity.CRITICAL: return <ShieldX className="w-8 h-8 text-red-900" />;
-      case Severity.HIGH: return <ShieldAlert className="w-8 h-8 text-red-500" />;
-      case Severity.MEDIUM: return <AlertTriangle className="w-8 h-8 text-amber-500" />;
-      case Severity.LOW: return <Info className="w-8 h-8 text-green-500" />;
-      default: return <ShieldCheck className="w-8 h-8 text-blue-500" />;
+const dagreGraph = new dagre.graphlib.Graph();
+dagreGraph.setDefaultEdgeLabel(() => ({}));
+
+const getLayoutedElements = (nodes, edges, direction = 'TB') => {
+  const nodeWidth = 220;
+  const nodeHeight = 90;
+  dagreGraph.setGraph({ rankdir: direction });
+
+  nodes.forEach((node) => {
+    dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
+  });
+
+  edges.forEach((edge) => {
+    dagreGraph.setEdge(edge.source, edge.target);
+  });
+
+  dagre.layout(dagreGraph);
+
+  const layoutedNodes = nodes.map((node) => {
+    const nodeWithPosition = dagreGraph.node(node.id);
+    node.position = {
+      x: nodeWithPosition.x - nodeWidth / 2,
+      y: nodeWithPosition.y - nodeHeight / 2,
+    };
+    return node;
+  });
+
+  return { nodes: layoutedNodes, edges };
+};
+
+const CustomNode = ({ data }) => {
+  return (
+    <div className="bg-white dark:bg-slate-800 border-2 rounded-lg p-3 shadow-md w-[220px] flex flex-col items-center transition-all hover:shadow-lg hover:-translate-y-1" style={{borderColor: data.color}}>
+      <div className="flex flex-col items-center gap-1 mb-2 w-full">
+        {data.icon}
+        <span className="font-bold text-slate-800 dark:text-slate-100 text-sm text-center line-clamp-2 w-full">{data.label}</span>
+      </div>
+      <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border`} style={{color: data.color, borderColor: data.color}}>
+        {data.risk} Risk
+      </span>
+    </div>
+  );
+};
+const nodeTypes = { custom: CustomNode };
+
+const SupplyChainGraph = ({ report, theme, onNodeSelect }) => {
+  const initialNodes = [];
+  const initialEdges = [];
+  
+  const buildGraph = (node, parentId = null) => {
+    const nodeId = node.vendor_name;
+    
+    if (!initialNodes.find(n => n.id === nodeId)) {
+      initialNodes.push({
+        id: nodeId,
+        type: 'custom',
+        data: { 
+          label: node.vendor_name,
+          risk: node.overall_risk,
+          color: SEVERITY_COLORS[node.overall_risk],
+          icon: getSeverityIcon(node.overall_risk),
+          fullReport: node
+        }
+      });
+    }
+
+    if (parentId) {
+      initialEdges.push({
+        id: `${parentId}->${nodeId}`,
+        source: parentId,
+        target: nodeId,
+        type: 'smoothstep',
+        className: 'animated-reverse',
+        style: { stroke: theme === 'dark' ? '#94a3b8' : '#64748b', strokeWidth: 2 }
+      });
+    }
+
+    if (node.supply_chain && node.supply_chain.length > 0) {
+      node.supply_chain.forEach(child => buildGraph(child, nodeId));
     }
   };
 
+  buildGraph(report);
+  
+  const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(initialNodes, initialEdges, 'TB');
+  
+  const onNodeClick = (event, node) => {
+    if (onNodeSelect) {
+      onNodeSelect(node.data.fullReport);
+    }
+  };
+
+  return (
+    <div className="h-full w-full bg-slate-50 dark:bg-slate-900/50 relative">
+      <ReactFlow
+        nodes={layoutedNodes}
+        edges={layoutedEdges}
+        nodeTypes={nodeTypes}
+        onNodeClick={onNodeClick}
+        fitView
+        fitViewOptions={{ padding: 0.2 }}
+        className={theme === 'dark' ? 'dark' : ''}
+      >
+        <Background color={theme === 'dark' ? '#334155' : '#cbd5e1'} gap={16} />
+        <Controls />
+      </ReactFlow>
+    </div>
+  );
+};
+
+const Dashboard = ({ report, rootReport, onReset, onResetSupplier, theme }) => {
   // Data prep for charts
   const severityCounts = report.red_flags.reduce((acc, flag) => {
     acc[flag.severity] = (acc[flag.severity] || 0) + 1;
@@ -410,6 +523,16 @@ const Dashboard = ({ report, onReset, theme }) => {
       {/* Header Area */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 transition-all duration-300">
         <div>
+          {rootReport && rootReport.vendor_name !== report.vendor_name && (
+            <div className="flex items-center gap-2 mb-2 text-sm font-semibold text-slate-500 dark:text-slate-400">
+              <button onClick={onResetSupplier} className="hover:text-blue-500 transition-colors flex items-center gap-1">
+                <Home className="w-4 h-4" />
+                {rootReport.vendor_name}
+              </button>
+              <ChevronRight className="w-4 h-4" />
+              <span className="text-slate-800 dark:text-slate-200">{report.vendor_name}</span>
+            </div>
+          )}
           <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-3">
             {report.vendor_name}
           </h1>
@@ -630,6 +753,8 @@ export default function App() {
   const [companyDetails, setCompanyDetails] = useState(null);
   const [report, setReport] = useState(null);
   const [globalError, setGlobalError] = useState(null);
+  const [isGraphOpen, setIsGraphOpen] = useState(false);
+  const [selectedSupplier, setSelectedSupplier] = useState(null);
   const [theme, setTheme] = useState(() => {
     // Default is dark mode as per requirements
     const saved = localStorage.getItem('theme');
@@ -661,6 +786,7 @@ export default function App() {
   const handleProcessingComplete = (actualReport) => {
     setReport(actualReport);
     setView('dashboard');
+    setIsGraphOpen(actualReport.supply_chain && actualReport.supply_chain.length > 0);
     if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
       new Notification('Research Complete', {
         body: `Due diligence report for ${actualReport.vendor_name} is ready!`,
@@ -682,6 +808,8 @@ export default function App() {
     setCompanyDetails(null);
     setReport(null);
     setGlobalError(null);
+    setIsGraphOpen(false);
+    setSelectedSupplier(null);
     setView('input');
   };
 
@@ -747,8 +875,42 @@ export default function App() {
         )}
 
         {view === 'dashboard' && report && (
-          <div className="animate-in fade-in slide-in-from-bottom-8 duration-700">
-            <Dashboard report={report} onReset={handleReset} theme={theme} />
+          <div className={`animate-in fade-in slide-in-from-bottom-8 duration-700 flex ${isGraphOpen ? 'gap-6 flex-row items-start' : 'flex-col'}`}>
+            
+            {/* Toggle Button for Desktop */}
+            {report.supply_chain && report.supply_chain.length > 0 && (
+              <div className="fixed left-4 top-1/2 -translate-y-1/2 z-20 hidden lg:block">
+                <button 
+                  onClick={() => setIsGraphOpen(!isGraphOpen)}
+                  className="bg-white dark:bg-slate-800 p-3 rounded-full shadow-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  title={isGraphOpen ? "Hide Supply Chain Graph" : "Show Supply Chain Graph"}
+                >
+                  {isGraphOpen ? <ChevronLeft className="w-6 h-6" /> : <ChevronRight className="w-6 h-6" />}
+                </button>
+              </div>
+            )}
+
+            {/* Left Pane: Graph (only visible on desktop if open) */}
+            {isGraphOpen && (
+              <div className="hidden lg:block w-1/2 shrink-0 h-[calc(100vh-8rem)] sticky top-24 rounded-xl overflow-hidden shadow-sm border border-slate-200 dark:border-slate-700">
+                 <SupplyChainGraph 
+                   report={report} 
+                   theme={theme}
+                   onNodeSelect={(supplierReport) => setSelectedSupplier(supplierReport)}
+                 />
+              </div>
+            )}
+            
+            {/* Right Pane (or full width): Dashboard */}
+            <div className={`flex-1 w-full ${isGraphOpen ? 'lg:w-1/2' : ''}`}>
+              <Dashboard 
+                report={selectedSupplier || report} 
+                rootReport={report}
+                onReset={handleReset} 
+                onResetSupplier={() => setSelectedSupplier(null)}
+                theme={theme} 
+              />
+            </div>
           </div>
         )}
       </main>

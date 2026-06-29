@@ -10,9 +10,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "dagre": "^0.8.5",
     "lucide-react": "^1.21.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "reactflow": "^11.11.4",
     "recharts": "^3.9.0"
   },
   "devDependencies": {
