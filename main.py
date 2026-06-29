@@ -49,7 +49,7 @@ def build_engine(openai: OpenAIClient) -> tuple[FlowEngine, SummaryAgent]:
 
 
 async def run_dd_with_ctx(ctx: DDContext) -> DDReport:
-    openai = OpenAIClient(model="gpt-4o-mini")
+    openai = OpenAIClient(model="gpt-4o-mini", use_cache=ctx.use_mock)
     try:
         engine, summary_agent = build_engine(openai)
         # 1. Run the adaptive pipeline asynchronously.

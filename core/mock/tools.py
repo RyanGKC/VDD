@@ -19,12 +19,25 @@ def _is_high_risk(name: str | list[str]) -> bool:
         text = str(name).lower()
     return "risk" in text or "bad" in text
 
+import random
+
 async def perform_web_search(query: str) -> str:
     """Simulates querying a web search API (e.g., Google Custom Search/Serper)."""
     await asyncio.sleep(0.6)
     query_lower = query.lower()
     
     results = []
+    
+    # Random supply chain generator
+    if "supply chain" in query_lower or "resilience" in query_lower or "supplier" in query_lower:
+        s1 = f"Supplier {random.randint(100, 999)} LLC"
+        s2 = f"Global {random.randint(10, 99)} Corp"
+        s3 = f"Manufacturing Partner {random.randint(1, 9)} Ltd"
+        results.append({
+            "title": "Supply Chain Disclosure and Logistics",
+            "snippet": f"Audit reveals the primary direct suppliers are {s1}, {s2}, and {s3}."
+        })
+
     if _is_high_risk(query):
         if "esg" in query_lower or "greenwashing" in query_lower or "social" in query_lower:
             results.append({"title": "Lawsuit over environmental damage", "snippet": "The company faces massive fines for illegal dumping and forced labor controversies."})
@@ -45,7 +58,7 @@ async def perform_web_search(query: str) -> str:
             results.append({"title": "Annual Sustainability Report", "snippet": "Company achieves carbon neutral status for 2023."})
         elif "operations" in query_lower or "profile" in query_lower:
             results.append({"title": "Leading B2B SaaS Provider", "snippet": "Company expands operations in software development sector."})
-        else:
+        elif not ("supply chain" in query_lower or "resilience" in query_lower or "supplier" in query_lower):
             results.append({"title": "Company news", "snippet": "Standard operations continuing steadily without disruptions."})
             
     return json.dumps({"search_results": results})
