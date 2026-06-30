@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable, Awaitable
 
 from core.models import (
     DDContext,
@@ -46,7 +47,13 @@ class FlowEngine:
         if missing_agents:
             raise ValueError(f"Missing registered agents for steps: {missing_agents}")
 
-    async def _execute_dag(self, plan: list[StepName], ctx: DDContext, step_execution_counts: dict[StepName, int]) -> set[StepName]:
+    async def _execute_dag(
+        self, 
+        plan: list[StepName], 
+        ctx: DDContext, 
+        step_execution_counts: dict[StepName, int],
+        on_step_complete: Callable[[StepName, DDContext], Awaitable[None]] | None = None
+    ) -> set[StepName]:
         pending = set(plan)
         running_tasks = {} # Map from asyncio.Task -> StepName
         completed_this_round = set()
@@ -90,13 +97,19 @@ class FlowEngine:
                 try:
                     result = task.result()
                     completed_this_round.add(step)
+                    if on_step_complete:
+                        await on_step_complete(step, ctx)
                 except Exception as e:
                     ctx.log(f"DAG ERROR: {step.value} failed with {e}")
                     completed_this_round.add(step)
 
         return completed_this_round
 
-    async def run(self, ctx: DDContext) -> DDContext:
+    async def run(
+        self, 
+        ctx: DDContext,
+        on_step_complete: Callable[[StepName, DDContext], Awaitable[None]] | None = None
+    ) -> DDContext:
         """Execute the full due-diligence flow with DAG-based parallelism and batched review."""
         plan: list[StepName] = list(IDEAL_FLOW)
         replans = 0
@@ -106,7 +119,7 @@ class FlowEngine:
         while plan:
             # 1. Execute the current plan as a DAG
             ctx.log(f"SYSTEM: Spawning DAG execution for {len(plan)} steps...")
-            completed_this_round = await self._execute_dag(plan, ctx, step_execution_counts)
+            completed_this_round = await self._execute_dag(plan, ctx, step_execution_counts, on_step_complete)
             all_completed.update(completed_this_round)
 
             # 2. Batched Supervisor Review

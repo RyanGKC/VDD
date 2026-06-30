@@ -3,13 +3,13 @@ import {
   ShieldAlert, ShieldCheck, Shield, AlertTriangle, 
   CheckCircle, Info, Building2, Globe, FileText, 
   MapPin, Landmark, ArrowRight, Loader2, PlaySquare,
-  Activity, FileSearch, ShieldX, Sun, Moon, ChevronLeft, ChevronRight, Home
+  Activity, FileSearch, ShieldX, Sun, Moon, ChevronLeft, ChevronRight, Home, History, Clock
 } from 'lucide-react';
 import { 
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, 
   CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar
 } from 'recharts';
-import ReactFlow, { Controls, Background, MarkerType } from 'reactflow';
+import ReactFlow, { Controls, Background, MarkerType, BaseEdge, getSmoothStepPath, Handle, Position } from 'reactflow';
 import 'reactflow/dist/style.css';
 import dagre from 'dagre';
 
@@ -69,7 +69,7 @@ const generateMockReport = (companyDetails) => {
   ];
 
   return {
-    vendor_name: companyDetails.company_name,
+    vendor_name: companyDetails.company_name || "Target Company",
     overall_risk,
     executive_summary: isHighRisk 
       ? `Critical risks identified for ${companyDetails.company_name}. A sanctioned entity was discovered deep in the ownership structure, triggering a deep-dive anomaly review. Furthermore, undisclosed debt and severe ESG violations represent unacceptable risk vectors.`
@@ -83,6 +83,46 @@ const generateMockReport = (companyDetails) => {
     step_risk_scores: isHighRisk
       ? { Ownership: 90, KYB: 50, Sanctions: 100, Profile: 25, Licenses: 0, Financials: 75, Resilience: 25, ESG: 75, Media: 50 }
       : { Ownership: 0, KYB: 0, Sanctions: 0, Profile: 0, Licenses: 0, Financials: 50, Resilience: 0, ESG: 0, Media: 25 },
+    supply_chain: [
+      {
+        vendor_name: "Global Materials Ltd",
+        overall_risk: Severity.LOW,
+        executive_summary: "Stable Tier-1 supplier.",
+        red_flags: [],
+        strengths: [],
+        recommendations: [],
+        supply_chain: [
+          {
+            vendor_name: "Raw Metals Inc",
+            overall_risk: Severity.MEDIUM,
+            executive_summary: "Tier-2 supplier with moderate risk.",
+            red_flags: [],
+            strengths: [],
+            recommendations: [],
+            supply_chain: []
+          }
+        ]
+      },
+      {
+        vendor_name: "Logistics Pro",
+        overall_risk: Severity.HIGH,
+        executive_summary: "High risk logistics provider with pending litigation.",
+        red_flags: [],
+        strengths: [],
+        recommendations: [],
+        supply_chain: [
+          {
+            vendor_name: "Oceanic Shipping Shell",
+            overall_risk: Severity.CRITICAL,
+            executive_summary: "Critical shell entity in logistics chain.",
+            red_flags: [],
+            strengths: [],
+            recommendations: [],
+            supply_chain: []
+          }
+        ]
+      }
+    ],
     generated_at: new Date().toISOString()
   };
 };
@@ -90,16 +130,16 @@ const generateMockReport = (companyDetails) => {
 // --- Components ---
 export const getSeverityIcon = (sev) => {
   switch(sev) {
-    case Severity.CRITICAL: return <ShieldX className="w-8 h-8 text-red-900" />;
+    case Severity.CRITICAL: return <ShieldX className="w-8 h-8 text-red-900 animate-pulse drop-shadow-md" />;
     case Severity.HIGH: return <ShieldAlert className="w-8 h-8 text-red-500" />;
     case Severity.MEDIUM: return <AlertTriangle className="w-8 h-8 text-amber-500" />;
-    case Severity.LOW: return <Info className="w-8 h-8 text-green-500" />;
-    default: return <ShieldCheck className="w-8 h-8 text-blue-500" />;
+    case Severity.LOW: return <CheckCircle className="w-8 h-8 text-green-500" />;
+    default: return <Info className="w-8 h-8 text-blue-500" />;
   }
 };
 
 
-const InputForm = ({ onSubmit }) => {
+const InputForm = ({ onSubmit, onInstantMock }) => {
   const [formData, setFormData] = useState({
     company_name: '',
     registration_number: '',
@@ -209,6 +249,13 @@ const InputForm = ({ onSubmit }) => {
         </div>
         <div className="pt-4 flex justify-end">
           <button 
+            type="button"
+            onClick={() => onInstantMock(formData)}
+            className="flex items-center gap-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-100 px-6 py-3 rounded-lg font-semibold transition-all mr-4 shadow-sm"
+          >
+            Preview UI (Instant Mock)
+          </button>
+          <button 
             onClick={() => onSubmit(formData)}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-all shadow-md shadow-blue-200 dark:shadow-blue-900/20"
           >
@@ -225,6 +272,8 @@ const ProcessingTerminal = ({ onComplete, onError, onCancel, companyDetails }) =
   const [logs, setLogs] = useState([]);
   const endOfLogsRef = useRef(null);
   const abortControllerRef = useRef(null);
+  const jobIdRef = useRef(null);
+  const wsRef = useRef(null);
   
   useEffect(() => {
     endOfLogsRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -239,21 +288,23 @@ const ProcessingTerminal = ({ onComplete, onError, onCancel, companyDetails }) =
       setLogs(prev => [...prev, { text: "SYSTEM: Connecting to backend... (this may take a few minutes as agents process data)", time: new Date().toLocaleTimeString() }]);
       
       const jobId = Math.random().toString(36).substring(2, 15);
+      jobIdRef.current = jobId;
       
-      const statusInterval = setInterval(async () => {
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const ws = new WebSocket(`${wsProtocol}//${window.location.host}/api/ws/dd_status/${jobId}`);
+      wsRef.current = ws;
+      
+      ws.onmessage = (event) => {
         if (!isMounted) return;
         try {
-          const statusRes = await fetch(`/api/dd_status/${jobId}`);
-          if (statusRes.ok) {
-            const statusData = await statusRes.json();
-            if (statusData.logs && statusData.logs.length > 0) {
-              setLogs(statusData.logs);
-            }
+          const data = JSON.parse(event.data);
+          if (data.logs && data.logs.length > 0) {
+            setLogs(prev => [...prev, ...data.logs]);
           }
         } catch (e) {
-          // Ignore fetch errors during polling
+          console.error("WebSocket parse error:", e);
         }
-      }, 2000);
+      };
       
       try {
         const response = await fetch('/api/dd_report', {
@@ -276,7 +327,6 @@ const ProcessingTerminal = ({ onComplete, onError, onCancel, companyDetails }) =
           signal: abortControllerRef.current.signal
         });
         
-        clearInterval(statusInterval);
         
         if (!response.ok) {
            const errText = await response.text();
@@ -286,14 +336,12 @@ const ProcessingTerminal = ({ onComplete, onError, onCancel, companyDetails }) =
         const reportData = await response.json();
         
         if (isMounted) {
-          clearInterval(statusInterval);
           setLogs(prev => [...prev, { text: "SYSTEM: Pipeline Complete. Generating Report.", time: new Date().toLocaleTimeString() }]);
           setTimeout(() => {
             if (isMounted) onComplete(reportData);
           }, 1000);
         }
       } catch (err) {
-        clearInterval(statusInterval);
         if (err.name === 'AbortError') {
           if (isMounted) setLogs(prev => [...prev, { text: `SYSTEM: Flow interrupted by user.`, isError: true, time: new Date().toLocaleTimeString() }]);
           return;
@@ -311,15 +359,21 @@ const ProcessingTerminal = ({ onComplete, onError, onCancel, companyDetails }) =
 
     return () => {
       isMounted = false;
+      if (wsRef.current) wsRef.current.close();
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
     };
-  }, [companyDetails, onComplete, onError]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run exactly once per mount
 
   const handleCancelClick = () => {
     if (window.confirm("Are you sure you want to interrupt the research flow? All current progress will be lost.")) {
+      if (wsRef.current) wsRef.current.close();
       if (abortControllerRef.current) abortControllerRef.current.abort();
+      if (jobIdRef.current) {
+        fetch(`/api/dd_cancel/${jobIdRef.current}`, { method: 'POST' }).catch(() => {});
+      }
       onCancel();
     }
   };
@@ -359,20 +413,22 @@ const ProcessingTerminal = ({ onComplete, onError, onCancel, companyDetails }) =
   );
 };
 
-const dagreGraph = new dagre.graphlib.Graph();
-dagreGraph.setDefaultEdgeLabel(() => ({}));
-
 const getLayoutedElements = (nodes, edges, direction = 'TB') => {
+  const dagreGraph = new dagre.graphlib.Graph();
+  dagreGraph.setDefaultEdgeLabel(() => ({}));
+
   const nodeWidth = 220;
   const nodeHeight = 90;
-  dagreGraph.setGraph({ rankdir: direction });
+  // Increase vertical spacing (ranksep) to give arrows more room
+  dagreGraph.setGraph({ rankdir: direction, ranksep: 120, nodesep: 60 });
 
   nodes.forEach((node) => {
     dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
   });
 
   edges.forEach((edge) => {
-    dagreGraph.setEdge(edge.source, edge.target);
+    // Reverse the edge in dagre so that the parent (target) stays at the top of the tree
+    dagreGraph.setEdge(edge.target, edge.source);
   });
 
   dagre.layout(dagreGraph);
@@ -392,6 +448,7 @@ const getLayoutedElements = (nodes, edges, direction = 'TB') => {
 const CustomNode = ({ data }) => {
   return (
     <div className="bg-white dark:bg-slate-800 border-2 rounded-lg p-3 shadow-md w-[220px] flex flex-col items-center transition-all hover:shadow-lg hover:-translate-y-1" style={{borderColor: data.color}}>
+      <Handle type="source" position={Position.Top} className="opacity-0" />
       <div className="flex flex-col items-center gap-1 mb-2 w-full">
         {data.icon}
         <span className="font-bold text-slate-800 dark:text-slate-100 text-sm text-center line-clamp-2 w-full">{data.label}</span>
@@ -399,12 +456,14 @@ const CustomNode = ({ data }) => {
       <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border`} style={{color: data.color, borderColor: data.color}}>
         {data.risk} Risk
       </span>
+      <Handle type="target" position={Position.Bottom} className="opacity-0" />
     </div>
   );
 };
 const nodeTypes = { custom: CustomNode };
 
 const SupplyChainGraph = ({ report, theme, onNodeSelect }) => {
+  const [isLegendOpen, setIsLegendOpen] = useState(true);
   const initialNodes = [];
   const initialEdges = [];
   
@@ -427,12 +486,18 @@ const SupplyChainGraph = ({ report, theme, onNodeSelect }) => {
 
     if (parentId) {
       initialEdges.push({
-        id: `${parentId}->${nodeId}`,
-        source: parentId,
-        target: nodeId,
+        id: `${nodeId}->${parentId}`,
+        source: nodeId,
+        target: parentId,
         type: 'smoothstep',
-        className: 'animated-reverse',
-        style: { stroke: theme === 'dark' ? '#94a3b8' : '#64748b', strokeWidth: 2 }
+        animated: true,
+        style: { stroke: theme === 'dark' ? '#94a3b8' : '#64748b', strokeWidth: 2 },
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          width: 12,
+          height: 12,
+          color: theme === 'dark' ? '#94a3b8' : '#64748b',
+        }
       });
     }
 
@@ -464,6 +529,25 @@ const SupplyChainGraph = ({ report, theme, onNodeSelect }) => {
       >
         <Background color={theme === 'dark' ? '#334155' : '#cbd5e1'} gap={16} />
         <Controls />
+        
+        {/* Risk Legend */}
+        <div className="absolute bottom-4 right-4 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm p-3 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 text-xs z-10 transition-all duration-300 overflow-hidden">
+          <div className="flex items-center justify-between gap-6 cursor-pointer group" onClick={() => setIsLegendOpen(!isLegendOpen)}>
+            <h4 className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider select-none">Risk Legend</h4>
+            <button className="text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 transition-colors" title={isLegendOpen ? "Minimize Legend" : "Expand Legend"}>
+              {isLegendOpen ? <ChevronRight className="w-4 h-4 rotate-90" /> : <ChevronRight className="w-4 h-4 -rotate-90" />}
+            </button>
+          </div>
+          {isLegendOpen && (
+            <div className="flex flex-col gap-2 mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+              <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-blue-500"></div><span className="text-slate-600 dark:text-slate-300 font-semibold">No Risk</span></div>
+              <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-green-500"></div><span className="text-slate-600 dark:text-slate-300 font-semibold">Low Risk</span></div>
+              <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-amber-500"></div><span className="text-slate-600 dark:text-slate-300 font-semibold">Medium Risk</span></div>
+              <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-red-500"></div><span className="text-slate-600 dark:text-slate-300 font-semibold">High Risk</span></div>
+              <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-red-900 animate-pulse"></div><span className="text-slate-600 dark:text-slate-300 font-semibold">Critical Risk</span></div>
+            </div>
+          )}
+        </div>
       </ReactFlow>
     </div>
   );
@@ -519,45 +603,43 @@ const Dashboard = ({ report, rootReport, onReset, onResetSupplier, theme }) => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 pb-12">
+    <div className="w-full max-w-full mx-auto space-y-6 pb-12">
       {/* Header Area */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 transition-all duration-300">
-        <div>
+      <div className="flex flex-col items-start gap-4 bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 transition-all duration-300 w-full overflow-hidden">
+        <div className="w-full">
           {rootReport && rootReport.vendor_name !== report.vendor_name && (
-            <div className="flex items-center gap-2 mb-2 text-sm font-semibold text-slate-500 dark:text-slate-400">
-              <button onClick={onResetSupplier} className="hover:text-blue-500 transition-colors flex items-center gap-1">
+            <div className="flex items-center gap-2 mb-2 text-sm font-semibold text-slate-500 dark:text-slate-400 flex-wrap">
+              <button onClick={onResetSupplier} className="hover:text-blue-500 transition-colors flex items-center gap-1 shrink-0">
                 <Home className="w-4 h-4" />
-                {rootReport.vendor_name}
+                <span className="truncate max-w-[150px] sm:max-w-xs">{rootReport.vendor_name}</span>
               </button>
-              <ChevronRight className="w-4 h-4" />
-              <span className="text-slate-800 dark:text-slate-200">{report.vendor_name}</span>
+              <ChevronRight className="w-4 h-4 shrink-0" />
+              <span className="text-slate-800 dark:text-slate-200 break-words">{report.vendor_name}</span>
             </div>
           )}
-          <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-3">
+          <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-3 break-words">
             {report.vendor_name}
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">Generated: {new Date(report.generated_at).toLocaleString()}</p>
+          <p className="text-slate-500 dark:text-slate-400 mt-2">Generated: {new Date(report.generated_at).toLocaleString()}</p>
         </div>
-        <div className="flex items-center gap-6">
-          <div className="flex flex-col items-end">
-            <span className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Overall Risk</span>
-            <div className="flex items-center gap-2 mt-1">
+
+        <div className="flex flex-col sm:flex-row justify-between w-full gap-4 items-start sm:items-center border-t border-slate-200 dark:border-slate-800 pt-5">
+          <div className="flex flex-col items-start">
+            <span className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Overall Risk</span>
+            <div className="flex items-center gap-2">
               {getSeverityIcon(report.overall_risk)}
               <span className={`text-2xl font-bold uppercase`} style={{color: SEVERITY_COLORS[report.overall_risk]}}>
                 {report.overall_risk}
               </span>
             </div>
           </div>
-          <div className="flex items-center gap-3 ml-4">
+          <div className="flex items-center gap-3">
             {report.audit_log && (
               <button onClick={handleDownloadAuditLog} className="flex items-center gap-2 px-4 py-2 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/50 dark:hover:bg-blue-800/50 text-blue-700 dark:text-blue-300 rounded-lg text-sm font-semibold transition border border-blue-200 dark:border-blue-800">
                 <FileText className="w-4 h-4" />
                 Audit Log
               </button>
             )}
-            <button onClick={onReset} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-semibold transition">
-              New Report
-            </button>
           </div>
         </div>
       </div>
@@ -576,7 +658,7 @@ const Dashboard = ({ report, rootReport, onReset, onResetSupplier, theme }) => {
             {pieData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value" isAnimationActive={false}>
                     {pieData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
@@ -606,7 +688,7 @@ const Dashboard = ({ report, rootReport, onReset, onResetSupplier, theme }) => {
                 <PolarGrid stroke={theme === 'dark' ? '#334155' : '#e2e8f0'} />
                 <PolarAngleAxis dataKey="subject" tick={{fill: theme === 'dark' ? '#94a3b8' : '#64748b', fontSize: 12}} />
                 <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} stroke={theme === 'dark' ? '#334155' : '#e2e8f0'} />
-                <Radar name="Risk Score" dataKey="A" stroke="#3b82f6" fill="#3b82f6" fillOpacity={theme === 'dark' ? 0.35 : 0.5} />
+                <Radar name="Risk Score" dataKey="A" stroke="#3b82f6" fill="#3b82f6" fillOpacity={theme === 'dark' ? 0.35 : 0.5} isAnimationActive={false} />
                 <RechartsTooltip 
                   contentStyle={{
                     backgroundColor: theme === 'dark' ? '#1e293b' : '#ffffff',
@@ -754,6 +836,8 @@ export default function App() {
   const [report, setReport] = useState(null);
   const [globalError, setGlobalError] = useState(null);
   const [isGraphOpen, setIsGraphOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [historyList, setHistoryList] = useState([]);
   const [selectedSupplier, setSelectedSupplier] = useState(null);
   const [theme, setTheme] = useState(() => {
     // Default is dark mode as per requirements
@@ -769,6 +853,22 @@ export default function App() {
     }
     localStorage.setItem('theme', theme);
   }, [theme]);
+
+  const fetchHistory = async () => {
+    try {
+      const res = await fetch('/api/history');
+      if (res.ok) {
+        const data = await res.json();
+        setHistoryList(data);
+      }
+    } catch (e) {
+      console.error("Failed to fetch history", e);
+    }
+  };
+
+  useEffect(() => {
+    fetchHistory();
+  }, []);
 
   const toggleTheme = () => {
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
@@ -787,6 +887,7 @@ export default function App() {
     setReport(actualReport);
     setView('dashboard');
     setIsGraphOpen(actualReport.supply_chain && actualReport.supply_chain.length > 0);
+    fetchHistory(); // Refresh history
     if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
       new Notification('Research Complete', {
         body: `Due diligence report for ${actualReport.vendor_name} is ready!`,
@@ -804,6 +905,13 @@ export default function App() {
     setView('input');
   };
 
+  const handleInstantMock = (data) => {
+    setGlobalError(null);
+    setCompanyDetails(data);
+    const mockData = generateMockReport(data);
+    handleProcessingComplete(mockData);
+  };
+
   const handleReset = () => {
     setCompanyDetails(null);
     setReport(null);
@@ -813,16 +921,44 @@ export default function App() {
     setView('input');
   };
 
+  const handleLoadHistory = async (jobId) => {
+    try {
+      const res = await fetch(`/api/history/${jobId}`);
+      if (res.ok) {
+        const historicalReport = await res.json();
+        setCompanyDetails(null);
+        setReport(historicalReport);
+        setSelectedSupplier(null);
+        setIsGraphOpen(historicalReport.supply_chain && historicalReport.supply_chain.length > 0);
+        setView('dashboard');
+      }
+    } catch (e) {
+      console.error("Failed to load historical report", e);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans selection:bg-blue-200 selection:dark:bg-blue-800 selection:dark:text-white transition-colors duration-300">
+    <div className="min-h-screen h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans selection:bg-blue-200 selection:dark:bg-blue-800 selection:dark:text-white transition-colors duration-300">
       {/* Navbar */}
-      <nav className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10 transition-colors duration-300">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <nav className="shrink-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 z-10 transition-colors duration-300">
+        <div className="max-w-[98%] 2xl:max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="p-2 -ml-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors mr-2"
+              title="Toggle History Sidebar"
+            >
+              <History className="w-5 h-5" />
+            </button>
             <Shield className="w-8 h-8 text-blue-600 dark:text-blue-500" />
             <span className="font-bold text-xl tracking-tight text-slate-800 dark:text-slate-100">A2A Due Diligence</span>
           </div>
           <div className="flex items-center gap-4">
+            {view === 'dashboard' && (
+              <button onClick={handleReset} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition shadow-sm">
+                New Report
+              </button>
+            )}
             <button 
               onClick={toggleTheme}
               className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors border border-slate-200 dark:border-slate-700"
@@ -834,86 +970,127 @@ export default function App() {
         </div>
       </nav>
 
-      {/* Main Content Area */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
-        {view === 'input' && (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="text-center mb-10 max-w-2xl mx-auto">
-              <h1 className="text-4xl font-extrabold text-slate-900 dark:text-slate-100 mb-4 tracking-tight">Automated Vendor Risk Assessment</h1>
-              <p className="text-lg text-slate-600 dark:text-slate-400">
-                Trigger a multi-agent orchestrated workflow.
-              </p>
-            </div>
-            
-            {globalError && (
-              <div className="max-w-2xl mx-auto mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 rounded-lg flex items-start gap-3 text-red-700 dark:text-red-400 animate-in fade-in zoom-in-95 duration-300">
-                <ShieldX className="w-5 h-5 shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="font-bold">Pipeline Error</h3>
-                  <p className="text-sm mt-1">{globalError}</p>
+      <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar */}
+        <aside className={`${isSidebarOpen ? 'w-72' : 'w-0'} shrink-0 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300 overflow-y-auto flex flex-col`}>
+          <div className="p-4 border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-white dark:bg-slate-900 z-10">
+            <h3 className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+              <Clock className="w-4 h-4" /> Recent Searches
+            </h3>
+          </div>
+          <div className="p-2 space-y-1">
+            {historyList.length === 0 ? (
+              <p className="text-sm text-slate-500 dark:text-slate-400 p-2 text-center italic">No history found</p>
+            ) : (
+              historyList.map((item) => (
+                <button
+                  key={item.job_id}
+                  onClick={() => handleLoadHistory(item.job_id)}
+                  className="w-full text-left p-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700 group flex flex-col gap-1"
+                >
+                  <div className="flex justify-between items-center w-full">
+                    <span className="font-semibold text-sm truncate text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400">{item.company_name}</span>
+                    <div className="flex items-center" title={item.overall_risk}>
+                      {item.overall_risk === Severity.CRITICAL && <div className="w-2.5 h-2.5 rounded-full bg-red-900 animate-pulse"></div>}
+                      {item.overall_risk === Severity.HIGH && <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>}
+                      {item.overall_risk === Severity.MEDIUM && <div className="w-2.5 h-2.5 rounded-full bg-amber-500"></div>}
+                      {item.overall_risk === Severity.LOW && <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>}
+                      {item.overall_risk === Severity.INFO && <div className="w-2.5 h-2.5 rounded-full bg-blue-500"></div>}
+                    </div>
+                  </div>
+                  <span className="text-xs text-slate-500 dark:text-slate-400">{new Date(item.timestamp).toLocaleString()}</span>
+                </button>
+              ))
+            )}
+          </div>
+        </aside>
+
+        {/* Main Content Area */}
+        <main className="flex-1 overflow-y-auto">
+          <div className="max-w-[98%] 2xl:max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+            {view === 'input' && (
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="text-center mb-10 max-w-2xl mx-auto">
+                  <h1 className="text-4xl font-extrabold text-slate-900 dark:text-slate-100 mb-4 tracking-tight">Automated Vendor Risk Assessment</h1>
+                  <p className="text-lg text-slate-600 dark:text-slate-400">
+                    Trigger a multi-agent orchestrated workflow.
+                  </p>
+                </div>
+                
+                {globalError && (
+                  <div className="max-w-2xl mx-auto mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 rounded-lg flex items-start gap-3 text-red-700 dark:text-red-400 animate-in fade-in zoom-in-95 duration-300">
+                    <ShieldX className="w-5 h-5 shrink-0 mt-0.5" />
+                    <div>
+                      <h3 className="font-bold">Pipeline Error</h3>
+                      <p className="text-sm mt-1">{globalError}</p>
+                    </div>
+                  </div>
+                )}
+                
+                <InputForm onSubmit={startPipeline} onInstantMock={handleInstantMock} />
+              </div>
+            )}
+
+            {view === 'processing' && companyDetails && (
+              <div className="animate-in fade-in zoom-in-95 duration-300 flex flex-col items-center">
+                <div className="mb-8 text-center">
+                  <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2">Orchestrating Agents...</h2>
+                  <p className="text-slate-500 dark:text-slate-400">The FlowEngine is passing context to the A2A network.</p>
+                </div>
+                <ProcessingTerminal 
+                  companyDetails={companyDetails} 
+                  onComplete={handleProcessingComplete} 
+                  onError={handleProcessingError}
+                  onCancel={handleProcessingCancel}
+                />
+              </div>
+            )}
+
+            {view === 'dashboard' && report && (
+              <div className={`animate-in fade-in slide-in-from-bottom-8 duration-700 flex ${isGraphOpen ? 'gap-6 flex-row items-start' : 'flex-col'}`}>
+                
+                {/* Toggle Button for Desktop */}
+                {report.supply_chain && report.supply_chain.length > 0 && (
+                  <div className="fixed left-0 top-1/2 -translate-y-1/2 z-20 hidden lg:block">
+                    <button 
+                      onClick={() => setIsGraphOpen(!isGraphOpen)}
+                      className="group flex items-center gap-2 bg-white dark:bg-slate-800 py-6 px-3 rounded-r-xl shadow-[4px_0_15px_-3px_rgba(0,0,0,0.15)] dark:shadow-[4px_0_15px_-3px_rgba(0,0,0,0.5)] border border-l-0 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all focus:outline-none"
+                      title={isGraphOpen ? "Hide Supply Chain Graph" : "Show Supply Chain Graph"}
+                    >
+                      <span className="font-bold text-xs tracking-widest uppercase whitespace-nowrap rotate-180 select-none text-slate-500 group-hover:text-blue-500 transition-colors" style={{ writingMode: 'vertical-rl' }}>
+                        Supply Chain
+                      </span>
+                      {isGraphOpen ? <ChevronLeft className="w-5 h-5 text-slate-400 group-hover:text-blue-500 transition-colors" /> : <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-blue-500 transition-colors" />}
+                    </button>
+                  </div>
+                )}
+
+                {/* Left Pane: Graph (only visible on desktop if open) */}
+                {isGraphOpen && (
+                  <div className="hidden lg:block w-1/2 shrink-0 h-[calc(100vh-8rem)] sticky top-24 rounded-xl overflow-hidden shadow-sm border border-slate-200 dark:border-slate-700">
+                    <SupplyChainGraph 
+                      report={report} 
+                      theme={theme}
+                      onNodeSelect={(supplierReport) => setSelectedSupplier(supplierReport)}
+                    />
+                  </div>
+                )}
+                
+                {/* Right Pane (or full width): Dashboard */}
+                <div className={`flex-1 w-full ${isGraphOpen ? 'lg:w-1/2' : ''}`}>
+                  <Dashboard 
+                    report={selectedSupplier || report} 
+                    rootReport={report}
+                    onReset={handleReset} 
+                    onResetSupplier={() => setSelectedSupplier(null)}
+                    theme={theme} 
+                  />
                 </div>
               </div>
             )}
-            
-            <InputForm onSubmit={startPipeline} />
           </div>
-        )}
-
-        {view === 'processing' && companyDetails && (
-          <div className="animate-in fade-in zoom-in-95 duration-300 flex flex-col items-center">
-            <div className="mb-8 text-center">
-              <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2">Orchestrating Agents...</h2>
-              <p className="text-slate-500 dark:text-slate-400">The FlowEngine is passing context to the A2A network.</p>
-            </div>
-            <ProcessingTerminal 
-              companyDetails={companyDetails} 
-              onComplete={handleProcessingComplete} 
-              onError={handleProcessingError}
-              onCancel={handleProcessingCancel}
-            />
-          </div>
-        )}
-
-        {view === 'dashboard' && report && (
-          <div className={`animate-in fade-in slide-in-from-bottom-8 duration-700 flex ${isGraphOpen ? 'gap-6 flex-row items-start' : 'flex-col'}`}>
-            
-            {/* Toggle Button for Desktop */}
-            {report.supply_chain && report.supply_chain.length > 0 && (
-              <div className="fixed left-4 top-1/2 -translate-y-1/2 z-20 hidden lg:block">
-                <button 
-                  onClick={() => setIsGraphOpen(!isGraphOpen)}
-                  className="bg-white dark:bg-slate-800 p-3 rounded-full shadow-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  title={isGraphOpen ? "Hide Supply Chain Graph" : "Show Supply Chain Graph"}
-                >
-                  {isGraphOpen ? <ChevronLeft className="w-6 h-6" /> : <ChevronRight className="w-6 h-6" />}
-                </button>
-              </div>
-            )}
-
-            {/* Left Pane: Graph (only visible on desktop if open) */}
-            {isGraphOpen && (
-              <div className="hidden lg:block w-1/2 shrink-0 h-[calc(100vh-8rem)] sticky top-24 rounded-xl overflow-hidden shadow-sm border border-slate-200 dark:border-slate-700">
-                 <SupplyChainGraph 
-                   report={report} 
-                   theme={theme}
-                   onNodeSelect={(supplierReport) => setSelectedSupplier(supplierReport)}
-                 />
-              </div>
-            )}
-            
-            {/* Right Pane (or full width): Dashboard */}
-            <div className={`flex-1 w-full ${isGraphOpen ? 'lg:w-1/2' : ''}`}>
-              <Dashboard 
-                report={selectedSupplier || report} 
-                rootReport={report}
-                onReset={handleReset} 
-                onResetSupplier={() => setSelectedSupplier(null)}
-                theme={theme} 
-              />
-            </div>
-          </div>
-        )}
-      </main>
+        </main>
+      </div>
     </div>
   );
 }

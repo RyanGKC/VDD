@@ -135,7 +135,11 @@ class StepResult(BaseModel):
     completed_at: datetime = Field(default_factory=lambda:datetime.now(timezone.utc))
 
 
+from pydantic import BaseModel, Field, ConfigDict
+import asyncio
+
 class DDContext(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
    # The shared, mutable working memory passed between agents.
     company_details: CompanyDetails
     # Accumulated results keyed by step.
@@ -154,6 +158,10 @@ class DDContext(BaseModel):
     max_suppliers_per_node: int = Field(default=3, ge=1)
     # Track visited companies across the recursive supply chain to prevent loops
     visited_companies: set[str] = Field(default_factory=set)
+    # Lock for thread/coroutine-safe mutations to visited_companies
+    visited_lock: asyncio.Lock = Field(default_factory=asyncio.Lock, exclude=True)
+    # Keep track of child pipelines spawned asynchronously mid-DAG
+    child_tasks: list[asyncio.Task] = Field(default_factory=list, exclude=True)
 
     def log(self, message: str) -> None:
         stamped = f"{datetime.now(timezone.utc).isoformat()} | {message}"

@@ -10,11 +10,10 @@ from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.events import EventQueue, Event
 from a2a.types import AgentCard, AgentSkill, Message, Part
 
-from core.openai_client import OpenAIClient
 from core.models import DDContext, StepName, StepResult
 from core.tools import perform_web_search
 from pydantic import BaseModel
-from typing import Type, TypeVar
+from typing import Type, TypeVar, Any
 
 TModel = TypeVar("TModel", bound=BaseModel)
 
@@ -30,13 +29,13 @@ class BaseResearchAgent(AgentExecutor, abc.ABC):
     #: Which step this agent owns. Set by each subclass.
     step: StepName
 
-    def __init__(self, openai: OpenAIClient) -> None:
-        self.openai = openai
-        self.gemini = openai
+    def __init__(self, client: Any) -> None:
+        self.openai = client
+        self.gemini = client
 
     async def generate_with_web_search(self, ctx: DDContext, system_instruction: str, base_prompt: str, schema: Type[TModel]) -> TModel:
-        max_searches = 3
         step_val = self.step.value if hasattr(self, 'step') else 'AGENT'
+        max_searches = 3
         
         # --- Phase 1: Ask the LLM to plan its research strategy ---
         plan_prompt = (

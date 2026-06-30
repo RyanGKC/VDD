@@ -27,10 +27,10 @@ T = TypeVar("T", bound=BaseModel)
 
 
 class OpenAIClient:
-    def __init__(self, model: str = "gpt-4o-mini", use_cache: bool = False) -> None:
+    def __init__(self, model: str | None = None, use_cache: bool = False) -> None:
         api_key = os.getenv("OPENAI_API_KEY")
         self._client = AsyncOpenAI(api_key=api_key)
-        self._model = model
+        self._model = model or os.getenv("OPENAI_MODEL", "gpt-4o-mini")
         self.use_cache = use_cache
 
     async def close(self) -> None:
@@ -53,6 +53,8 @@ class OpenAIClient:
             cache_key = f"llm|{self._model}|{system_instruction}|{prompt}|{schema.__name__}"
             cached_val = cache_db.get(cache_key, use_mock=True)
             if cached_val:
+                import asyncio
+                await asyncio.sleep(0.5) # Yield to event loop and simulate network delay
                 return schema.model_validate_json(cached_val)
 
         # Call OpenAI asynchronously using structured outputs via beta.chat.completions.parse

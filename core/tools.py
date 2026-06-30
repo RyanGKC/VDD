@@ -48,5 +48,7 @@ async def scan_adverse_media(ctx: DDContext, entities: list[str]) -> str:
 
 async def perform_web_search(ctx: DDContext, query: str) -> str:
     if ctx.use_mock:
+        import asyncio
+        await asyncio.sleep(0.5)
         return await _run_mock(mock_tools.perform_web_search, f"search|{query}", query)
     return await real_tools.perform_web_search(ctx, query)

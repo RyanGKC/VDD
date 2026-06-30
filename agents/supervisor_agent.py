@@ -13,6 +13,7 @@ import logging
 
 from pydantic import BaseModel, Field
 
+from typing import Any
 from core.openai_client import OpenAIClient
 from core.models import (
     DDContext,
@@ -80,9 +81,9 @@ class _ReviewDecision(BaseModel):
     steps_to_run: list[StepName]
 
 class SupervisorAgent:
-    def __init__(self, openai: OpenAIClient) -> None:
-        self.openai = openai
-        self.gemini = openai
+    def __init__(self, client: Any) -> None:
+        self.openai = client
+        self.gemini = client
 
     async def review(
         self,
