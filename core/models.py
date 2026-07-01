@@ -162,6 +162,10 @@ class DDContext(BaseModel):
     visited_lock: asyncio.Lock = Field(default_factory=asyncio.Lock, exclude=True)
     # Keep track of child pipelines spawned asynchronously mid-DAG
     child_tasks: list[asyncio.Task] = Field(default_factory=list, exclude=True)
+    # Parent company options
+    enable_parent_company: bool = False
+    enable_parent_supply_chain: bool = False
+    parent_task: asyncio.Task | None = Field(default=None, exclude=True)
 
     def log(self, message: str) -> None:
         stamped = f"{datetime.now(timezone.utc).isoformat()} | {message}"
@@ -212,4 +216,5 @@ class DDReport(BaseModel):
     generated_at: datetime = Field(default_factory=lambda:datetime.now(timezone.utc))
     # Supply chain recursive reports
     supply_chain: list['DDReport'] = Field(default_factory=list)
-
+    # Parent company report
+    parent_company: 'DDReport | None' = None

@@ -18,6 +18,8 @@ hidden or previously undisclosed UBO, set 'hidden_ubo_found' to true and
 provide the 'ubo_name'.
 
 CRITICAL INSTRUCTION: If the entity is a publicly traded company (e.g., it files a 10-K, has an SEC CIK, or is noted as 'Publicly Traded'), do not flag the lack of a single UBO as an anomaly. Instead, list the major institutional investors or indicate that ownership is dispersed, and set 'hidden_ubo_found' to false.
+
+If you identify a direct Corporate Parent company (i.e. a higher-level holding company or HQ that owns this subsidiary), set 'parent_company' to its official name.
 """
 
 class ShareholdersAgent(BaseResearchAgent):
@@ -54,10 +56,14 @@ class ShareholdersAgent(BaseResearchAgent):
 
         # Note: We store the parsed shareholders in structured_data so the 
         # SanctionsAgent can easily access them later.
+        structured_data = {"shareholders": [{"name": s} for s in analysis.extracted_shareholder_names]}
+        if analysis.parent_company:
+            structured_data["parent_company"] = analysis.parent_company
+
         result = StepResult(
             step=self.step,
             findings=findings,
-            structured_data={"shareholders": [{"name": s} for s in analysis.extracted_shareholder_names]},
+            structured_data=structured_data,
             sources=[s for f in findings for s in f.sources],
             raw_data=data,
             rationale=analysis.rationale,
@@ -96,3 +102,4 @@ class _ShareholderAnalysis(BaseModel):
     extracted_shareholder_names: list[str]
     hidden_ubo_found: bool = False
     ubo_name: str | None = None
+    parent_company: str | None = Field(default=None, description="The official name of the direct corporate parent company (HQ/Holding Company) if one exists.")

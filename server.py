@@ -35,6 +35,8 @@ class DDRequest(BaseModel):
     tiers_to_search: int = 1
     max_suppliers_per_node: int = 3
     job_id: Optional[str] = None
+    enable_parent_company: bool = False
+    enable_parent_supply_chain: bool = False
 
 @app.post("/api/dd_report", response_model=DDReport)
 async def generate_dd_report(request: DDRequest):
@@ -46,7 +48,9 @@ async def generate_dd_report(request: DDRequest):
         ),
         use_mock=request.use_mock,
         tiers_to_search=request.tiers_to_search,
-        max_suppliers_per_node=request.max_suppliers_per_node
+        max_suppliers_per_node=request.max_suppliers_per_node,
+        enable_parent_company=request.enable_parent_company,
+        enable_parent_supply_chain=request.enable_parent_supply_chain
     )
     if request.job_id:
         active_jobs[request.job_id] = ctx
@@ -155,6 +159,17 @@ async def get_history_report(job_id: str):
     # Return as JSON response to avoid double serialization since it's already a JSON string
     from fastapi.responses import JSONResponse
     return JSONResponse(content=json.loads(report_json))
+
+class DeleteHistoryRequest(BaseModel):
+    job_ids: list[str]
+
+@app.delete("/api/history")
+async def delete_history(request: DeleteHistoryRequest):
+    try:
+        history_db.delete_reports(request.job_ids)
+        return {"status": "success", "deleted": len(request.job_ids)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn

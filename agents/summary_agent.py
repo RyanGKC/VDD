@@ -46,7 +46,6 @@ Be extremely conservative: only flag genuine logical contradictions of concrete 
 
 
 class _SummaryModel(BaseModel):
-    overall_risk: SeverityLevel
     executive_summary: str
     recommendations: list[str]
 
@@ -79,23 +78,16 @@ _STEP_LABELS = {
 }
 
 
-def _compute_step_risk_scores(ctx: DDContext) -> dict[str, int]:
-    """Derive a 0–100 risk score per step from actual findings."""
-    scores: dict[str, int] = {}
-    for step_name, result in ctx.results.items():
-        if not result.findings:
-            # No findings → baseline low risk
-            scores[_STEP_LABELS.get(step_name, step_name.value)] = 0
-            continue
-
-        # Take the maximum severity of red-flag findings in this step.
-        # If there are no red flags, the step is considered low risk.
-        red_flags = [f for f in result.findings if f.is_red_flag]
-        if not red_flags:
-            scores[_STEP_LABELS.get(step_name, step_name.value)] = 0
-        else:
-            max_score = max(_SEVERITY_SCORES.get(f.severity, 0) for f in red_flags)
-            scores[_STEP_LABELS.get(step_name, step_name.value)] = max_score
+def _compute_step_risk_scores(findings: list[Finding]) -> dict[str, int]:
+    """Derive a 0–100 risk score per step from cleaned findings."""
+    scores: dict[str, int] = {label: 0 for label in _STEP_LABELS.values()}
+    
+    for f in findings:
+        cat = getattr(f, "category", "Other")
+        if f.is_red_flag:
+            score = _SEVERITY_SCORES.get(f.severity, 0)
+            if score > scores.get(cat, 0):
+                scores[cat] = score
 
     return scores
 
@@ -187,26 +179,35 @@ class SummaryAgent:
                     sources.append(s)
 
         # Compute real per-step risk scores from actual findings.
-        step_risk_scores = _compute_step_risk_scores(ctx)
+        step_risk_scores = _compute_step_risk_scores(cleaned_findings)
+
+        # Programmatically determine overall risk
+        if red_flags:
+            max_score = max(_SEVERITY_SCORES.get(f.severity, 0) for f in red_flags)
+            score_to_sev = {v: k for k, v in _SEVERITY_SCORES.items()}
+            computed_risk = score_to_sev.get(max_score, Severity.LOW)
+        else:
+            computed_risk = Severity.LOW
 
         # Call Gemini asynchronously using the cleaned context
         summary = await self.gemini.generate_structured(
             system_instruction=SYSTEM_INSTRUCTION,
             prompt=(
                 f"Vendor: {ctx.company_details.company_name}\n"
+                f"Overall Risk (Must align summary with this): {computed_risk.value}\n"
                 f"Strengths: {[f.summary for f in strengths]}\n"
                 f"Red flags: "
                 f"{[(f.severity.value, f.summary) for f in red_flags]}\n"
                 f"Per-step risk scores: {step_risk_scores}\n"
                 f"Execution log (for context): {ctx.execution_log[-20:]}\n"
-                "Write the report."
+                "Write the executive summary and recommendations."
             ),
             schema=_SummaryModel,
         )
 
         return DDReport(
             vendor_name=ctx.company_details.company_name,
-            overall_risk=parse_severity(summary.overall_risk),
+            overall_risk=computed_risk,
             strengths=strengths,
             red_flags=red_flags,
             recommendations=summary.recommendations,

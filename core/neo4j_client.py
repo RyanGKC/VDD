@@ -56,3 +56,17 @@ class Neo4jClient:
                 await session.run(query, supplier=supplier_name, target=target_company)
         except Exception as e:
             logger.error(f"Failed to save edge {supplier_name}->{target_company} to Neo4j: {e}")
+
+    async def save_ownership_edge(self, parent_name: str, target_company: str):
+        if not self.driver:
+            return
+        query = """
+        MERGE (parent:Company {name: $parent})
+        MERGE (target:Company {name: $target})
+        MERGE (parent)-[:OWNS]->(target)
+        """
+        try:
+            async with self.driver.session() as session:
+                await session.run(query, parent=parent_name, target=target_company)
+        except Exception as e:
+            logger.error(f"Failed to save edge {parent_name}->{target_company} to Neo4j: {e}")
