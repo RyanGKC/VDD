@@ -3,7 +3,7 @@ import {
   ShieldAlert, ShieldCheck, Shield, AlertTriangle, 
   CheckCircle, Info, Building2, Globe, FileText, 
   MapPin, Landmark, ArrowRight, Loader2, PlaySquare,
-  Activity, FileSearch, ShieldX, Sun, Moon, ChevronLeft, ChevronRight, Home, History, Clock
+  Activity, FileSearch, ShieldX, Sun, Moon, ChevronLeft, ChevronRight, Home, History, Clock, Edit2, Trash2
 } from 'lucide-react';
 import { 
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, 
@@ -150,7 +150,9 @@ const InputForm = ({ onSubmit, onInstantMock }) => {
     use_mock: false,
     enable_supply_chain: false,
     tiers_to_search: 1,
-    max_suppliers_per_node: 3
+    max_suppliers_per_node: 3,
+    enable_parent_company: false,
+    enable_parent_supply_chain: false
   });
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -224,6 +226,32 @@ const InputForm = ({ onSubmit, onInstantMock }) => {
                   <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Max Suppliers Per Node</label>
                   <input type="number" min="1" max="10" name="max_suppliers_per_node" value={formData.max_suppliers_per_node} onChange={handleChange} className="w-32 px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:dark:ring-blue-500 outline-none transition rounded-lg" />
                 </div>
+              </div>
+            )}
+            <div className="flex items-center gap-2 mb-4 mt-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  name="enable_parent_company" 
+                  checked={formData.enable_parent_company} 
+                  onChange={(e) => setFormData({ ...formData, enable_parent_company: e.target.checked })} 
+                  className="w-5 h-5 text-blue-600 rounded border-slate-300 dark:border-slate-700 focus:ring-blue-500 bg-white dark:bg-slate-800 transition"
+                />
+                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Research parent company</span>
+              </label>
+            </div>
+            {formData.enable_parent_company && (
+              <div className="flex items-center gap-2 mb-4 ml-6">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    name="enable_parent_supply_chain" 
+                    checked={formData.enable_parent_supply_chain} 
+                    onChange={(e) => setFormData({ ...formData, enable_parent_supply_chain: e.target.checked })} 
+                    className="w-5 h-5 text-blue-600 rounded border-slate-300 dark:border-slate-700 focus:ring-blue-500 bg-white dark:bg-slate-800 transition"
+                  />
+                  <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Research parent company's supply chain</span>
+                </label>
               </div>
             )}
             <div className="flex items-center gap-2 mt-2">
@@ -388,6 +416,8 @@ const ProcessingTerminal = ({ onComplete, onError, onCancel, companyDetails }) =
             use_mock: companyDetails.use_mock,
             tiers_to_search: companyDetails.enable_supply_chain ? (parseInt(companyDetails.tiers_to_search, 10) || 1) : 1,
             max_suppliers_per_node: companyDetails.enable_supply_chain ? (parseInt(companyDetails.max_suppliers_per_node, 10) || 3) : 3,
+            enable_parent_company: companyDetails.enable_parent_company,
+            enable_parent_supply_chain: companyDetails.enable_parent_supply_chain,
             job_id: jobId
           }),
           signal: abortControllerRef.current.signal
@@ -436,7 +466,9 @@ const ProcessingTerminal = ({ onComplete, onError, onCancel, companyDetails }) =
   const handleCancelClick = () => {
     if (window.confirm("Are you sure you want to interrupt the research flow? All current progress will be lost.")) {
       if (wsRef.current) wsRef.current.close();
-      if (abortControllerRef.current) abortControllerRef.current.abort();
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
       if (jobIdRef.current) {
         fetch(`/api/dd_cancel/${jobIdRef.current}`, { method: 'POST' }).catch(() => {});
       }
@@ -481,62 +513,70 @@ const ProcessingTerminal = ({ onComplete, onError, onCancel, companyDetails }) =
   const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(nodes, edges, 'LR');
 
   return (
-    <div className="w-full flex flex-col h-[600px] bg-slate-50 dark:bg-slate-900 rounded-xl overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800 relative">
+    <div className="w-full flex flex-col h-[800px] bg-slate-50 dark:bg-slate-900 rounded-xl overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800 relative">
       {/* Header */}
-      <div className="bg-slate-800 dark:bg-slate-950 px-4 py-3 flex items-center justify-between border-b border-slate-700 dark:border-slate-800 z-10">
+      <div className="bg-slate-800 dark:bg-slate-950 px-4 py-3 flex items-center justify-between border-b border-slate-700 dark:border-slate-800 z-10 shrink-0">
         <div className="flex items-center gap-4">
           <span className="text-slate-300 font-bold flex items-center gap-2">
             <Loader2 className="w-4 h-4 animate-spin text-blue-400" /> Research in Progress...
           </span>
         </div>
-        <button 
-          onClick={handleCancelClick}
-          className="text-sm bg-slate-700 hover:bg-slate-600 text-red-400 px-3 py-1 rounded-md font-semibold transition"
-        >
-          Cancel Flow
-        </button>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setIsConsoleOpen(!isConsoleOpen)}
+            className="text-sm bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1 rounded-md font-semibold transition border border-slate-600"
+          >
+            {isConsoleOpen ? 'Hide Debug' : 'Show Debug'}
+          </button>
+          <button 
+            onClick={handleCancelClick}
+            className="text-sm bg-slate-700 hover:bg-slate-600 text-red-400 px-3 py-1 rounded-md font-semibold transition"
+          >
+            Cancel Flow
+          </button>
+        </div>
       </div>
       
-      {/* ReactFlow Graph Canvas */}
-      <div className="flex-1 relative">
-        <ReactFlow
-          nodes={layoutedNodes}
-          edges={layoutedEdges}
-          nodeTypes={loadingNodeTypes}
-          fitView
-          fitViewOptions={{ padding: 0.2 }}
-          attributionPosition="bottom-left"
-        >
-          <Background color="#94a3b8" gap={20} />
-          <Controls />
-        </ReactFlow>
-      </div>
+      {/* Split Body Container */}
+      <div className="flex flex-1 overflow-hidden">
+        
+        {/* ReactFlow Graph Canvas */}
+        <div className="flex-1 relative">
+          <ReactFlow
+            nodes={layoutedNodes}
+            edges={layoutedEdges}
+            nodeTypes={loadingNodeTypes}
+            fitView
+            fitViewOptions={{ padding: 0.2 }}
+            attributionPosition="bottom-left"
+          >
+            <Background color="#94a3b8" gap={20} />
+            <Controls />
+          </ReactFlow>
+        </div>
 
-      {/* Collapsible Debug Console */}
-      <div className={`absolute bottom-0 left-0 right-0 bg-slate-950 border-t border-slate-700 transition-all duration-300 ${isConsoleOpen ? 'h-64' : 'h-10'}`}>
-        <button 
-          onClick={() => setIsConsoleOpen(!isConsoleOpen)}
-          className="w-full h-10 flex items-center justify-between px-4 text-slate-400 hover:text-slate-200 hover:bg-slate-900 transition font-mono text-xs"
-        >
-          <span className="flex items-center gap-2">
-            {isConsoleOpen ? '▼' : '▲'} Debug Console
-          </span>
-          <span>{logs.length} logs</span>
-        </button>
+        {/* Side Debug Console */}
         {isConsoleOpen && (
-          <div className="p-4 font-mono text-xs h-54 overflow-y-auto space-y-1">
-            {logs.map((log, i) => {
-              if (log.text.startsWith("[EVENT]")) return null; // Hide structured events from raw log
-              return (
-                <div key={i} className={`flex gap-3 ${log.isError ? 'text-red-400' : log.isSuper ? 'text-purple-400' : 'text-emerald-400'}`}>
-                  <span className="text-slate-500 shrink-0">[{log.time}]</span>
-                  <span className={log.isError ? 'font-bold' : ''}>{log.text}</span>
-                </div>
-              );
-            })}
-            <div ref={endOfLogsRef} />
+          <div className="w-1/3 bg-slate-950 border-l border-slate-700 flex flex-col">
+            <div className="p-3 bg-slate-900 border-b border-slate-800 text-slate-400 font-mono text-xs flex justify-between shrink-0">
+              <span>Terminal Output</span>
+              <span>{logs.length} logs</span>
+            </div>
+            <div className="p-4 font-mono text-xs flex-1 overflow-y-auto space-y-2">
+              {logs.map((log, i) => {
+                if (log.text.startsWith("[EVENT]")) return null; // Hide structured events from raw log
+                return (
+                  <div key={i} className={`flex flex-col gap-1 ${log.isError ? 'text-red-400' : log.isSuper ? 'text-purple-400' : 'text-emerald-400'}`}>
+                    <span className="text-slate-600 shrink-0 select-none">[{log.time}]</span>
+                    <span className={`break-words ${log.isError ? 'font-bold' : ''}`}>{log.text}</span>
+                  </div>
+                );
+              })}
+              <div ref={endOfLogsRef} />
+            </div>
           </div>
         )}
+        
       </div>
     </div>
   );
@@ -633,6 +673,10 @@ const SupplyChainGraph = ({ report, theme, onNodeSelect }) => {
     if (node.supply_chain && node.supply_chain.length > 0) {
       node.supply_chain.forEach(child => buildGraph(child, nodeId));
     }
+    
+    if (node.parent_company) {
+      buildGraph(node.parent_company, nodeId);
+    }
   };
 
   buildGraph(report);
@@ -682,7 +726,7 @@ const SupplyChainGraph = ({ report, theme, onNodeSelect }) => {
   );
 };
 
-const Dashboard = ({ report, rootReport, onReset, onResetSupplier, theme }) => {
+const Dashboard = ({ report, rootReport, onReset, onResetSupplier, theme, isGraphOpen, onToggleGraph }) => {
   // Data prep for charts
   const severityCounts = report.red_flags.reduce((acc, flag) => {
     acc[flag.severity] = (acc[flag.severity] || 0) + 1;
@@ -762,9 +806,19 @@ const Dashboard = ({ report, rootReport, onReset, onResetSupplier, theme }) => {
               </span>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3 justify-end">
+            {rootReport && rootReport.supply_chain && rootReport.supply_chain.length > 0 && onToggleGraph && (
+              <button
+                onClick={onToggleGraph}
+                className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-semibold transition border border-slate-200 dark:border-slate-700 shadow-sm"
+                title={isGraphOpen ? "Hide Supply Chain Graph" : "Show Supply Chain Graph"}
+              >
+                <Activity className="w-4 h-4" />
+                {isGraphOpen ? 'Hide Supply Chain' : 'Show Supply Chain'}
+              </button>
+            )}
             {report.audit_log && (
-              <button onClick={handleDownloadAuditLog} className="flex items-center gap-2 px-4 py-2 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/50 dark:hover:bg-blue-800/50 text-blue-700 dark:text-blue-300 rounded-lg text-sm font-semibold transition border border-blue-200 dark:border-blue-800">
+              <button onClick={handleDownloadAuditLog} className="flex items-center gap-2 px-4 py-2 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/50 dark:hover:bg-blue-800/50 text-blue-700 dark:text-blue-300 rounded-lg text-sm font-semibold transition border border-blue-200 dark:border-blue-800 shadow-sm">
                 <FileText className="w-4 h-4" />
                 Audit Log
               </button>
@@ -967,6 +1021,8 @@ export default function App() {
   const [isGraphOpen, setIsGraphOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [historyList, setHistoryList] = useState([]);
+  const [isEditingHistory, setIsEditingHistory] = useState(false);
+  const [selectedHistoryItems, setSelectedHistoryItems] = useState(new Set());
   const [selectedSupplier, setSelectedSupplier] = useState(null);
   const [theme, setTheme] = useState(() => {
     // Default is dark mode as per requirements
@@ -1102,33 +1158,100 @@ export default function App() {
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
         <aside className={`${isSidebarOpen ? 'w-72' : 'w-0'} shrink-0 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300 overflow-y-auto flex flex-col`}>
-          <div className="p-4 border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-white dark:bg-slate-900 z-10">
+          <div className="p-4 border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-white dark:bg-slate-900 z-10 flex items-center justify-between">
             <h3 className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
               <Clock className="w-4 h-4" /> Recent Searches
             </h3>
+            {historyList.length > 0 && (
+              <button 
+                onClick={() => {
+                  setIsEditingHistory(!isEditingHistory);
+                  setSelectedHistoryItems(new Set());
+                }}
+                className={`p-1.5 rounded-md transition-colors ${isEditingHistory ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                title="Edit History"
+              >
+                <Edit2 className="w-4 h-4" />
+              </button>
+            )}
           </div>
+          
+          {isEditingHistory && selectedHistoryItems.size > 0 && (
+            <div className="p-2 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+              <button
+                onClick={async () => {
+                  if (window.confirm(`Are you sure you want to delete ${selectedHistoryItems.size} report(s)?`)) {
+                    try {
+                      await fetch('/api/history', {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ job_ids: Array.from(selectedHistoryItems) })
+                      });
+                      setIsEditingHistory(false);
+                      setSelectedHistoryItems(new Set());
+                      fetchHistory();
+                    } catch (e) {
+                      console.error("Failed to delete history", e);
+                    }
+                  }
+                }}
+                className="w-full flex items-center justify-center gap-2 py-2 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 font-semibold text-sm rounded-lg transition-colors border border-red-200 dark:border-red-800/50"
+              >
+                <Trash2 className="w-4 h-4" /> Delete Selected ({selectedHistoryItems.size})
+              </button>
+            </div>
+          )}
+
           <div className="p-2 space-y-1">
             {historyList.length === 0 ? (
               <p className="text-sm text-slate-500 dark:text-slate-400 p-2 text-center italic">No history found</p>
             ) : (
               historyList.map((item) => (
-                <button
+                <div
                   key={item.job_id}
-                  onClick={() => handleLoadHistory(item.job_id)}
-                  className="w-full text-left p-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700 group flex flex-col gap-1"
+                  onClick={() => {
+                    if (isEditingHistory) {
+                      const newSet = new Set(selectedHistoryItems);
+                      if (newSet.has(item.job_id)) {
+                        newSet.delete(item.job_id);
+                      } else {
+                        newSet.add(item.job_id);
+                      }
+                      setSelectedHistoryItems(newSet);
+                    } else {
+                      handleLoadHistory(item.job_id);
+                    }
+                  }}
+                  className={`w-full text-left p-3 rounded-lg transition-colors border group flex items-start gap-3 cursor-pointer ${
+                    isEditingHistory && selectedHistoryItems.has(item.job_id) 
+                      ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800' 
+                      : 'border-transparent hover:bg-slate-100 dark:hover:bg-slate-800 hover:border-slate-200 dark:hover:border-slate-700'
+                  }`}
                 >
-                  <div className="flex justify-between items-center w-full">
-                    <span className="font-semibold text-sm truncate text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400">{item.company_name}</span>
-                    <div className="flex items-center" title={item.overall_risk}>
-                      {item.overall_risk === Severity.CRITICAL && <div className="w-2.5 h-2.5 rounded-full bg-red-900 animate-pulse"></div>}
-                      {item.overall_risk === Severity.HIGH && <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>}
-                      {item.overall_risk === Severity.MEDIUM && <div className="w-2.5 h-2.5 rounded-full bg-amber-500"></div>}
-                      {item.overall_risk === Severity.LOW && <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>}
-                      {item.overall_risk === Severity.INFO && <div className="w-2.5 h-2.5 rounded-full bg-blue-500"></div>}
+                  {isEditingHistory && (
+                    <div className="pt-0.5 shrink-0">
+                      <input 
+                        type="checkbox" 
+                        checked={selectedHistoryItems.has(item.job_id)}
+                        readOnly
+                        className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
+                      />
                     </div>
+                  )}
+                  <div className="flex-1 min-w-0 flex flex-col gap-1">
+                    <div className="flex justify-between items-center w-full">
+                      <span className="font-semibold text-sm truncate text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400">{item.company_name}</span>
+                      <div className="flex items-center" title={item.overall_risk}>
+                        {item.overall_risk === Severity.CRITICAL && <div className="w-2.5 h-2.5 rounded-full bg-red-900 animate-pulse"></div>}
+                        {item.overall_risk === Severity.HIGH && <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>}
+                        {item.overall_risk === Severity.MEDIUM && <div className="w-2.5 h-2.5 rounded-full bg-amber-500"></div>}
+                        {item.overall_risk === Severity.LOW && <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>}
+                        {item.overall_risk === Severity.INFO && <div className="w-2.5 h-2.5 rounded-full bg-blue-500"></div>}
+                      </div>
+                    </div>
+                    <span className="text-xs text-slate-500 dark:text-slate-400">{new Date(item.timestamp).toLocaleString()}</span>
                   </div>
-                  <span className="text-xs text-slate-500 dark:text-slate-400">{new Date(item.timestamp).toLocaleString()}</span>
-                </button>
+                </div>
               ))
             )}
           </div>
@@ -1178,25 +1301,9 @@ export default function App() {
             {view === 'dashboard' && report && (
               <div className={`animate-in fade-in slide-in-from-bottom-8 duration-700 flex ${isGraphOpen ? 'gap-6 flex-row items-start' : 'flex-col'}`}>
                 
-                {/* Toggle Button for Desktop */}
-                {report.supply_chain && report.supply_chain.length > 0 && (
-                  <div className="fixed left-0 top-1/2 -translate-y-1/2 z-20 hidden lg:block">
-                    <button 
-                      onClick={() => setIsGraphOpen(!isGraphOpen)}
-                      className="group flex items-center gap-2 bg-white dark:bg-slate-800 py-6 px-3 rounded-r-xl shadow-[4px_0_15px_-3px_rgba(0,0,0,0.15)] dark:shadow-[4px_0_15px_-3px_rgba(0,0,0,0.5)] border border-l-0 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all focus:outline-none"
-                      title={isGraphOpen ? "Hide Supply Chain Graph" : "Show Supply Chain Graph"}
-                    >
-                      <span className="font-bold text-xs tracking-widest uppercase whitespace-nowrap rotate-180 select-none text-slate-500 group-hover:text-blue-500 transition-colors" style={{ writingMode: 'vertical-rl' }}>
-                        Supply Chain
-                      </span>
-                      {isGraphOpen ? <ChevronLeft className="w-5 h-5 text-slate-400 group-hover:text-blue-500 transition-colors" /> : <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-blue-500 transition-colors" />}
-                    </button>
-                  </div>
-                )}
-
                 {/* Left Pane: Graph (only visible on desktop if open) */}
                 {isGraphOpen && (
-                  <div className="hidden lg:block w-1/2 shrink-0 h-[calc(100vh-8rem)] sticky top-24 rounded-xl overflow-hidden shadow-sm border border-slate-200 dark:border-slate-700">
+                  <div className="hidden lg:block w-1/2 shrink-0 h-[calc(100vh-8rem)] sticky top-6 rounded-xl overflow-hidden shadow-sm border border-slate-200 dark:border-slate-700">
                     <SupplyChainGraph 
                       report={report} 
                       theme={theme}
@@ -1212,7 +1319,9 @@ export default function App() {
                     rootReport={report}
                     onReset={handleReset} 
                     onResetSupplier={() => setSelectedSupplier(null)}
-                    theme={theme} 
+                    theme={theme}
+                    isGraphOpen={isGraphOpen}
+                    onToggleGraph={() => setIsGraphOpen(!isGraphOpen)}
                   />
                 </div>
               </div>

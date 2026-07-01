@@ -54,3 +54,12 @@ class HistoryDB:
             if row:
                 return row[0]
         return None
+
+    def delete_reports(self, job_ids: list[str]):
+        if not job_ids:
+            return
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            placeholders = ",".join("?" * len(job_ids))
+            cursor.execute(f"DELETE FROM reports WHERE job_id IN ({placeholders})", job_ids)
+            conn.commit()
