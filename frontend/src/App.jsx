@@ -345,6 +345,7 @@ const ProcessingTerminal = ({ onComplete, onError, onCancel, companyDetails }) =
   const jobIdRef = useRef(null);
   const wsRef = useRef(null);
   const nodeStatesRef = useRef({});
+  const entityMetaRef = useRef({}); // tracks { role, parentEntity } per entity
   
   useEffect(() => {
     endOfLogsRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -373,12 +374,13 @@ const ProcessingTerminal = ({ onComplete, onError, onCancel, companyDetails }) =
             setLogs(prev => [...prev, ...data.logs]);
             
             const newStates = { ...nodeStatesRef.current };
+            const newMeta = { ...entityMetaRef.current };
             let stateChanged = false;
             for (const log of data.logs) {
               if (log.text.startsWith("[EVENT]")) {
                 try {
                   const eventData = JSON.parse(log.text.substring(7));
-                  const { entity, agent, status } = eventData;
+                  const { entity, agent, status, role, parent_entity } = eventData;
                   if (!newStates[entity]) {
                     newStates[entity] = {};
                     stateChanged = true;
@@ -387,11 +389,17 @@ const ProcessingTerminal = ({ onComplete, onError, onCancel, companyDetails }) =
                     newStates[entity][agent] = status;
                     stateChanged = true;
                   }
+                  // Track role metadata for graph positioning
+                  if (!newMeta[entity]) {
+                    newMeta[entity] = { role: role || 'root', parentEntity: parent_entity || null };
+                    stateChanged = true;
+                  }
                 } catch (e) {}
               }
             }
             if (stateChanged) {
               nodeStatesRef.current = newStates;
+              entityMetaRef.current = newMeta;
               setNodeStates(newStates);
             }
           }
@@ -476,41 +484,113 @@ const ProcessingTerminal = ({ onComplete, onError, onCancel, companyDetails }) =
     }
   };
 
-  // Build Graph
+  // Build Graph — role-aware
   const nodes = [];
   const edges = [];
+  const seenEdges = new Set();
   const entities = Object.keys(nodeStates);
-  
-  if (entities.length === 0) {
-    // Show root node at least
+
+  // Always ensure root node exists
+  const rootName = companyDetails.company_name;
+  const allEntities = entities.length === 0 ? [rootName] : entities;
+
+  // Collect roles and parent relationships
+  const roles = entityMetaRef.current;
+
+  allEntities.forEach((entity) => {
+    const role = roles[entity]?.role || (entity === rootName ? 'root' : 'supplier');
+    const isRoot = entity === rootName;
+    const isParent = role === 'parent';
+
     nodes.push({
-      id: companyDetails.company_name,
+      id: entity,
       type: 'custom',
-      data: { entity: companyDetails.company_name, agents: {} },
-      position: { x: 0, y: 0 }
+      data: { entity, agents: nodeStates[entity] || {}, role },
+      position: { x: 0, y: 0 },
     });
-  } else {
-    entities.forEach((entity) => {
-      nodes.push({
-        id: entity,
-        type: 'custom',
-        data: { entity, agents: nodeStates[entity] },
-        position: { x: 0, y: 0 }
-      });
-      if (entity !== companyDetails.company_name) {
+
+    const parentEntity = roles[entity]?.parentEntity;
+    if (parentEntity && parentEntity !== entity) {
+      const edgeId = isParent
+        ? `${entity}-owns-${parentEntity}`
+        : `${entity}-supplies-${parentEntity}`; // supplier→supplied: arrow points from entity to parentEntity
+      if (!seenEdges.has(edgeId)) {
+        seenEdges.add(edgeId);
         edges.push({
-          id: `root->${entity}`,
-          source: companyDetails.company_name,
-          target: entity,
+          id: edgeId,
+          source: entity,
+          target: parentEntity,
+          sourceHandle: isParent ? 'bottom' : 'left',
+          targetHandle: isParent ? 'top' : 'right',
           type: 'smoothstep',
           animated: true,
-          style: { stroke: '#3b82f6', strokeWidth: 2 }
+          style: { 
+            stroke: isParent ? '#a855f7' : '#3b82f6', 
+            strokeWidth: 2,
+            strokeDasharray: isParent ? '6 3' : '4 4',
+          },
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+            width: 14,
+            height: 14,
+            color: isParent ? '#a855f7' : '#3b82f6',
+          }
         });
       }
-    });
-  }
+    } else if (!isRoot && !parentEntity) {
+      // Fallback: connect unknown entity to root
+      const edgeId = `${entity}-supplies-${rootName}`;
+      if (!seenEdges.has(edgeId)) {
+        seenEdges.add(edgeId);
+        edges.push({
+          id: edgeId,
+          source: entity,
+          target: rootName,
+          sourceHandle: 'left',
+          targetHandle: 'right',
+          type: 'smoothstep',
+          animated: true,
+          style: { stroke: '#3b82f6', strokeWidth: 2, strokeDasharray: '4 4' },
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+            width: 14,
+            height: 14,
+            color: '#3b82f6',
+          }
+        });
+      }
+    }
+  });
 
-  const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(nodes, edges, 'LR');
+  const supplyEdges = edges.filter(e => !e.id.includes('-owns-'));
+  const { nodes: layoutedNodes } = getLayoutedElements(nodes, supplyEdges, 'LR');
+  
+  const NODE_HEIGHT = 90;
+  const PARENT_GAP = 200; // vertical gap between parent and subsidiary
+  edges
+    .filter(e => e.id.includes('-owns-'))
+    .forEach(edge => {
+      const parentNode = layoutedNodes.find(n => n.id === edge.source);
+      const subsidNode = layoutedNodes.find(n => n.id === edge.target);
+      if (parentNode && subsidNode) {
+        parentNode.position = {
+          x: subsidNode.position.x,
+          y: subsidNode.position.y - NODE_HEIGHT - PARENT_GAP,
+        };
+      }
+    });
+
+  edges
+    .filter(e => e.id.includes('-supplies-'))
+    .forEach(supplyEdge => {
+      const supplierNode = layoutedNodes.find(n => n.id === supplyEdge.source);
+      const suppliedNode = layoutedNodes.find(n => n.id === supplyEdge.target);
+      if (supplierNode && suppliedNode && suppliedNode.position.y < -100) {
+        supplierNode.position.y = suppliedNode.position.y;
+      }
+    });
+
+  const layoutedEdges = edges;
 
   return (
     <div className="w-full flex flex-col h-[800px] bg-slate-50 dark:bg-slate-900 rounded-xl overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800 relative">
@@ -546,6 +626,7 @@ const ProcessingTerminal = ({ onComplete, onError, onCancel, companyDetails }) =
             nodes={layoutedNodes}
             edges={layoutedEdges}
             nodeTypes={loadingNodeTypes}
+            nodeOrigin={[0.5, 0.5]}
             fitView
             fitViewOptions={{ padding: 0.2 }}
             attributionPosition="bottom-left"
@@ -582,21 +663,20 @@ const ProcessingTerminal = ({ onComplete, onError, onCancel, companyDetails }) =
   );
 };
 
-const getLayoutedElements = (nodes, edges, direction = 'TB') => {
+const getLayoutedElements = (nodes, edges, direction = 'LR') => {
   const dagreGraph = new dagre.graphlib.Graph();
   dagreGraph.setDefaultEdgeLabel(() => ({}));
 
   const nodeWidth = 220;
-  const nodeHeight = 90;
-  // Increase vertical spacing (ranksep) to give arrows more room
-  dagreGraph.setGraph({ rankdir: direction, ranksep: 120, nodesep: 60 });
+  const nodeHeight = 110;
+  dagreGraph.setGraph({ rankdir: direction, ranksep: 140, nodesep: 80 });
 
   nodes.forEach((node) => {
     dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
   });
 
   edges.forEach((edge) => {
-    // Reverse the edge in dagre so that the parent (target) stays at the top of the tree
+    // Reverse for dagre so that the "supplied company" ranks LEFT and its suppliers rank RIGHT
     dagreGraph.setEdge(edge.target, edge.source);
   });
 
@@ -605,9 +685,10 @@ const getLayoutedElements = (nodes, edges, direction = 'TB') => {
   const layoutedNodes = nodes.map((node) => {
     const nodeWithPosition = dagreGraph.node(node.id);
     node.position = {
-      x: nodeWithPosition.x - nodeWidth / 2,
-      y: nodeWithPosition.y - nodeHeight / 2,
+      x: nodeWithPosition.x,
+      y: nodeWithPosition.y,
     };
+    node.origin = [0.5, 0.5]; // Centers the node on the coordinate, allowing dynamic height growth
     return node;
   });
 
@@ -616,8 +697,11 @@ const getLayoutedElements = (nodes, edges, direction = 'TB') => {
 
 const CustomNode = ({ data }) => {
   return (
-    <div className="bg-white dark:bg-slate-800 border-2 rounded-lg p-3 shadow-md w-[220px] flex flex-col items-center transition-all hover:shadow-lg hover:-translate-y-1" style={{borderColor: data.color}}>
-      <Handle type="source" position={Position.Top} className="opacity-0" />
+    <div className="bg-white dark:bg-slate-800 border-2 rounded-lg p-3 shadow-md w-[220px] min-h-[110px] flex flex-col items-center justify-between transition-all hover:shadow-lg hover:-translate-y-1" style={{borderColor: data.color}}>
+      {/* Top handle: used by ownership lines (parent above, child below) */}
+      <Handle type="target" position={Position.Top} id="top" className="opacity-0" />
+      {/* Left handle: supplier connects from its left side to the target */}
+      <Handle type="source" position={Position.Left} id="left" className="opacity-0" />
       <div className="flex flex-col items-center gap-1 mb-2 w-full">
         {data.icon}
         <span className="font-bold text-slate-800 dark:text-slate-100 text-sm text-center line-clamp-2 w-full">{data.label}</span>
@@ -625,7 +709,10 @@ const CustomNode = ({ data }) => {
       <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border`} style={{color: data.color, borderColor: data.color}}>
         {data.risk} Risk
       </span>
-      <Handle type="target" position={Position.Bottom} className="opacity-0" />
+      {/* Bottom handle: used by ownership lines */}
+      <Handle type="source" position={Position.Bottom} id="bottom" className="opacity-0" />
+      {/* Right handle: supplied company receives on its right side */}
+      <Handle type="target" position={Position.Right} id="right" className="opacity-0" />
     </div>
   );
 };
@@ -635,54 +722,125 @@ const SupplyChainGraph = ({ report, theme, onNodeSelect }) => {
   const [isLegendOpen, setIsLegendOpen] = useState(true);
   const initialNodes = [];
   const initialEdges = [];
-  
-  const buildGraph = (node, parentId = null) => {
+  const seenNodes = new Set();
+  const seenEdges = new Set();
+
+  // Build supply chain edges: parent → target flows RIGHT (LR layout)
+  // Build parent-company edges: parent is ABOVE target (dagre handles via reversed edge)
+  const buildGraph = (node, parentId = null, relationship = 'supply') => {
     const nodeId = node.vendor_name;
-    
-    if (!initialNodes.find(n => n.id === nodeId)) {
+
+    if (!seenNodes.has(nodeId)) {
+      seenNodes.add(nodeId);
       initialNodes.push({
         id: nodeId,
         type: 'custom',
-        data: { 
+        data: {
           label: node.vendor_name,
           risk: node.overall_risk,
           color: SEVERITY_COLORS[node.overall_risk],
           icon: getSeverityIcon(node.overall_risk),
-          fullReport: node
-        }
+          fullReport: node,
+          relationship,
+        },
+        position: { x: 0, y: 0 },
       });
     }
 
     if (parentId) {
-      initialEdges.push({
-        id: `${nodeId}->${parentId}`,
-        source: nodeId,
-        target: parentId,
-        type: 'smoothstep',
-        animated: true,
-        style: { stroke: theme === 'dark' ? '#94a3b8' : '#64748b', strokeWidth: 2 },
-        markerEnd: {
-          type: MarkerType.ArrowClosed,
-          width: 12,
-          height: 12,
-          color: theme === 'dark' ? '#94a3b8' : '#64748b',
-        }
-      });
+      const isParentRel = relationship === 'parent';
+      const edgeId = isParentRel
+        ? `${nodeId}-owns-${parentId}`
+        : `${nodeId}-supplies-${parentId}`; // supplier→supplied: arrow points from nodeId to parentId
+
+      if (!seenEdges.has(edgeId)) {
+        seenEdges.add(edgeId);
+        initialEdges.push({
+          id: edgeId,
+          // Supply: supplier (nodeId) → company it supplies (parentId)
+          // Parent: parent company (nodeId) → subsidiary (parentId) — drawn top→bottom
+          source: nodeId,
+          target: parentId,
+          sourceHandle: isParentRel ? 'bottom' : 'left',
+          targetHandle: isParentRel ? 'top' : 'right',
+          type: 'smoothstep',
+          animated: true,
+          // No labels — relationship shown in legend
+          style: {
+            stroke: isParentRel
+              ? (theme === 'dark' ? '#a855f7' : '#9333ea')
+              : (theme === 'dark' ? '#3b82f6' : '#2563eb'),
+            strokeWidth: 2,
+            strokeDasharray: isParentRel ? '6 3' : '4 4',
+          },
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+            width: 14,
+            height: 14,
+            color: isParentRel
+              ? (theme === 'dark' ? '#a855f7' : '#9333ea')
+              : (theme === 'dark' ? '#3b82f6' : '#2563eb'),
+          },
+        });
+      }
     }
 
+    // Supply chain nodes branch rightward
     if (node.supply_chain && node.supply_chain.length > 0) {
-      node.supply_chain.forEach(child => buildGraph(child, nodeId));
+      node.supply_chain.forEach(child => buildGraph(child, nodeId, 'supply'));
     }
-    
+
+    // Parent company branches upward
     if (node.parent_company) {
-      buildGraph(node.parent_company, nodeId);
+      buildGraph(node.parent_company, nodeId, 'parent');
     }
   };
 
   buildGraph(report);
+
+  // Use LR so supply chain flows right
+  // Only feed supply chain edges to dagre — ownership edges are handled by manual positioning
+  const supplyEdges = initialEdges.filter(e => !e.id.includes('-owns-'));
+  const { nodes: layoutedNodes } = getLayoutedElements(initialNodes, supplyEdges, 'LR');
   
-  const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(initialNodes, initialEdges, 'TB');
-  
+  // dagre LR puts ALL source nodes to the left of their targets, including parent companies.
+  // We want parent companies ABOVE their subsidiaries, so we manually override their positions
+  // after dagre has already placed the supply chain nodes correctly.
+  const NODE_HEIGHT = 90;
+  const PARENT_GAP = 200; // vertical gap between parent and subsidiary
+  initialEdges
+    .filter(e => e.id.includes('-owns-'))
+    .forEach(edge => {
+      // edge.source = parent company, edge.target = subsidiary
+      const parentNode = layoutedNodes.find(n => n.id === edge.source);
+      const subsidNode = layoutedNodes.find(n => n.id === edge.target);
+      if (parentNode && subsidNode) {
+        // Place parent directly above the subsidiary, centered horizontally
+        parentNode.position = {
+          x: subsidNode.position.x,
+          y: subsidNode.position.y - NODE_HEIGHT - PARENT_GAP,
+        };
+      }
+    });
+
+  // After positioning parent above subsidiary, also shift the parent's suppliers
+  // to be at the same vertical level as the parent
+  initialEdges
+    .filter(e => e.id.includes('-supplies-'))
+    .forEach(supplyEdge => {
+      // supplyEdge.source = supplier, supplyEdge.target = company being supplied
+      const supplierNode = layoutedNodes.find(n => n.id === supplyEdge.source);
+      const suppliedNode = layoutedNodes.find(n => n.id === supplyEdge.target);
+      // We only want to adjust suppliers belonging to parents (who have negative Y positions relative to the main tree)
+      if (supplierNode && suppliedNode && suppliedNode.position.y < -100) {
+        // Align supplier's Y to the company it supplies (which may have been moved up for parent)
+        supplierNode.position.y = suppliedNode.position.y;
+      }
+    });
+
+  // We need to pass the full initialEdges to ReactFlow, not just the supplyEdges used for layout
+  const layoutedEdges = initialEdges;
+
   const onNodeClick = (event, node) => {
     if (onNodeSelect) {
       onNodeSelect(node.data.fullReport);
@@ -695,6 +853,7 @@ const SupplyChainGraph = ({ report, theme, onNodeSelect }) => {
         nodes={layoutedNodes}
         edges={layoutedEdges}
         nodeTypes={nodeTypes}
+        nodeOrigin={[0.5, 0.5]}
         onNodeClick={onNodeClick}
         fitView
         fitViewOptions={{ padding: 0.2 }}
@@ -703,21 +862,43 @@ const SupplyChainGraph = ({ report, theme, onNodeSelect }) => {
         <Background color={theme === 'dark' ? '#334155' : '#cbd5e1'} gap={16} />
         <Controls />
         
-        {/* Risk Legend */}
-        <div className="absolute bottom-4 right-4 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm p-3 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 text-xs z-10 transition-all duration-300 overflow-hidden">
-          <div className="flex items-center justify-between gap-6 cursor-pointer group" onClick={() => setIsLegendOpen(!isLegendOpen)}>
-            <h4 className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider select-none">Risk Legend</h4>
-            <button className="text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 transition-colors" title={isLegendOpen ? "Minimize Legend" : "Expand Legend"}>
+        {/* Legend Panel */}
+        <div className="absolute bottom-4 right-4 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm p-3 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 text-xs z-10 transition-all duration-300 overflow-hidden w-44">
+          <div className="flex items-center justify-between gap-4 cursor-pointer group" onClick={() => setIsLegendOpen(!isLegendOpen)}>
+            <h4 className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider select-none">Legend</h4>
+            <button className="text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 transition-colors" title={isLegendOpen ? 'Collapse' : 'Expand'}>
               {isLegendOpen ? <ChevronRight className="w-4 h-4 rotate-90" /> : <ChevronRight className="w-4 h-4 -rotate-90" />}
             </button>
           </div>
           {isLegendOpen && (
-            <div className="flex flex-col gap-2 mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
-              <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-blue-500"></div><span className="text-slate-600 dark:text-slate-300 font-semibold">No Risk</span></div>
-              <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-green-500"></div><span className="text-slate-600 dark:text-slate-300 font-semibold">Low Risk</span></div>
-              <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-amber-500"></div><span className="text-slate-600 dark:text-slate-300 font-semibold">Medium Risk</span></div>
-              <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-red-500"></div><span className="text-slate-600 dark:text-slate-300 font-semibold">High Risk</span></div>
-              <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-red-900 animate-pulse"></div><span className="text-slate-600 dark:text-slate-300 font-semibold">Critical Risk</span></div>
+            <div className="mt-3 space-y-3">
+              {/* Risk sub-section */}
+              <div>
+                <p className="text-[10px] uppercase tracking-widest text-slate-400 dark:text-slate-500 font-bold mb-1.5">Risk</p>
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-blue-500"></div><span className="text-slate-600 dark:text-slate-300">No Risk</span></div>
+                  <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-green-500"></div><span className="text-slate-600 dark:text-slate-300">Low</span></div>
+                  <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-amber-500"></div><span className="text-slate-600 dark:text-slate-300">Medium</span></div>
+                  <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-red-500"></div><span className="text-slate-600 dark:text-slate-300">High</span></div>
+                  <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-red-900 animate-pulse"></div><span className="text-slate-600 dark:text-slate-300">Critical</span></div>
+                </div>
+              </div>
+              {/* Relationship sub-section */}
+              <div className="border-t border-slate-200 dark:border-slate-700 pt-3">
+                <p className="text-[10px] uppercase tracking-widest text-slate-400 dark:text-slate-500 font-bold mb-1.5">Relationship</p>
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-0 flex-shrink-0" style={{borderTop:'2px dashed #3b82f6',position:'relative'}}>
+                    </div>
+                    <span className="text-slate-600 dark:text-slate-300">Supplies</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-0 flex-shrink-0" style={{borderTop:'2px dashed #9333ea',position:'relative'}}>
+                    </div>
+                    <span className="text-slate-600 dark:text-slate-300">Owns</span>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>

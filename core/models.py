@@ -166,6 +166,10 @@ class DDContext(BaseModel):
     enable_parent_company: bool = False
     enable_parent_supply_chain: bool = False
     parent_task: asyncio.Task | None = Field(default=None, exclude=True)
+    # Role of this entity in the graph: 'root', 'supplier', or 'parent'
+    entity_role: str = Field(default='root')
+    # Name of the entity that spawned this context (for edge drawing)
+    parent_entity: str | None = Field(default=None)
 
     def log(self, message: str) -> None:
         stamped = f"{datetime.now(timezone.utc).isoformat()} | {message}"
@@ -174,7 +178,7 @@ class DDContext(BaseModel):
         
     def log_event(self, entity: str, agent: str, status: str) -> None:
         import json
-        event = {"entity": entity, "agent": agent, "status": status}
+        event = {"entity": entity, "agent": agent, "status": status, "role": self.entity_role, "parent_entity": self.parent_entity}
         message = f"[EVENT] {json.dumps(event)}"
         stamped = f"{datetime.now(timezone.utc).isoformat()} | {message}"
         self.execution_log.append(stamped)

@@ -85,6 +85,8 @@ async def run_dd_with_ctx(ctx: DDContext) -> DDReport:
                             visited_lock=current_ctx.visited_lock,
                             enable_parent_company=False,
                             enable_parent_supply_chain=False,
+                            entity_role='parent',
+                            parent_entity=current_ctx.company_details.company_name,
                         )
                         # Assign by reference AFTER construction to bypass Pydantic's deep copy
                         parent_ctx.execution_log = current_ctx.execution_log
@@ -121,6 +123,8 @@ async def run_dd_with_ctx(ctx: DDContext) -> DDReport:
                             max_suppliers_per_node=current_ctx.max_suppliers_per_node,
                             visited_companies=current_ctx.visited_companies,
                             visited_lock=current_ctx.visited_lock,
+                            entity_role='supplier',
+                            parent_entity=current_ctx.company_details.company_name,
                         )
                         # Assign by reference AFTER construction to bypass Pydantic's deep copy
                         child_ctx.execution_log = current_ctx.execution_log
