@@ -4,3 +4,4 @@ cache.db
 /venv
 /.agents
 node_modules/
+history.db
