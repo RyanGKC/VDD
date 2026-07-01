@@ -268,12 +268,55 @@ const InputForm = ({ onSubmit, onInstantMock }) => {
   );
 };
 
+const AGENT_LIST = ["shareholders", "kyb", "sanctions", "profile", "licenses", "finances", "resilience", "esg", "media"];
+
+const LoadingGraphNode = ({ data }) => {
+  return (
+    <div className="bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-600 rounded-lg p-3 shadow-md w-[260px] flex flex-col items-center">
+      <Handle type="target" position={Position.Left} className="w-2 h-2" />
+      <div className="font-bold text-slate-800 dark:text-slate-100 mb-2 text-center w-full truncate" title={data.entity}>
+        {data.entity}
+      </div>
+      <div className="grid grid-cols-3 gap-2 w-full mt-2">
+        {AGENT_LIST.map(agent => {
+          const status = data.agents[agent] || 'pending';
+          let bgColor = 'bg-slate-200 dark:bg-slate-700';
+          let ping = false;
+          if (status === 'running') {
+            bgColor = 'bg-blue-500';
+            ping = true;
+          } else if (status === 'completed') {
+            bgColor = 'bg-green-500';
+          } else if (status === 'error') {
+            bgColor = 'bg-red-500';
+          }
+          return (
+            <div key={agent} className="flex flex-col items-center gap-1" title={agent}>
+              <div className="relative">
+                {ping && <div className="absolute inset-0 rounded-full bg-blue-400 animate-ping opacity-75"></div>}
+                <div className={`w-3 h-3 rounded-full ${bgColor} relative z-10`}></div>
+              </div>
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-tighter truncate w-14 text-center">{agent.substring(0,4)}</span>
+            </div>
+          );
+        })}
+      </div>
+      <Handle type="source" position={Position.Right} className="w-2 h-2" />
+    </div>
+  );
+};
+
+const loadingNodeTypes = { custom: LoadingGraphNode };
+
 const ProcessingTerminal = ({ onComplete, onError, onCancel, companyDetails }) => {
   const [logs, setLogs] = useState([]);
+  const [nodeStates, setNodeStates] = useState({});
+  const [isConsoleOpen, setIsConsoleOpen] = useState(false);
   const endOfLogsRef = useRef(null);
   const abortControllerRef = useRef(null);
   const jobIdRef = useRef(null);
   const wsRef = useRef(null);
+  const nodeStatesRef = useRef({});
   
   useEffect(() => {
     endOfLogsRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -300,6 +343,29 @@ const ProcessingTerminal = ({ onComplete, onError, onCancel, companyDetails }) =
           const data = JSON.parse(event.data);
           if (data.logs && data.logs.length > 0) {
             setLogs(prev => [...prev, ...data.logs]);
+            
+            const newStates = { ...nodeStatesRef.current };
+            let stateChanged = false;
+            for (const log of data.logs) {
+              if (log.text.startsWith("[EVENT]")) {
+                try {
+                  const eventData = JSON.parse(log.text.substring(7));
+                  const { entity, agent, status } = eventData;
+                  if (!newStates[entity]) {
+                    newStates[entity] = {};
+                    stateChanged = true;
+                  }
+                  if (newStates[entity][agent] !== status) {
+                    newStates[entity][agent] = status;
+                    stateChanged = true;
+                  }
+                } catch (e) {}
+              }
+            }
+            if (stateChanged) {
+              nodeStatesRef.current = newStates;
+              setNodeStates(newStates);
+            }
           }
         } catch (e) {
           console.error("WebSocket parse error:", e);
@@ -378,36 +444,99 @@ const ProcessingTerminal = ({ onComplete, onError, onCancel, companyDetails }) =
     }
   };
 
+  // Build Graph
+  const nodes = [];
+  const edges = [];
+  const entities = Object.keys(nodeStates);
+  
+  if (entities.length === 0) {
+    // Show root node at least
+    nodes.push({
+      id: companyDetails.company_name,
+      type: 'custom',
+      data: { entity: companyDetails.company_name, agents: {} },
+      position: { x: 0, y: 0 }
+    });
+  } else {
+    entities.forEach((entity) => {
+      nodes.push({
+        id: entity,
+        type: 'custom',
+        data: { entity, agents: nodeStates[entity] },
+        position: { x: 0, y: 0 }
+      });
+      if (entity !== companyDetails.company_name) {
+        edges.push({
+          id: `root->${entity}`,
+          source: companyDetails.company_name,
+          target: entity,
+          type: 'smoothstep',
+          animated: true,
+          style: { stroke: '#3b82f6', strokeWidth: 2 }
+        });
+      }
+    });
+  }
+
+  const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(nodes, edges, 'LR');
+
   return (
-    <div className="max-w-3xl mx-auto w-full">
-      <div className="bg-slate-900 rounded-xl overflow-hidden shadow-2xl border border-slate-700 dark:border-slate-800">
-        <div className="bg-slate-950 px-4 py-3 flex items-center justify-between border-b border-slate-800">
-          <div className="flex gap-2">
-            <div className="w-3 h-3 rounded-full bg-red-500"></div>
-            <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-            <div className="w-3 h-3 rounded-full bg-green-500"></div>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-slate-400 text-xs font-mono flex items-center gap-2">
-              <Loader2 className="w-3 h-3 animate-spin" /> FlowEngine Executing
-            </span>
-            <button 
-              onClick={handleCancelClick}
-              className="text-xs text-red-400 hover:text-red-300 font-semibold transition"
-            >
-              Cancel
-            </button>
-          </div>
+    <div className="w-full flex flex-col h-[600px] bg-slate-50 dark:bg-slate-900 rounded-xl overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800 relative">
+      {/* Header */}
+      <div className="bg-slate-800 dark:bg-slate-950 px-4 py-3 flex items-center justify-between border-b border-slate-700 dark:border-slate-800 z-10">
+        <div className="flex items-center gap-4">
+          <span className="text-slate-300 font-bold flex items-center gap-2">
+            <Loader2 className="w-4 h-4 animate-spin text-blue-400" /> Research in Progress...
+          </span>
         </div>
-        <div className="p-6 font-mono text-sm h-96 overflow-y-auto space-y-2">
-          {logs.map((log, i) => (
-            <div key={i} className={`flex gap-3 ${log.isError ? 'text-red-400' : log.isSuper ? 'text-purple-400' : 'text-emerald-400'}`}>
-              <span className="text-slate-500 shrink-0">[{log.time}]</span>
-              <span className={log.isError ? 'font-bold' : ''}>{log.text}</span>
-            </div>
-          ))}
-          <div ref={endOfLogsRef} />
-        </div>
+        <button 
+          onClick={handleCancelClick}
+          className="text-sm bg-slate-700 hover:bg-slate-600 text-red-400 px-3 py-1 rounded-md font-semibold transition"
+        >
+          Cancel Flow
+        </button>
+      </div>
+      
+      {/* ReactFlow Graph Canvas */}
+      <div className="flex-1 relative">
+        <ReactFlow
+          nodes={layoutedNodes}
+          edges={layoutedEdges}
+          nodeTypes={loadingNodeTypes}
+          fitView
+          fitViewOptions={{ padding: 0.2 }}
+          attributionPosition="bottom-left"
+        >
+          <Background color="#94a3b8" gap={20} />
+          <Controls />
+        </ReactFlow>
+      </div>
+
+      {/* Collapsible Debug Console */}
+      <div className={`absolute bottom-0 left-0 right-0 bg-slate-950 border-t border-slate-700 transition-all duration-300 ${isConsoleOpen ? 'h-64' : 'h-10'}`}>
+        <button 
+          onClick={() => setIsConsoleOpen(!isConsoleOpen)}
+          className="w-full h-10 flex items-center justify-between px-4 text-slate-400 hover:text-slate-200 hover:bg-slate-900 transition font-mono text-xs"
+        >
+          <span className="flex items-center gap-2">
+            {isConsoleOpen ? '▼' : '▲'} Debug Console
+          </span>
+          <span>{logs.length} logs</span>
+        </button>
+        {isConsoleOpen && (
+          <div className="p-4 font-mono text-xs h-54 overflow-y-auto space-y-1">
+            {logs.map((log, i) => {
+              if (log.text.startsWith("[EVENT]")) return null; // Hide structured events from raw log
+              return (
+                <div key={i} className={`flex gap-3 ${log.isError ? 'text-red-400' : log.isSuper ? 'text-purple-400' : 'text-emerald-400'}`}>
+                  <span className="text-slate-500 shrink-0">[{log.time}]</span>
+                  <span className={log.isError ? 'font-bold' : ''}>{log.text}</span>
+                </div>
+              );
+            })}
+            <div ref={endOfLogsRef} />
+          </div>
+        )}
       </div>
     </div>
   );

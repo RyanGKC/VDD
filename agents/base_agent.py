@@ -130,12 +130,17 @@ class BaseResearchAgent(AgentExecutor, abc.ABC):
     async def run(self, ctx: DDContext) -> StepResult:
         print(f"\n--- Running {self.step.value.upper()} Agent ---")
         ctx.log(f"START step={self.step.value}")
+        if hasattr(ctx, 'log_event'):
+            ctx.log_event(ctx.company_details.company_name, self.step.value, "running")
+            
         try:
             # Await the async research logic
             result = await self.research(ctx)
         except Exception as exc:  # noqa: BLE001 - we deliberately catch all
             logger.exception("Agent %s failed", self.step.value)
             ctx.log(f"ERROR step={self.step.value} err={exc}")
+            if hasattr(ctx, 'log_event'):
+                ctx.log_event(ctx.company_details.company_name, self.step.value, "error")
             print(f"[{self.step.value.upper()}] Agent failed with error: {exc}")
             # Return an empty-but-valid result so the flow can continue
             return StepResult(step=self.step)
@@ -152,6 +157,8 @@ class BaseResearchAgent(AgentExecutor, abc.ABC):
             print(f"[{self.step.value.upper()}] ANOMALY RAISED: {result.anomaly.reason}")
             
         ctx.log(f"DONE step={self.step.value} findings={len(result.findings)}")
+        if hasattr(ctx, 'log_event'):
+            ctx.log_event(ctx.company_details.company_name, self.step.value, "completed")
         print(f"[{self.step.value.upper()}] Completed with {len(result.findings)} findings:")
         if result.rationale:
             print(f"  > Rationale: {result.rationale}")

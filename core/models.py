@@ -168,6 +168,13 @@ class DDContext(BaseModel):
         self.execution_log.append(stamped)
         self.detailed_audit_log.append(stamped)
         
+    def log_event(self, entity: str, agent: str, status: str) -> None:
+        import json
+        event = {"entity": entity, "agent": agent, "status": status}
+        message = f"[EVENT] {json.dumps(event)}"
+        stamped = f"{datetime.now(timezone.utc).isoformat()} | {message}"
+        self.execution_log.append(stamped)
+        
     def audit(self, message: str) -> None:
         """Log detailed information exclusively to the downloadable audit file, not the UI."""
         stamped = f"{datetime.now(timezone.utc).isoformat()} | {message}"
