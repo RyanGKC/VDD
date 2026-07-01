@@ -1,21 +1,32 @@
 # Vendor Due Diligence (VDD) Prototype
 
-An AI-powered multi-agent system that automates deep-dive due diligence and supply chain mapping for corporate vendors. The system investigates companies across multiple risk vectors (KYB, Sanctions, Financials, ESG, Adverse Media, etc.) and recursively maps out supply chains, evaluating risks at every tier using a Neo4j graph database.
+An AI-powered multi-agent system designed to automate deep-dive due diligence and supply chain mapping for corporate vendors. The system investigates companies across multiple risk vectors and recursively maps out supply chains, evaluating risks at every tier.
 
-## Features
-- **Multi-Agent Architecture**: Specialised AI agents (Sanctions, ESG, Media, Finances, Resilience, etc.) autonomously research different risk vectors.
-- **Adaptive Execution**: A Supervisor Agent monitors the pipeline for anomalies and adjusts the investigation flow dynamically.
-- **Recursive Supply Chain Mapping**: Discovers suppliers of suppliers, creating a complete supply chain graph mapped into a Neo4j database.
-- **Detailed Audit Trails**: Every conclusion is backed by chronological execution logs and raw source data.
-- **Mock Data Support**: Capable of running in a safe mock mode to demonstrate functionality without spending API quotas.
-- **React Frontend**: A modern, interactive dashboard for submitting reports and visualising the analysis.
+## What It Does
+
+The VDD Prototype streamlines the traditionally manual process of vendor risk assessment by employing specialized AI agents. 
+
+- **Comprehensive Risk Analysis:** Specialized agents autonomously research different vectors including KYB (Know Your Business), Sanctions, Financials, ESG (Environmental, Social, and Governance), Resilience, and Adverse Media.
+- **Deterministic Risk Scoring:** Enforces programmatic risk aggregation to prevent AI hallucinations and ensure perfectly consistent executive summaries.
+- **Hierarchical Supply Chain Mapping:** Recursively discovers and visually maps the relationships between target companies, their parent companies, and their downstream suppliers using a Neo4j graph database.
+- **Real-Time Execution Monitoring:** A WebSocket-based live terminal and dynamic graph allow users to watch the AI agents actively research and construct the supply chain in real-time.
+- **Interactive Reporting:** Generates comprehensive risk reports with color-coded severity indicators, detailed historical audit logs, and interactive supply chain maps.
+
+## Architecture
+
+The system is built on a decoupled client-server architecture:
+- **Frontend (React/Vite):** A modern, responsive dashboard featuring interactive Dagre/ReactFlow graphs for visualizing complex supply chains, alongside historical report management.
+- **Backend (FastAPI & Python):** A DAG-based execution orchestrator (`FlowEngine`) that manages a network of specialized AI sub-agents running concurrently in parallel to maximize analysis speed. Powered by Gemini 3.5 Flash.
+- **Graph Database (Neo4j):** Stores the relational data between entities, allowing for complex queries and relationship mapping across the supply chain.
 
 ## Prerequisites
+
+Before running the system, ensure you have the following installed:
 - **Python 3.12+**
 - **Node.js 18+**
-- **Neo4j Database** (Running locally or on AuraDB)
+- **Neo4j Database** (Running locally via Desktop/Docker, or hosted on AuraDB)
 
-## Setup
+## Setup & Configuration
 
 ### 1. Backend Configuration
 Create a virtual environment and install the dependencies:
@@ -28,7 +39,6 @@ pip install -r requirements.txt
 Create a `.env` file in the root directory and configure your API keys:
 ```env
 # Core AI Models
-OPENAI_API_KEY=your_openai_key
 GOOGLE_API_KEY=your_gemini_key
 
 # Research Data Providers
@@ -38,10 +48,13 @@ FMP_API_KEY=your_fmp_key
 NEWSAPI_KEY=your_news_key
 TAVILY_API_KEY=your_tavily_key
 
-# Graph Database (Optional: falls back to localhost if omitted)
+# Graph Database Configuration
 NEO4J_URI=bolt://localhost:7687
 NEO4J_USER=neo4j
-NEO4J_PASSWORD=password
+NEO4J_PASSWORD=your_neo4j_password
+
+# Testing / Demo
+USE_MOCK=False
 ```
 
 ### 2. Frontend Configuration
@@ -51,27 +64,21 @@ cd frontend
 npm install
 ```
 
-## Running the Application
+## Running the System
 
-You need to start both the backend server and the frontend application.
+You will need two separate terminal windows to run both the backend API and the frontend dashboard simultaneously.
 
-**Start the Backend (FastAPI):**
+**1. Start the Backend API:**
 In the root directory, with your virtual environment activated:
 ```bash
 python server.py
 ```
 *The API will be available at `http://localhost:8000`.*
 
-**Start the Frontend (React/Vite):**
-In a separate terminal:
+**2. Start the Frontend Dashboard:**
+In a separate terminal, navigate to the frontend directory:
 ```bash
 cd frontend
 npm run dev
 ```
-*The web dashboard will be available at `http://localhost:5173` (or the port specified by Vite).*
-
-## Architecture Overview
-- **`agents/`**: Contains the logic for the individual research sub-agents (e.g., `ESGAgent`, `SanctionsAgent`, `SummaryAgent`, `SupervisorAgent`).
-- **`core/`**: Houses the central `FlowEngine` (DAG orchestrator), data models (`models.py`), API clients (`openai_client.py`, `neo4j_client.py`), and real/mock tool functions.
-- **`main.py`**: Constructs the agent network and orchestrates the recursive supply chain pipelines.
-- **`server.py`**: FastAPI endpoints that expose the pipeline to the React frontend.
+*The web dashboard will be accessible at `http://localhost:5173`.*
