@@ -30,7 +30,7 @@ T = TypeVar("T", bound=BaseModel)
 
 class GeminiClient:
     def __init__(self, model: str | None = None, use_cache: bool = False) -> None:
-        self._model = model or os.getenv("GEMINI_MODEL", "gemini-3.1-pro-preview")
+        self._model = model or os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
         self.use_cache = use_cache
         
         # Check if enterprise mode is enabled
