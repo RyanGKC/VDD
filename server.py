@@ -7,6 +7,7 @@ from typing import Optional
 from main import run_dd_with_ctx
 from core.models import DDReport, DDContext, CompanyDetails
 from core.history_db import HistoryDB
+from datetime import datetime, timezone
 import json
 
 app = FastAPI(title="VDD Prototype API")
@@ -37,9 +38,18 @@ class DDRequest(BaseModel):
     job_id: Optional[str] = None
     enable_parent_company: bool = False
     enable_parent_supply_chain: bool = False
+    enable_rag: Optional[bool] = None
 
 @app.post("/api/dd_report", response_model=DDReport)
 async def generate_dd_report(request: DDRequest):
+    import uuid
+    from core.dependencies import (
+        retrieval_engine, ingestion_pipeline,
+        cache_gate, singleflight, background_tasks, vs
+    )
+
+    run_id = request.job_id if request.job_id else str(uuid.uuid4())
+
     ctx = DDContext(
         company_details=CompanyDetails(
             company_name=request.company_name,
@@ -50,8 +60,16 @@ async def generate_dd_report(request: DDRequest):
         tiers_to_search=request.tiers_to_search,
         max_suppliers_per_node=request.max_suppliers_per_node,
         enable_parent_company=request.enable_parent_company,
-        enable_parent_supply_chain=request.enable_parent_supply_chain
+        enable_parent_supply_chain=request.enable_parent_supply_chain,
+        run_id=run_id,
+        retrieval_engine=retrieval_engine,
+        ingestion_pipeline=ingestion_pipeline,
+        cache_gate=cache_gate,
+        singleflight=singleflight,
+        background_tasks=background_tasks,
     )
+    if request.enable_rag is not None:
+        ctx.enable_rag = request.enable_rag
     if request.job_id:
         active_jobs[request.job_id] = ctx
         
@@ -72,6 +90,21 @@ async def generate_dd_report(request: DDRequest):
                 report_json=report.model_dump_json()
             )
             
+            # Embed into historical_reports for cross-run RAG comparison
+            import uuid
+            hist_id = str(uuid.uuid4())
+            metadata = {
+                "primary_entity_id": request.company_name,
+                "report_id": request.job_id,
+                "risk_rating": report.overall_risk.value,
+                "date_generated": datetime.now(timezone.utc).isoformat()
+            }
+            vs.get_collection("historical_reports").add(
+                documents=[f"Summary: {report.executive_summary}\n\nStrengths: {report.strengths}\n\nRed Flags: {report.red_flags}"],
+                metadatas=[metadata],
+                ids=[hist_id]
+            )
+            
         return report
     except asyncio.CancelledError:
         print(f"Job {request.job_id} was successfully cancelled.")
@@ -87,6 +120,15 @@ async def generate_dd_report(request: DDRequest):
                 await asyncio.sleep(5)
                 active_jobs.pop(request.job_id, None)
                 active_tasks.pop(request.job_id, None)
+                
+                # Cleanup ephemeral vector store documents
+                try:
+                    from core.dependencies import vs
+                    vs.get_collection("run_documents").delete(where={"run_id": run_id})
+                    print(f"SYSTEM: Cleaned up run_documents for run_id={run_id}")
+                except Exception as e:
+                    print(f"SYSTEM: Failed to clean up run_documents: {e}")
+                    
             asyncio.create_task(delayed_cleanup())
 
 @app.websocket("/api/ws/dd_status/{job_id}")

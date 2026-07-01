@@ -1,0 +1,653 @@
+Starting test...
+INFO:google_genai._api_client:The user provided project/location will take precedence over the Vertex AI API key from the environment variable.
+INFO:google_genai._api_client:The user provided project/location will take precedence over the Vertex AI API key from the environment variable.
+INFO:neo4j.notifications:Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT company_name IF NOT EXISTS FOR (e:Company) REQUIRE (e.name) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT company_name FOR (e:Company) REQUIRE (e.name) IS UNIQUE' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE CONSTRAINT company_name IF NOT EXISTS FOR (c:Company) REQUIRE c.name IS UNIQUE'
+INFO:neo4j.notifications:Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT person_name IF NOT EXISTS FOR (e:Person) REQUIRE (e.name) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT person_name FOR (e:Person) REQUIRE (e.name) IS UNIQUE' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE CONSTRAINT person_name IF NOT EXISTS FOR (p:Person) REQUIRE p.name IS UNIQUE'
+INFO:neo4j.notifications:Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description='note: successful completion - index or constraint already exists. The command \'CREATE VECTOR INDEX company_embeddings IF NOT EXISTS FOR (e:Company) ON (e.embedding) OPTIONS {indexConfig: {`vector.dimensions`: 768, `vector.similarity_function`: "cosine"}}\' has no effect. The index or constraint specified by \'VECTOR INDEX company_embeddings FOR (e:Company) ON (e.embedding)\' already exists.', position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: "\n        CREATE VECTOR INDEX company_embeddings IF NOT EXISTS \n        FOR (c:Company) ON (c.embedding) \n        OPTIONS {indexConfig: {`vector.dimensions`: 768, `vector.similarity_function`: 'cosine'}}\n        "
+INFO:neo4j.notifications:Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE FULLTEXT INDEX entity_names IF NOT EXISTS FOR (e:Company|Person) ON EACH [e.name, e.canonical_name, e.aliases]' has no effect. The index or constraint specified by 'FULLTEXT INDEX entity_names FOR (e:Company|Person) ON EACH [e.name, e.canonical_name, e.aliases]' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: '\n        CREATE FULLTEXT INDEX entity_names IF NOT EXISTS \n        FOR (n:Company|Person) ON EACH [n.name, n.canonical_name, n.aliases]\n        '
+
+--- Running SHAREHOLDERS Agent ---
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+
+--- Running LICENSES Agent ---
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+
+--- Running PROFILE Agent ---
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+
+--- Running FINANCES Agent ---
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+[SHAREHOLDERS] Research Plan (1 searches):
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+[PROFILE] Research Plan (2 searches):
+[FINANCES] Research Plan (3 searches):
+[LICENSES] Research Plan (3 searches):
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+[SHAREHOLDERS] Completed with 1 findings:
+  > Rationale: Apple Inc. is a publicly traded corporation listed on the NASDAQ. As a public company, its ownership is highly dispersed among institutional and retail investors rather than being held by a single Ultimate Beneficial Owner (UBO). According to the SEC filings and recent Schedule 13G disclosures, major institutional shareholders include Vanguard Capital Management LLC (holding approximately 7.48% of the shares), State Street Corporation, BlackRock, Inc., Geode Capital Management, LLC, and FMR LLC. Because it is a publicly traded entity with dispersed ownership, the lack of a single individual UBO is expected and does not constitute a red flag or anomaly.
+  > Raw Data: {"quality_flag": "high", "source": "API", "data": {"entity_type": "Publicly Traded Corporation", "ubo_expectation": "Dispersed/Institutional", "sec_filings": {"accessionNumber": ["0001308179-26-000008", "0000320193-25-000079", "0001308179-25-000008", "0000320193-24-000123", "0001193125-24-036431"], ...
+  - [INFO] Apple Inc. is a publicly traded corporation with highly transparent, dispersed institutional ownership. Major institutional shareholders include Vanguard Capital Management LLC, State Street Corp, and BlackRock, Inc.
+DEBUG _execute_dag: completed StepName.SHAREHOLDERS, on_step_complete=<function run_dd_with_ctx.<locals>.handle_step_complete at 0x10ac09120>
+DEBUG: inside handle_step_complete: step=StepName.SHAREHOLDERS, tiers_to_search=2
+
+--- Running KYB Agent ---
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+[KYB] Research Plan (2 searches):
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+[LICENSES] Completed with 4 findings:
+  > Rationale: The compliance verification of Apple Inc. was conducted using database records and extensive web search results. The analysis focused on verifying active registrations, information security certifications, quality and environmental management certifications, and any potential trade compliance violations or license revocations. 
+
+1. SAM.gov Registration: Apple Inc. is registered under Unique Entity ID (UEI) HJAKCN4NEU95 and CAGE Code 58839. Although some records show a status of 'Expired' in historical snapshots, the most recent active registration cycle is verified as active through May 12, 2027 (activated on May 22, 2026).
+2. ISO Certifications: Apple maintains robust, active certifications. This includes ISO/IEC 27001 and ISO/IEC 27018 for information security and privacy practices (audited annually by Coalfire). Additionally, Apple holds ISO 14001 (environmental management) for its facilities (including 100% of its Cork, Ireland facility) and ISO 9001:2015 (quality management) originally certified in 2020.
+3. Trade Compliance & Violations: Apple maintains a dedicated Global Trade Compliance program. A historical OFAC violation from 2019 was identified where Apple paid a $466,912 settlement for hosting apps from a blocked Slovenian developer (SIS d.o.o.) due to a screening software mismatch. However, this is a historical, resolved civil settlement and does not represent an active revocation of critical operational licenses or current debarment. No active critical license revocations or suspensions were found.
+  > Raw Data: DB: {"quality_flag": "partial", "source": "API", "data": {"sam_gov": "Partial data - SAM API requires setup"}} WEB: {"source": "Exa API", "quality_flag": "high", "search_results": [{"title": "Legal - Global Trade Compliance - Apple", "snippet": "As a global technology company, Apple is committed to ...
+  - [INFO] Apple Inc. maintains active ISO/IEC 27001 and ISO/IEC 27018 certifications for its internet services, which are audited annually by an accredited registrar (Coalfire).
+  - [INFO] Apple Inc. holds active ISO 14001 (Environmental Management) and ISO 9001:2015 (Quality Management) certifications, demonstrating long-term commitment to quality and environmental standards.
+  - [INFO] Apple Inc. is registered in the US federal System for Award Management (SAM.gov) under UEI HJAKCN4NEU95, with registration active through May 12, 2027.
+  - [LOW] Apple Inc. previously settled a civil liability with OFAC for $466,912 in 2019 due to a sanctions screening software failure involving a blocked Slovenian app developer. Apple has since implemented corrective compliance measures.
+DEBUG _execute_dag: completed StepName.LICENSES, on_step_complete=<function run_dd_with_ctx.<locals>.handle_step_complete at 0x10ac09120>
+DEBUG: inside handle_step_complete: step=StepName.LICENSES, tiers_to_search=2
+[KYB] Completed with 2 findings:
+  > Rationale: Apple Inc. is a highly established, publicly traded corporation incorporated in California. Web research confirms its active registration with the California Secretary of State under Entity Number 00806592 (incorporated on January 3, 1977) and its active SEC filing status under CIK 0000320193. Since it is an active public corporation filing regular regulatory reports, its KYB status is verified as valid and in good standing.
+  > Raw Data: {"quality_flag": "high", "source": "API", "data": {"entity_type": "Publicly Traded Corporation", "company_info": {"name": "Apple Inc.", "sic": "Electronic Computers", "stateOfIncorporation": "CA"}}}...
+  - [INFO] Apple Inc. is an active SEC filer with Central Index Key (CIK) 0000320193, regularly submitting required regulatory filings such as Form 10-K and Form 8-K.
+  - [INFO] Apple Inc. is registered as an active corporation with the California Secretary of State under Entity Number 00806592, with an incorporation date of January 3, 1977.
+DEBUG _execute_dag: completed StepName.KYB, on_step_complete=<function run_dd_with_ctx.<locals>.handle_step_complete at 0x10ac09120>
+DEBUG: inside handle_step_complete: step=StepName.KYB, tiers_to_search=2
+
+--- Running SANCTIONS Agent ---
+INFO:httpx:HTTP Request: POST https://api.opensanctions.org/match/default "HTTP/1.1 429 Too Many Requests"
+WARNING:core.real_tools:OpenSanctions API returned status code 429. Initiating web search fallback.
+INFO:core.real_tools:OpenSanctions API unavailable or failed. Executing fallback web search sanctions screening.
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+[PROFILE] Completed with 3 findings:
+  > Rationale: Apple Inc. is a highly established, globally recognized consumer technology giant. The corporate profile assessment confirms that Apple operates exactly within its claimed industry of consumer electronics, software, and digital services. Its business model is a highly successful dual-engine flywheel: using premium hardware (iPhone, Mac, iPad, Wearables) to establish a massive global user base (over 2.2 billion active devices), and then monetizing that base through high-margin recurring services (App Store, iCloud, Apple Music, Apple Pay). The company employs approximately 166,000 full-time employees globally as of FY 2025 and is headquartered at Apple Park in Cupertino, California. There are no operational discrepancies or red flags identified; the company's actual operations perfectly align with its public profile.
+  > Raw Data: {"source": "Exa API", "quality_flag": "high", "search_results": [{"title": "Apple Strategy and Business Model - Umbrex", "snippet": "Apple is a global consumer technology company founded in 1976 and headquartered in Cupertino, California. It designs and sells smartphones, personal computers, tablets...
+  - [INFO] Apple operates an exceptionally strong, highly established global business model with an active installed base exceeding 2.2 billion devices, demonstrating a highly reputable operational profile.
+  - [INFO] Apple maintains a massive corporate footprint with approximately 166,000 full-time employees globally as of fiscal year 2025, headquartered at Apple Park in Cupertino, California.
+  - [INFO] The core business model relies on a highly effective ecosystem lock-in, combining upfront hardware sales with high-margin recurring services (App Store, iCloud, Apple Pay, Apple Music) that drive customer lifetime value.
+DEBUG _execute_dag: completed StepName.PROFILE, on_step_complete=<function run_dd_with_ctx.<locals>.handle_step_complete at 0x10ac09120>
+DEBUG: inside handle_step_complete: step=StepName.PROFILE, tiers_to_search=2
+
+--- Running ESG Agent ---
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+
+--- Running RESILIENCE Agent ---
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+
+--- Running MEDIA Agent ---
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+[SANCTIONS] Research Plan (3 searches):
+[FINANCES] Completed with 4 findings:
+  > Rationale: Apple Inc. exhibits exceptional creditworthiness, characterized by its 'AA+' credit rating from S&P with a stable outlook. The company maintains massive liquidity, with cash and investments historically around $166 billion, and generates robust free operating cash flow. Although Apple carries significant long-term debt as part of its capital structure optimization (targeting a net-cash-neutral position over time), its leverage is highly manageable. Key credit risks include product concentration (with the iPhone representing over half of revenues) and ongoing geopolitical tensions (particularly US-China trade friction). Additionally, Apple faced a major legal setback in September 2024 when the CJEU upheld a €13 billion EU tax recovery order. While this represents a substantial cash outflow, Apple's immense liquidity ensures it does not pose a solvency or going-concern risk. Other litigation, such as a $490 million securities class action settlement, is also easily absorbed. No undisclosed related-party debt was identified.
+  > Raw Data: DB: {"quality_flag": "high", "source": "API", "data": {"xbrl_facts": "Available (Truncated for brevity)"}} WEB: (Ingested via RAG)...
+  - [INFO] S&P Global Ratings affirms Apple Inc.'s long-term local currency credit rating at 'AA+' with a stable outlook, reflecting its strong brand loyalty, exceptional profitability, and conservative balance sheet.
+  - [INFO] Apple maintains massive liquidity with cash and investments of approximately $166 billion, providing substantial capacity to fund shareholder returns and manage debt obligations while targeting a net-cash-neutral position over time.
+  - [MEDIUM] Apple lost its final appeal in the €13 billion EU State Aid tax case in September 2024, requiring Ireland to recover the unpaid taxes plus interest. While a massive cash outflow, it does not threaten Apple's solvency.
+  - [LOW] Apple agreed to a $490 million settlement in September 2024 to resolve a long-running securities fraud class action lawsuit regarding statements made about iPhone demand in China.
+DEBUG _execute_dag: completed StepName.FINANCES, on_step_complete=<function run_dd_with_ctx.<locals>.handle_step_complete at 0x10ac09120>
+DEBUG: inside handle_step_complete: step=StepName.FINANCES, tiers_to_search=2
+[RESILIENCE] Research Plan (2 searches):
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+[ESG] Research Plan (3 searches):
+[MEDIA] Research Plan (3 searches):
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+[RESILIENCE] ANOMALY RAISED: High-risk supply chain dependency found: Apple has repeatedly attempted to source memory and storage components from ChangXin Memory Technologies (CXMT) and Yangtze Memory Technologies Co Ltd (YMTC). Both entities are designated as Chinese Military Companies under the US Pentagon's 1260H list, posing severe geopolitical, regulatory, and reputational risks to Apple's hardware supply chain.
+[RESILIENCE] Completed with 3 findings:
+  > Rationale: Apple Inc. maintains one of the most complex and highly scrutinized supply chains in the global consumer electronics industry. Historically, Apple has been heavily dependent on Chinese manufacturing ecosystems, with key assembly partners like Foxconn and Pegatron operating massive facilities in China. To mitigate geopolitical risks, trade tensions, and tariff pressures, Apple is actively diversifying its production footprint by shifting assembly and component manufacturing to India (e.g., Tamil Nadu and Karnataka) and Southeast Asia (specifically Vietnam and Thailand). However, China remains a critical hub, accounting for approximately 50% of Apple's facilities. A key operational risk was identified regarding Apple's attempts to source memory chips from ChangXin Memory Technologies (CXMT) and Yangtze Memory Technologies Co Ltd (YMTC), both of which are blacklisted by the US Department of Defense as Chinese Military Companies (1260H list). Although Apple reportedly blacklisted CXMT or restricted its components from US-bound products to manage reputational and regulatory risks, the pressure to source from these low-cost, high-volume Chinese semiconductor firms remains a notable vulnerability.
+  > Raw Data: {"source": "Exa API", "quality_flag": "high", "search_results": [{"title": "Apple's Supply Chain: Economic and Geopolitical ...", "snippet": "- Over the past decade, many electronics firms have talked about diversifying their supply chains. An analysis of Apple\u2014America\u2019s biggest consumer e...
+  - [HIGH] Apple maintains a heavy, concentrated operational dependency on China-based manufacturing facilities, which represent approximately 50% of its global supply chain footprint.
+  - [INFO] Apple is actively diversifying its supply chain by scaling up iPhone assembly in India (Tamil Nadu and Karnataka) and manufacturing other major products (iPads, MacBooks, Apple Watches, and AirPods) in Vietnam and Thailand.
+  - [HIGH] Apple faced severe regulatory and reputational risks after seeking permission to procure memory chips from ChangXin Memory Technologies (CXMT) and Yangtze Memory Technologies Co Ltd (YMTC), both of which are blacklisted by the US Pentagon as Chinese Military Companies.
+DEBUG _execute_dag: completed StepName.RESILIENCE, on_step_complete=<function run_dd_with_ctx.<locals>.handle_step_complete at 0x10ac09120>
+DEBUG: inside handle_step_complete: step=StepName.RESILIENCE, tiers_to_search=2
+DEBUG handle_step_complete: extracted suppliers: ['Foxconn', 'Pegatron', 'Wistron Corporation', 'Quanta Computer Incorporated', 'Qualcomm Incorporated', 'Renesas Electronics Corporation', 'Robert Bosch GmbH', 'TXC Corporation', 'Unimicron Technology Corporation', 'Unisteel Technology Limited (SFS Group)', 'Unitech Printed Circuit Board Corporation', 'United Test and Assembly Center Limited', 'VARTA Microbattery GmbH', 'Viavi Solutions Incorporated', 'Western Digital Corporation', 'Winbond Electronics Corporation', 'Wingtech Technology Co., Ltd.', 'R.R. Donnelley and Sons Company', 'Radiant Opto-Electronics Corporation', 'Alpha and Omega Semiconductor Limited', 'Analog Devices Incorporated', 'AKM Meadville Electronics (Xiamen) Company Limited']
+[MEDIA] Completed with 5 findings:
+  > Rationale: The adverse media screening for Apple Inc. reveals several significant legal and regulatory challenges, though none constitute critical breaking news that fundamentally alters the company's overall risk profile. The most severe finding is a first-of-its-kind consumer protection lawsuit filed by the West Virginia Attorney General in February 2026, alleging that Apple knowingly allowed its iCloud platform to be used for storing and distributing Child Sexual Abuse Material (CSAM) after abandoning its planned on-device detection tools. Additionally, Apple faces massive antitrust exposure in India, where it is contesting a potential $38 billion fine based on global turnover rules, accusing the Competition Commission of India (CCI) of 'copy-pasting' allegations from rivals. Other notable findings include a $250 million preliminary class-action settlement in May 2026 over allegations of false advertising regarding 'Apple Intelligence' AI features, ongoing App Store antitrust complaints from Chinese developers, and a minor fine in Russia. These findings represent medium to high reputational and regulatory risks, but do not indicate immediate operational insolvency or executive criminal indictments.
+  > Raw Data: DB: {"quality_flag": "high", "source": "API", "articles": [{"headline": "Apple Announces macOS Golden Gate", "source": "MacRumors", "date": "2026-06-08T17:19:09Z"}, {"headline": "WWDC 2026 Spoiler-Free Video Stream", "source": "MacRumors", "date": "2026-06-08T16:12:52Z"}, {"headline": "One Week to G...
+  - [HIGH] West Virginia Attorney General JB McCuskey filed a first-of-its-kind government lawsuit against Apple, alleging the company knowingly allowed iCloud to become a secure avenue for storing and distributing Child Sexual Abuse Material (CSAM) after abandoning its planned detection systems.
+  - [HIGH] Apple is facing a potential $38 billion antitrust fine in India. In response, Apple has accused the Competition Commission of India (CCI) of 'copy-pasting' its entire case from rivals and EU rulings without independent verification.
+  - [MEDIUM] Apple agreed to a $250 million class-action settlement in California federal court to resolve allegations of false advertising and misleading consumers regarding the availability of 'Apple Intelligence' and Siri AI features on the iPhone 15 Pro and iPhone 16.
+  - [MEDIUM] A group of 48 China-based iOS developers filed an antitrust complaint against Apple with the State Administration for Market Regulation (SAMR), alleging unfair and excessively high App Store commission rates.
+  - [MEDIUM] Apple petitioned the US Supreme Court to reverse a contempt finding stemming from its ongoing legal battle with Epic Games over App Store commission fees and external payment links.
+[SANCTIONS] Completed with 4 findings:
+  > Rationale: An analysis of Apple Inc, its known shareholders, and raw screening hits was conducted. First, Apple Inc itself is not on any active international sanctions lists. However, it has historical sanctions enforcement exposure: in November 2019, Apple settled with US OFAC for $466,912 regarding apparent violations of the Foreign Narcotics Kingpin Sanctions Regulations for hosting and selling apps by a blocked Slovenian developer, SIS d.o.o. Additionally, in March 2026, Apple's Irish subsidiary, Apple Distribution International Limited (ADIL), was fined £390,000 by the UK's Office of Financial Sanctions Implementation (OFSI) for making payments to Okko LLC, an entity wholly owned and controlled by a UK-designated Russian party. Second, the shareholder 'Vanguard Capital Management LLC' was screened. The raw hits flagged a crude oil tanker named 'Vanguard' (IMO 9311622) that is heavily sanctioned by the US, UK, EU, Canada, and Australia for transporting Russian oil. Web research confirmed that Vanguard Capital Management LLC is a newly established, wholly owned investment advisory subsidiary of The Vanguard Group, Inc. and is entirely distinct from the sanctioned vessel. Third, shareholder 'State Street Corp' has historical exposure: its subsidiary Charles River Systems settled with OFAC in July 2024 for $7,452,501 over egregious, non-disclosed violations of Ukraine-/Russia-related sanctions involving reissued invoices for Directive 1 SSI entities. Fourth, shareholder 'BlackRock, Inc.' has minor operational exposure (e.g., its tokenized fund wallet receiving unsolicited 'dusting' transfers from the sanctioned Tornado Cash mixer), but is not a sanctioned entity. No active sanctions matches exist for the vendor or its shareholders, and no unmapped sanctioned parties were identified.
+  > Raw Data: {"quality_flag": "medium", "source": "web_search_fallback", "hits": [], "web_search_results": {"Apple Inc": {"source": "Exa API", "quality_flag": "high", "search_results": [{"title": "Apple, Inc. - OpenSanctions", "snippet": "Apple, Inc. - OpenSanctions\n\n## Search OpenSanctions\n\nAdvanced Search\...
+  - [MEDIUM] Apple Inc's Irish subsidiary, Apple Distribution International Limited (ADIL), was fined £390,000 by the UK OFSI in March 2026 for breaching Russia sanctions by routing payments to Okko LLC, an entity controlled by a designated person.
+  - [LOW] Apple Inc settled with US OFAC in November 2019 for $466,912 to resolve civil liability for apparent violations of the Foreign Narcotics Kingpin Sanctions Regulations by dealing in app software from blocked Slovenian developer SIS, d.o.o.
+  - [MEDIUM] Shareholder State Street Corp's subsidiary, Charles River Systems, Inc., entered a $7,452,501 settlement with US OFAC in July 2024 to resolve egregious, non-disclosed violations of Ukraine-/Russia-related sectoral sanctions.
+  - [INFO] A crude oil tanker named 'Vanguard' (IMO 9311622) is heavily sanctioned by the US, UK, EU, Canada, and Australia. This is a false positive match and is entirely distinct from the shareholder Vanguard Capital Management LLC.
+[ESG] Completed with 6 findings:
+  > Rationale: Apple Inc. exhibits a robust ESG framework with strong environmental commitments, but faces persistent, high-profile challenges regarding labor rights in its global supply chain and domestic retail operations. On the positive side, Apple has achieved a 'Low Risk' ESG rating of 18.9 from Morningstar Sustainalytics, an overall ESG score of 85/100 from other providers, and an 'A' rating from CDP. It has committed to becoming carbon neutral across its entire supply chain by 2030 and has successfully transitioned 100% of its identified 3TG, cobalt, and lithium smelters to third-party audits. However, significant controversies exist. In late 2025, China Labor Watch (CLW) published a major investigative report detailing systemic labor violations at Foxconn Zhengzhou (Apple's primary iPhone 17 manufacturer), including dispatch workers exceeding 50% of the workforce (violating Chinese legal limits), wage withholding, forced student night shifts, and ethnic discrimination. Additionally, a joint investigation by TBIJ in mid-2025 linked Apple and other global brands to state-imposed forced labor transfer schemes in China. Domestically, the U.S. National Labor Relations Board (NLRB) officially ruled in May 2024 that Apple violated federal labor laws by illegally interrogating employees and confiscating union flyers at its World Trade Center retail store, marking its first formal ruling against the company amidst multiple pending complaints. While these supply chain and union-busting issues represent significant ESG risks, they do not currently trigger a 'severe_esg_violation_found' flag because Apple has actively engaged in investigations, conducted over 1,500 third-party audits annually, and the violations are primarily attributed to third-party suppliers (Foxconn) or are domestic labor disputes currently being addressed through regulatory channels rather than undisclosed, unaddressed systemic modern slavery directly operated by the vendor.
+  > Raw Data: {"source": "Exa API", "quality_flag": "high", "search_results": [{"title": "", "snippet": "Social\nGovernance\n...\nReport\n\nApple\u2019s 2022 ESG Report\n...\nGovernance\n70 Corporate governance\n71 Ethics and compliance\n...\nEnvironmental Social Governance\n...\nIntroduction Environment Our Peop...
+  - [INFO] Morningstar Sustainalytics rates Apple Inc. as 'Low Risk' with a score of 18.9, and other ESG providers award it an overall score of 85/100, reflecting strong corporate governance and environmental management.
+  - [INFO] Apple has established a goal to achieve carbon neutrality across its entire supply chain by 2030 and has successfully transitioned 100% of its identified 3TG, cobalt, and lithium smelters to third-party audits.
+  - [HIGH] A September 2025 China Labor Watch investigation revealed severe labor violations at Apple's primary iPhone 17 supplier (Foxconn Zhengzhou), including dispatch workers making up over 50% of the workforce (violating Chinese law), wage withholding, forced student night shifts, and ethnic discrimination.
+  - [HIGH] A June 2025 joint investigation by TBIJ, the New York Times, and Der Spiegel linked Apple and other major brands to China's state-imposed forced labor transfer schemes, prompting an internal investigation by Apple.
+  - [MEDIUM] In May 2024, the U.S. National Labor Relations Board (NLRB) issued its first formal ruling against Apple, concluding the company violated federal labor laws by illegally interrogating retail employees and confiscating union flyers.
+  - [MEDIUM] The Beijing-based Institute of Public and Environmental Affairs (IPE) accused Apple of 'climate-washing,' arguing that Apple lacks sufficient supplier transparency to substantiate its carbon-neutral product claims.
+WARNING:neo4j.notifications:Received notification from DBMS server: <GqlStatusObject gql_status='01N01', status_description='warn: feature deprecated with replacement. db.index.vector.queryNodes is deprecated. It is replaced by SEARCH.', position=<SummaryInputPosition line=2, column=9, offset=9>, raw_classification='DEPRECATION', classification=<NotificationClassification.DEPRECATION: 'DEPRECATION'>, raw_severity='WARNING', severity=<NotificationSeverity.WARNING: 'WARNING'>, diagnostic_record={'_classification': 'DEPRECATION', '_severity': 'WARNING', '_position': {'offset': 9, 'line': 2, 'column': 9}, 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: "\n        CALL db.index.vector.queryNodes('company_embeddings', 1, $embedding)\n        YIELD node, score\n        WHERE score >= $threshold\n        RETURN node.name AS name, score\n        "
+INFO:google_genai._api_client:The user provided project/location will take precedence over the Vertex AI API key from the environment variable.
+INFO:google_genai._api_client:The user provided project/location will take precedence over the Vertex AI API key from the environment variable.
+INFO:neo4j.notifications:Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT company_name IF NOT EXISTS FOR (e:Company) REQUIRE (e.name) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT company_name FOR (e:Company) REQUIRE (e.name) IS UNIQUE' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE CONSTRAINT company_name IF NOT EXISTS FOR (c:Company) REQUIRE c.name IS UNIQUE'
+INFO:neo4j.notifications:Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT person_name IF NOT EXISTS FOR (e:Person) REQUIRE (e.name) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT person_name FOR (e:Person) REQUIRE (e.name) IS UNIQUE' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE CONSTRAINT person_name IF NOT EXISTS FOR (p:Person) REQUIRE p.name IS UNIQUE'
+INFO:neo4j.notifications:Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description='note: successful completion - index or constraint already exists. The command \'CREATE VECTOR INDEX company_embeddings IF NOT EXISTS FOR (e:Company) ON (e.embedding) OPTIONS {indexConfig: {`vector.dimensions`: 768, `vector.similarity_function`: "cosine"}}\' has no effect. The index or constraint specified by \'VECTOR INDEX company_embeddings FOR (e:Company) ON (e.embedding)\' already exists.', position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: "\n        CREATE VECTOR INDEX company_embeddings IF NOT EXISTS \n        FOR (c:Company) ON (c.embedding) \n        OPTIONS {indexConfig: {`vector.dimensions`: 768, `vector.similarity_function`: 'cosine'}}\n        "
+INFO:neo4j.notifications:Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE FULLTEXT INDEX entity_names IF NOT EXISTS FOR (e:Company|Person) ON EACH [e.name, e.canonical_name, e.aliases]' has no effect. The index or constraint specified by 'FULLTEXT INDEX entity_names FOR (e:Company|Person) ON EACH [e.name, e.canonical_name, e.aliases]' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: '\n        CREATE FULLTEXT INDEX entity_names IF NOT EXISTS \n        FOR (n:Company|Person) ON EACH [n.name, n.canonical_name, n.aliases]\n        '
+WARNING:neo4j.notifications:Received notification from DBMS server: <GqlStatusObject gql_status='01N01', status_description='warn: feature deprecated with replacement. db.index.vector.queryNodes is deprecated. It is replaced by SEARCH.', position=<SummaryInputPosition line=2, column=9, offset=9>, raw_classification='DEPRECATION', classification=<NotificationClassification.DEPRECATION: 'DEPRECATION'>, raw_severity='WARNING', severity=<NotificationSeverity.WARNING: 'WARNING'>, diagnostic_record={'_classification': 'DEPRECATION', '_severity': 'WARNING', '_position': {'offset': 9, 'line': 2, 'column': 9}, 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: "\n        CALL db.index.vector.queryNodes('company_embeddings', 1, $embedding)\n        YIELD node, score\n        WHERE score >= $threshold\n        RETURN node.name AS name, score\n        "
+INFO:google_genai._api_client:The user provided project/location will take precedence over the Vertex AI API key from the environment variable.
+INFO:google_genai._api_client:The user provided project/location will take precedence over the Vertex AI API key from the environment variable.
+INFO:neo4j.notifications:Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT company_name IF NOT EXISTS FOR (e:Company) REQUIRE (e.name) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT company_name FOR (e:Company) REQUIRE (e.name) IS UNIQUE' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE CONSTRAINT company_name IF NOT EXISTS FOR (c:Company) REQUIRE c.name IS UNIQUE'
+INFO:neo4j.notifications:Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT person_name IF NOT EXISTS FOR (e:Person) REQUIRE (e.name) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT person_name FOR (e:Person) REQUIRE (e.name) IS UNIQUE' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE CONSTRAINT person_name IF NOT EXISTS FOR (p:Person) REQUIRE p.name IS UNIQUE'
+INFO:neo4j.notifications:Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description='note: successful completion - index or constraint already exists. The command \'CREATE VECTOR INDEX company_embeddings IF NOT EXISTS FOR (e:Company) ON (e.embedding) OPTIONS {indexConfig: {`vector.dimensions`: 768, `vector.similarity_function`: "cosine"}}\' has no effect. The index or constraint specified by \'VECTOR INDEX company_embeddings FOR (e:Company) ON (e.embedding)\' already exists.', position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: "\n        CREATE VECTOR INDEX company_embeddings IF NOT EXISTS \n        FOR (c:Company) ON (c.embedding) \n        OPTIONS {indexConfig: {`vector.dimensions`: 768, `vector.similarity_function`: 'cosine'}}\n        "
+INFO:neo4j.notifications:Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE FULLTEXT INDEX entity_names IF NOT EXISTS FOR (e:Company|Person) ON EACH [e.name, e.canonical_name, e.aliases]' has no effect. The index or constraint specified by 'FULLTEXT INDEX entity_names FOR (e:Company|Person) ON EACH [e.name, e.canonical_name, e.aliases]' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: '\n        CREATE FULLTEXT INDEX entity_names IF NOT EXISTS \n        FOR (n:Company|Person) ON EACH [n.name, n.canonical_name, n.aliases]\n        '
+WARNING:neo4j.notifications:Received notification from DBMS server: <GqlStatusObject gql_status='01N01', status_description='warn: feature deprecated with replacement. db.index.vector.queryNodes is deprecated. It is replaced by SEARCH.', position=<SummaryInputPosition line=2, column=9, offset=9>, raw_classification='DEPRECATION', classification=<NotificationClassification.DEPRECATION: 'DEPRECATION'>, raw_severity='WARNING', severity=<NotificationSeverity.WARNING: 'WARNING'>, diagnostic_record={'_classification': 'DEPRECATION', '_severity': 'WARNING', '_position': {'offset': 9, 'line': 2, 'column': 9}, 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: "\n        CALL db.index.vector.queryNodes('company_embeddings', 1, $embedding)\n        YIELD node, score\n        WHERE score >= $threshold\n        RETURN node.name AS name, score\n        "
+INFO:google_genai._api_client:The user provided project/location will take precedence over the Vertex AI API key from the environment variable.
+INFO:google_genai._api_client:The user provided project/location will take precedence over the Vertex AI API key from the environment variable.
+DEBUG _execute_dag: completed StepName.ESG, on_step_complete=<function run_dd_with_ctx.<locals>.handle_step_complete at 0x10ac09120>
+DEBUG: inside handle_step_complete: step=StepName.ESG, tiers_to_search=2
+DEBUG _execute_dag: completed StepName.SANCTIONS, on_step_complete=<function run_dd_with_ctx.<locals>.handle_step_complete at 0x10ac09120>
+DEBUG: inside handle_step_complete: step=StepName.SANCTIONS, tiers_to_search=2
+DEBUG _execute_dag: completed StepName.MEDIA, on_step_complete=<function run_dd_with_ctx.<locals>.handle_step_complete at 0x10ac09120>
+DEBUG: inside handle_step_complete: step=StepName.MEDIA, tiers_to_search=2
+INFO:google_genai._api_client:The user provided project/location will take precedence over the Vertex AI API key from the environment variable.
+INFO:neo4j.notifications:Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT company_name IF NOT EXISTS FOR (e:Company) REQUIRE (e.name) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT company_name FOR (e:Company) REQUIRE (e.name) IS UNIQUE' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE CONSTRAINT company_name IF NOT EXISTS FOR (c:Company) REQUIRE c.name IS UNIQUE'
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:neo4j.notifications:Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT person_name IF NOT EXISTS FOR (e:Person) REQUIRE (e.name) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT person_name FOR (e:Person) REQUIRE (e.name) IS UNIQUE' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE CONSTRAINT person_name IF NOT EXISTS FOR (p:Person) REQUIRE p.name IS UNIQUE'
+INFO:neo4j.notifications:Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description='note: successful completion - index or constraint already exists. The command \'CREATE VECTOR INDEX company_embeddings IF NOT EXISTS FOR (e:Company) ON (e.embedding) OPTIONS {indexConfig: {`vector.dimensions`: 768, `vector.similarity_function`: "cosine"}}\' has no effect. The index or constraint specified by \'VECTOR INDEX company_embeddings FOR (e:Company) ON (e.embedding)\' already exists.', position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: "\n        CREATE VECTOR INDEX company_embeddings IF NOT EXISTS \n        FOR (c:Company) ON (c.embedding) \n        OPTIONS {indexConfig: {`vector.dimensions`: 768, `vector.similarity_function`: 'cosine'}}\n        "
+INFO:neo4j.notifications:Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE FULLTEXT INDEX entity_names IF NOT EXISTS FOR (e:Company|Person) ON EACH [e.name, e.canonical_name, e.aliases]' has no effect. The index or constraint specified by 'FULLTEXT INDEX entity_names FOR (e:Company|Person) ON EACH [e.name, e.canonical_name, e.aliases]' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: '\n        CREATE FULLTEXT INDEX entity_names IF NOT EXISTS \n        FOR (n:Company|Person) ON EACH [n.name, n.canonical_name, n.aliases]\n        '
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+
+--- Running SHAREHOLDERS Agent ---
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+
+--- Running LICENSES Agent ---
+
+--- Running PROFILE Agent ---
+
+--- Running FINANCES Agent ---
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+
+--- Running SHAREHOLDERS Agent ---
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+
+--- Running LICENSES Agent ---
+
+--- Running PROFILE Agent ---
+
+--- Running FINANCES Agent ---
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+
+--- Running SHAREHOLDERS Agent ---
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+
+--- Running LICENSES Agent ---
+
+--- Running PROFILE Agent ---
+
+--- Running FINANCES Agent ---
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+[SHAREHOLDERS] Research Plan (2 searches):
+[SHAREHOLDERS] Research Plan (3 searches):
+[FINANCES] Research Plan (3 searches):
+[PROFILE] No web searches needed — data sufficient.
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+[FINANCES] Research Plan (3 searches):
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+[PROFILE] Research Plan (2 searches):
+[FINANCES] Research Plan (3 searches):
+[LICENSES] Research Plan (3 searches):
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+[LICENSES] Research Plan (2 searches):
+[PROFILE] Research Plan (2 searches):
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+[SHAREHOLDERS] Research Plan (3 searches):
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+[PROFILE] Completed with 3 findings:
+  > Rationale: Foxconn (Hon Hai Precision Industry Co., Ltd.) is the world's largest electronics contract manufacturer, operating a highly established, global-scale business-to-business model. The company's core business model is built on Electronics Manufacturing Services (EMS), original design manufacturing (ODM), and component supply, serving major global technology brands (e.g., Apple, Sony, Google, Microsoft). There are no operational discrepancies or red flags; the company's actual operations perfectly align with its claimed industry. It is currently executing a strategic transition ('Foxconn 3.0') to expand into electric vehicles, digital health, and robotics, supported by AI, semiconductors, and next-generation communications.
+  > Raw Data: {"source": "Exa API", "quality_flag": "high", "search_results": [{"title": "Foxconn Strategy and Business Model", "snippet": "Foxconn, formally Hon Hai Precision Industry Co., Ltd., is the Taiwanese technology manufacturing group widely regarded as the world\u2019s largest electronics manufacturing ...
+  - [INFO] Foxconn is the world's largest electronics contract manufacturer, producing an estimated 40% of all consumer electronics sold globally, including iPhones, iPads, PlayStations, and Xbox consoles.
+  - [INFO] The company employs a massive global workforce, with over 767,000 employees in Taiwan alone (as of 2022) and a significantly larger footprint globally, making it one of the largest private employers in the world.
+  - [INFO] Foxconn is actively executing its 'Foxconn 3.0' strategic transformation, transitioning from a pure contract manufacturer to a platform-driven service company focusing on three emerging industries: Electric Vehicles (EVs), Digital Health, and Robotics.
+DEBUG _execute_dag: completed StepName.PROFILE, on_step_complete=<function run_dd_with_ctx.<locals>.handle_step_complete at 0x10c03ad40>
+DEBUG: inside handle_step_complete: step=StepName.PROFILE, tiers_to_search=1
+
+--- Running ESG Agent ---
+
+--- Running RESILIENCE Agent ---
+
+--- Running MEDIA Agent ---
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:httpx:HTTP Request: GET https://newsapi.org/v2/everything?q=%22Foxconn%22&apiKey=d962fe06dec746ae8151e57c148f3fe3 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+[LICENSES] Research Plan (3 searches):
+[FINANCES] Completed with 4 findings:
+  > Rationale: Wistron Corporation (TPE: 3231) exhibits strong financial performance and robust liquidity, mitigating potential solvency concerns. In FY 2024, Wistron achieved a record-high consolidated annual revenue of NT$1.0492 trillion (a 21% year-over-year growth) and a net profit of NT$17.45 billion (a 50% increase compared to 2023). Although the company carries a substantial total debt load of NT$339.9 billion (comprising NT$235.2 billion in short-term debt and NT$104.7 billion in long-term debt), its liquidity position is highly supportive. By the end of 2025, Wistron maintained a cash and short-term investment balance of approximately NT$150 billion. The company's probability of bankruptcy is estimated at a very low 1.8% by credit risk models, and its annual reports explicitly state there are no signs of a liquidity deficit. Furthermore, its strategic restructuring—such as exiting lower-margin mobile phone manufacturing in India via a $750 million transaction with Tata Group—has successfully shifted focus to high-margin AI servers and computing products, strengthening its overall credit profile. No undisclosed related-party debt was identified.
+  > Raw Data: DB: {"quality_flag": "partial", "source": "API", "data": {}} WEB: (Ingested via RAG)...
+  - [INFO] Wistron achieved record-high financial performance in FY 2024, with consolidated revenue reaching NT$1.0492 trillion (up 21% YoY) and net profit rising 50% YoY to NT$17.45 billion, driven by strong demand for AI servers.
+  - [INFO] Wistron maintains a robust liquidity profile with approximately NT$150 billion in cash and short-term investments as of the end of 2025, and the company reports no signs of a liquidity deficit.
+  - [LOW] Wistron carries a high total debt load of NT$339.9 billion (NT$235.2 billion short-term and NT$104.7 billion long-term). While this represents a significant leverage obligation, the default risk remains low with an estimated bankruptcy probability of only 1.8%.
+  - [MEDIUM] Wistron's total balance of endorsements and guarantees reached NT$128.62 billion as of April 2026, representing 72.43% of its net worth. This is primarily driven by guarantees for its 100% owned subsidiaries (such as Wiwynn), which requires ongoing monitoring for contingent liability risks.
+[FINANCES] Completed with 4 findings:
+  > Rationale: Foxconn (Hon Hai Technology Group) exhibits strong financial health, robust liquidity, and low leverage, with no material solvency or going-concern risks. In FY2024, Foxconn reported record-high net profits of NT$152.7 billion and revenue of NT$6.86 trillion, driven by strong demand for AI servers. Its balance sheet is highly liquid, with cash and cash equivalents of NT$1.198 trillion (as of late 2023) and a current ratio improving to 1.4 times in 2024. S&P Global Ratings maintains an 'A-' long-term rating with a Positive outlook, and Alpha Spread estimates its probability of bankruptcy at a negligible 1%. While Foxconn is involved in a high-profile legal dispute and adversary proceeding in Delaware bankruptcy court with Nu Ride Inc. (formerly Lordstown Motors Corp.) regarding a failed EV joint venture and investment agreement, this dispute does not pose a systemic threat to Foxconn's massive capital structure. No undisclosed related-party debts were identified.
+  > Raw Data: DB: {"quality_flag": "partial", "source": "API", "data": {}} WEB: (Ingested via RAG)...
+  - [INFO] Foxconn achieved record financial performance in FY2024, with net profit rising 7.5% year-on-year to NT$152.7 billion and revenue growing 11.3% to NT$6.86 trillion, driven by strong demand for AI infrastructure.
+  - [INFO] Foxconn maintains a highly liquid balance sheet with a current ratio of 1.4 times and a quick ratio of 1.0 times as of December 31, 2024, supported by the successful renewal of a three-year syndicated loan.
+  - [INFO] Credit rating agencies and solvency models indicate exceptionally low default risk. S&P Global Ratings rates Hon Hai at 'A-' with a Positive outlook, and independent credit analysis estimates its bankruptcy probability at just 1%.
+  - [MEDIUM] Foxconn is facing an ongoing multi-million dollar lawsuit and adversary proceeding in US Bankruptcy Court filed by Nu Ride Inc. (formerly Lordstown Motors), alleging breach of contract and fraud regarding a failed EV investment partnership. While a notable legal dispute, it does not threaten Foxconn's overall solvency.
+[LICENSES] Completed with 4 findings:
+  > Rationale: Wistron Corporation is a major Taiwan-based electronics manufacturer. A comprehensive review of the provided database records, ESG reports, and web search results was conducted to verify its corporate registration, business license, and key management system certifications. Wistron Corporation is actively registered in Taiwan under Unified Business No. 12868358, with its status officially approved and active. Regarding its management system certifications, Wistron maintains robust compliance across multiple international standards: 1) ISO/IEC 27001:2022 (Information Security Management System) was updated in August 2024 with 100% coverage across headquarters, Hsinchu, and all overseas manufacturing sites, certified by SGS and valid until August 22, 2026. 2) ISO/IEC 20000-1:2018 (Information Service Management System) is certified by SGS and valid until February 22, 2027. 3) ISO 14001 (Environmental Management System) is active across multiple global sites, including its Taiwan headquarters/plants (valid until May 12, 2027). 4) ISO 50001 (Energy Management System) is active across key sites, including its Taiwan headquarters/plants (valid until May 23, 2027). 5) ISO 9001 (Quality Management System) is actively maintained as part of its core operational policies. No critical operational licenses or certifications were found to be revoked, expired, or fraudulent.
+  > Raw Data: DB: {"quality_flag": "partial", "source": "API", "data": {}} WEB: {"source": "Exa API", "quality_flag": "high", "search_results": [{"title": "Management System-Wistron ESG", "snippet": "##### Environmental Management System (ISO 14001) Certification\n...\n| Operation sites | Original Issue Date | Ex...
+  - [INFO] Wistron Corporation is actively registered in Taiwan under Unified Business No. 12868358, with its corporate status officially approved and active.
+  - [INFO] Wistron successfully transitioned to the ISO/IEC 27001:2022 Information Security Management System certification in August 2024 with 100% coverage across its headquarters and all global manufacturing sites, valid until August 22, 2026.
+  - [INFO] Wistron maintains active ISO/IEC 20000-1:2018 Information Service Management System certification, verified by SGS and valid until February 22, 2027.
+  - [INFO] Wistron holds active ISO 14001 (Environmental Management System) and ISO 50001 (Energy Management System) certifications across its headquarters, Hsinchu plant, and major global subsidiaries, with expirations extending into 2027 and 2028.
+[FINANCES] Completed with 3 findings:
+  > Rationale: Pegatron Corporation (TPE: 4938) exhibits a strong and stable financial profile based on its FY 2024 consolidated financial statements and recent solvency metrics. The company's total assets of NT$ 674.75 billion comfortably exceed its total liabilities of NT$ 433.05 billion. Pegatron maintains a highly conservative leverage profile with a debt-to-equity ratio of approximately 30% (total debt of NT$ 57.7 billion to NT$ 74.7 billion against total equity of NT$ 241.7 billion). Its liquidity is robust, characterized by cash and cash equivalents of NT$ 121.63 billion (which exceeds its total interest-bearing debt) and a current ratio of 1.33x (current assets of NT$ 514.82 billion versus current liabilities of NT$ 386.06 billion). Operating cash flow remains strongly positive at NT$ 55.95 billion for FY 2024. Although the company faces industry-wide headwinds such as thin operating margins (operating income of NT$ 12.50 billion on revenue of NT$ 1.13 trillion, representing a 1.1% operating margin) and high client concentration (specifically Apple exposure), its overall default and bankruptcy risk is extremely low (estimated at 1.5% by credit risk models). No undisclosed related-party debt or material unmitigated solvency risks were identified.
+  > Raw Data: DB: {"quality_flag": "partial", "source": "API", "data": {}} WEB: (Ingested via RAG)...
+  - [INFO] Pegatron maintains a highly conservative leverage profile with a low debt-to-equity ratio of approximately 30% and total debt (NT$ 57.7 billion) that is fully covered by its cash reserves.
+  - [INFO] Pegatron exhibits robust short-term liquidity with NT$ 121.63 billion in cash and equivalents, a current ratio of 1.33x, and positive operating cash flow of NT$ 55.95 billion in FY 2024.
+  - [LOW] Pegatron operates with thin margins (1.1% operating margin in FY 2024) and faces intense price competition and high client concentration risks, particularly regarding Apple's product cycles.
+[PROFILE] Completed with 3 findings:
+  > Rationale: Pegatron Corporation is a highly established, publicly traded Taiwanese electronics manufacturer (TWSE: 4938) that was spun off from ASUS in 2010. It operates under a hybrid Design and Manufacturing Service (DMS) model, combining Electronics Manufacturing Services (EMS) and Original Design Manufacturing (ODM). The company specializes in computing, communications, and consumer electronics, serving as a major contract manufacturer (e.g., assembling iPhones for Apple). It has a massive global operational footprint with tens of thousands of employees across Taiwan, China, the Czech Republic, Mexico, and other regions. There are no operational discrepancies or red flags; the company's actual operations perfectly align with its claimed industry.
+  > Raw Data: {"source": "Exa API", "quality_flag": "high", "search_results": [{"title": "Pegatron Corporation: Shareholders Board Members Managers and Company Profile | TW0004938006 | MarketScreener", "snippet": "### Business description: Pegatron Corporation\n...\nPegatron Corp is engaged in the design, manufac...
+  - [INFO] Pegatron is a highly established global electronics contract manufacturer operating under a hybrid Design and Manufacturing Service (DMS) model, combining EMS and ODM capabilities.
+  - [INFO] The company maintains a massive global workforce, with estimates ranging from over 10,000 to 13,000+ direct corporate/R&D employees, and historically up to 90,000+ factory workers across its global manufacturing facilities.
+  - [INFO] Pegatron's product portfolio is highly diversified across three primary segments: Communications (smartphones, networking equipment), Computing (notebooks, desktops, motherboards), and Consumer Electronics (game consoles, smart home devices).
+[SHAREHOLDERS] Completed with 3 findings:
+  > Rationale: Foxconn (officially Hon Hai Precision Industry Co., Ltd.) is a publicly traded company listed on the Taiwan Stock Exchange (TWSE: 2317). Because it is a publicly traded entity with highly dispersed ownership, the lack of a single majority Ultimate Beneficial Owner (UBO) is standard and not flagged as an anomaly. Founder Terry Gou (Tai-Ming Gou) remains the largest individual shareholder with approximately 12.4% to 12.5% of the shares. The remaining shares are widely held by institutional investors (such as Vanguard, BlackRock, LGT Capital Partners, and various sovereign wealth/pension funds like the Government of Singapore and the Taiwan New Labor Pension Fund) and the general public (which holds over 60% of the float).
+  > Raw Data: {"quality_flag": "partial", "source": "API", "data": {}}...
+  - [INFO] Foxconn (Hon Hai Precision Industry Co., Ltd.) is a publicly traded company with highly dispersed ownership, where the general public holds approximately 64.9% to 67.3% of the shares.
+  - [INFO] Founder Terry Gou (Tai-Ming Gou) is the largest individual shareholder, holding approximately 12.4% to 12.5% of the company's outstanding shares.
+  - [INFO] Major institutional and sovereign shareholders include Vanguard Capital Management, the Taiwan New Labor Pension Scheme, LGT Capital Partners, and the Government of Singapore (GIC).
+[LICENSES] Completed with 4 findings:
+  > Rationale: The compliance analysis of Pegatron Corporation and its Indian subsidiaries (Pegatron Technology India Private Limited and Pegatron Electronics India Private Limited) was conducted using database records and web search results. The findings indicate that Pegatron maintains a robust compliance posture with active, valid certifications and corporate registrations. Specifically, Pegatron Corporation holds an active ISO 9001:2015 Quality Management System certification (valid until June 9, 2027) and an active ISO 45001:2018 Occupational Health and Safety Management System certification (valid until October 24, 2026). Its subsidiary, Pegatron Technology India Private Limited, holds an active ISO 14001:2015 Environmental Management System certification (valid until November 14, 2025). Furthermore, both Indian corporate entities are registered with the Registrar of Companies (ROC) Chennai and maintain an 'Active' status with up-to-date financial filings (last filed March 31, 2025). No critical operational licenses or certifications were found to be revoked, expired, or fraudulent.
+  > Raw Data: DB: {"quality_flag": "partial", "source": "API", "data": {}} WEB: {"source": "Exa API", "quality_flag": "high", "search_results": [{"title": "Pegatron Electronics India Private Limited - 2026 Insights", "snippet": "Pegatron Electronics India Private Limited, a active foreign private limited company,...
+  - [INFO] Pegatron Corporation holds an active ISO 9001:2015 Quality Management System certification issued by DNV, valid from June 23, 2025, to June 9, 2027.
+  - [INFO] Pegatron Corporation holds an active ISO 45001:2018 Occupational Health and Safety Management System certification, valid until October 24, 2026.
+  - [INFO] Pegatron Technology India Private Limited holds an active ISO 14001:2015 Environmental Management System certification for the manufacture of mobile phones, valid until November 14, 2025.
+  - [INFO] Pegatron Electronics India Private Limited (incorporated Sept 27, 2023) maintains an 'Active' status with ROC Chennai, with its latest financial statements filed up to March 31, 2025.
+DEBUG _execute_dag: completed StepName.FINANCES, on_step_complete=<function run_dd_with_ctx.<locals>.handle_step_complete at 0x10abc8f40>
+DEBUG: inside handle_step_complete: step=StepName.FINANCES, tiers_to_search=1
+DEBUG _execute_dag: completed StepName.LICENSES, on_step_complete=<function run_dd_with_ctx.<locals>.handle_step_complete at 0x10abc8f40>
+DEBUG: inside handle_step_complete: step=StepName.LICENSES, tiers_to_search=1
+DEBUG _execute_dag: completed StepName.SHAREHOLDERS, on_step_complete=<function run_dd_with_ctx.<locals>.handle_step_complete at 0x10c03ad40>
+DEBUG: inside handle_step_complete: step=StepName.SHAREHOLDERS, tiers_to_search=1
+DEBUG _execute_dag: completed StepName.FINANCES, on_step_complete=<function run_dd_with_ctx.<locals>.handle_step_complete at 0x10c03ad40>
+DEBUG: inside handle_step_complete: step=StepName.FINANCES, tiers_to_search=1
+DEBUG _execute_dag: completed StepName.FINANCES, on_step_complete=<function run_dd_with_ctx.<locals>.handle_step_complete at 0x10c03aca0>
+DEBUG: inside handle_step_complete: step=StepName.FINANCES, tiers_to_search=1
+DEBUG _execute_dag: completed StepName.LICENSES, on_step_complete=<function run_dd_with_ctx.<locals>.handle_step_complete at 0x10c03aca0>
+DEBUG: inside handle_step_complete: step=StepName.LICENSES, tiers_to_search=1
+DEBUG _execute_dag: completed StepName.PROFILE, on_step_complete=<function run_dd_with_ctx.<locals>.handle_step_complete at 0x10c03aca0>
+DEBUG: inside handle_step_complete: step=StepName.PROFILE, tiers_to_search=1
+
+--- Running KYB Agent ---
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+
+--- Running ESG Agent ---
+
+--- Running RESILIENCE Agent ---
+
+--- Running MEDIA Agent ---
+INFO:httpx:HTTP Request: GET https://newsapi.org/v2/everything?q=%22Pegatron%22&apiKey=d962fe06dec746ae8151e57c148f3fe3 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+[ESG] Research Plan (3 searches):
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+[KYB] Research Plan (2 searches):
+[RESILIENCE] Research Plan (3 searches):
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+[SHAREHOLDERS] Completed with 2 findings:
+  > Rationale: Pegatron Corporation is a publicly traded company listed on the Taiwan Stock Exchange (TWSE: 4938). Because it is a public company with widely dispersed ownership, there is no single ultimate beneficial owner (UBO) holding a controlling interest. Its largest shareholder is ASUSTeK Computer Inc., holding approximately 16.7% to 17.23% of the shares. Other major shareholders include institutional investors (such as Yuanta Securities Investment Trust, Fuh Hwa Securities Investment Trust, and BlackRock) and individual insiders (such as Tzu-Hsien Tung / Zi-Xian Tong and Jonney Shih / Chongtang Shi). Since it is a publicly traded entity with no single dominant individual owner, the lack of a single UBO is not flagged as an anomaly, and 'hidden_ubo_found' is set to false.
+  > Raw Data: {"quality_flag": "partial", "source": "API", "data": {}}...
+  - [INFO] Pegatron Corporation is a publicly traded company on the Taiwan Stock Exchange (TWSE: 4938) with highly transparent and widely dispersed ownership.
+  - [INFO] ASUSTeK Computer Inc. is the largest corporate shareholder of Pegatron Corporation, holding approximately 16.7% of the outstanding shares.
+DEBUG _execute_dag: completed StepName.SHAREHOLDERS, on_step_complete=<function run_dd_with_ctx.<locals>.handle_step_complete at 0x10c03aca0>
+DEBUG: inside handle_step_complete: step=StepName.SHAREHOLDERS, tiers_to_search=1
+
+--- Running KYB Agent ---
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+[PROFILE] Completed with 3 findings:
+  > Rationale: Wistron Corporation is a highly established, legitimate global Original Design Manufacturer (ODM) that spun off from Acer Inc. in 2000. The company's core business model centers on designing, manufacturing, and providing after-sales support for information and communication technology (ICT) products, including notebook PCs, enterprise servers, storage systems, and networking equipment. A key strategic shift identified in recent years is Wistron's deliberate divestment from lower-margin mobile phone assembly (such as selling its Indian operations to Tata Group in late 2023) to focus heavily on high-margin AI computing equipment, GPU accelerator cards, and enterprise server infrastructure. Employee headcount figures vary depending on whether they measure parent-level corporate staff (approximately 12,000 to 13,400 employees as of 2025/2026) or historical global manufacturing group-wide operations (which exceeded 80,000). There is no evidence of any drastic model discrepancy; the company's operations perfectly align with its claimed industry profile.
+  > Raw Data: {"source": "Exa API", "quality_flag": "high", "search_results": [{"title": "[PDF] 2025 - Wistron", "snippet": ", Wistron has been\n...\n(4)Low-Carbon Transformation and Sustainable Competitiveness \u2013 Faced with international net zero standards and customer carbon reduction requirements, we will ...
+  - [INFO] Wistron is a highly reputable and established global Original Design Manufacturer (ODM) with a strong market role, originally spun off from Acer Inc. in 2000.
+  - [INFO] The company has successfully executed a strategic pivot toward high-margin AI computing, GPU accelerator cards, and enterprise servers, while divesting from lower-margin assembly businesses like its Indian mobile operations in late 2023.
+  - [INFO] Wistron's active parent-level employee headcount is reported at approximately 12,000 to 13,400 as of 2025/2026, down from historical group-wide manufacturing peaks of over 80,000 due to corporate restructuring and divestments.
+DEBUG _execute_dag: completed StepName.PROFILE, on_step_complete=<function run_dd_with_ctx.<locals>.handle_step_complete at 0x10abc8f40>
+DEBUG: inside handle_step_complete: step=StepName.PROFILE, tiers_to_search=1
+
+--- Running ESG Agent ---
+
+--- Running RESILIENCE Agent ---
+
+--- Running MEDIA Agent ---
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+[ESG] Research Plan (3 searches):
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+[RESILIENCE] Research Plan (2 searches):
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://newsapi.org/v2/everything?q=%22Wistron%20Corporation%22&apiKey=d962fe06dec746ae8151e57c148f3fe3 "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+[KYB] Research Plan (2 searches):
+[MEDIA] Research Plan (3 searches):
+[MEDIA] Research Plan (3 searches):
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+[RESILIENCE] Research Plan (3 searches):
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+[SHAREHOLDERS] Completed with 2 findings:
+  > Rationale: Wistron Corporation is a publicly traded company listed on the Taiwan Stock Exchange (TWSE: 3231). Because it is a public company, its ownership structure is highly dispersed among institutional investors, exchange-traded funds (ETFs), pension funds, and the general public. No single shareholder holds a controlling stake or meets the typical 25% threshold to be classified as an Ultimate Beneficial Owner (UBO). The largest individual shareholder is Lin Hsien-Ming (also known as Simon Lin, Chairman & CSO) with approximately 1.42% to 1.54% of the shares. The largest institutional holdings are held by Yuanta Taiwan Dividend Plus ETF (3.87%), the Labor Pension Fund (2.88%), and Cathay MSCI Taiwan ESG Sustainability High Dividend Yield ETF (2.33%). Because the company is publicly traded with highly dispersed ownership, the lack of a single UBO is not flagged as an anomaly, and 'hidden_ubo_found' is set to false.
+  > Raw Data: {"quality_flag": "partial", "source": "API", "data": {}}...
+  - [INFO] Wistron Corporation is a publicly traded company with highly dispersed ownership. Its largest shareholders are institutional investment funds, ETFs, and pension funds, with no single entity or individual holding a controlling interest.
+  - [INFO] The largest individual shareholder is Chairman & CSO Lin Hsien-Ming (Simon Lin), holding approximately 1.42% of the total issued shares.
+DEBUG _execute_dag: completed StepName.SHAREHOLDERS, on_step_complete=<function run_dd_with_ctx.<locals>.handle_step_complete at 0x10abc8f40>
+DEBUG: inside handle_step_complete: step=StepName.SHAREHOLDERS, tiers_to_search=1
+
+--- Running KYB Agent ---
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+[ESG] Research Plan (3 searches):
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+[KYB] Completed with 2 findings:
+  > Rationale: The vendor 'Foxconn' is the globally recognized trade name for Hon Hai Precision Industry Co., Ltd. Web research confirms that Hon Hai Precision Industry Co., Ltd. is a massive, publicly traded multinational corporation established in Taiwan in 1974 (TWSE: 2317). It is actively listed on the Taiwan Stock Exchange (TWSE) and has global depositary receipts traded on major international exchanges, including the London Stock Exchange (LSE: HHPD). The company actively publishes audited financial reports and regulatory disclosures (such as its 2025/2026 annual and monthly reports). Under the critical instruction, because the company is a publicly traded corporation actively filing regulatory reports, its KYB status is considered in 'Good Standing' and valid by default. The lack of a private registry ID in the initial verification data does not invalidate its registration.
+  > Raw Data: {"quality_flag": "partial", "source": "API", "data": {}}...
+  - [INFO] Foxconn's primary legal entity is Hon Hai Precision Industry Co., Ltd., which is a highly active, publicly traded corporation listed on the Taiwan Stock Exchange (TWSE: 2317) and the London Stock Exchange (LSE: HHPD).
+  - [INFO] The company actively files regulatory reports, including audited annual reports and monthly sales disclosures, confirming its active corporate standing.
+DEBUG _execute_dag: completed StepName.KYB, on_step_complete=<function run_dd_with_ctx.<locals>.handle_step_complete at 0x10c03ad40>
+DEBUG: inside handle_step_complete: step=StepName.KYB, tiers_to_search=1
+
+--- Running SANCTIONS Agent ---
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+[KYB] Research Plan (2 searches):
+INFO:httpx:HTTP Request: POST https://api.opensanctions.org/match/default "HTTP/1.1 429 Too Many Requests"
+WARNING:core.real_tools:OpenSanctions API returned status code 429. Initiating web search fallback.
+INFO:core.real_tools:OpenSanctions API unavailable or failed. Executing fallback web search sanctions screening.
+[MEDIA] Research Plan (3 searches):
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+[KYB] Completed with 3 findings:
+  > Rationale: Pegatron Corporation is a well-established, publicly traded multinational electronics manufacturing company headquartered in Taiwan. It was established on June 27, 2007, and listed on the Taiwan Stock Exchange (TWSE) on June 24, 2010, under stock code 4938. The company's official registration ID (Unified Business Number / UBN) in Taiwan is 28689155, and its status is active ('approved for establishment'). Because Pegatron is a major publicly traded corporation actively filing audited financial reports (audited by KPMG Taiwan) and maintaining its listing on the TWSE, its corporate standing is verified as valid and in good standing. The lack of a registration ID in the initial input is resolved by the official registry data found during verification.
+  > Raw Data: {"quality_flag": "partial", "source": "API", "data": {}}...
+  - [INFO] Pegatron Corporation is actively listed on the Taiwan Stock Exchange (TWSE: 4938) with an ISIN code of TW0004938006.
+  - [INFO] The company is officially registered in Taiwan under Unified Business Number (UBN) 28689155 with an active status ('approved for establishment').
+  - [INFO] Pegatron actively publishes audited consolidated financial statements, with the latest reports reviewed by KPMG Taiwan, confirming robust regulatory compliance.
+DEBUG _execute_dag: completed StepName.KYB, on_step_complete=<function run_dd_with_ctx.<locals>.handle_step_complete at 0x10c03aca0>
+DEBUG: inside handle_step_complete: step=StepName.KYB, tiers_to_search=1
+
+--- Running SANCTIONS Agent ---
+[ESG] ANOMALY RAISED: Severe ESG Violation: An undercover investigation by China Labor Watch from March to September 2025 revealed severe labor violations at Foxconn's Zhengzhou facility. Over 50% of the peak workforce of 150,000–200,000 were temporary dispatch workers, violating the 10% legal limit under Chinese law. These workers faced wage withholding schemes, lack of social insurance, and forced overtime. Additionally, student workers were coerced into night shifts and overtime under threat of graduation withholding, which meets international indicators of forced labor. Systematic hiring discrimination against ethnic minorities (including Uyghurs and Tibetans) was also documented via automated recruitment platform rejections.
+[ESG] Completed with 4 findings:
+  > Rationale: Foxconn (Hon Hai Precision Industry Co., Ltd.) presents a highly polarized ESG profile. On one hand, the company has established robust ESG reporting frameworks, aligning with GRI, SASB, and TCFD standards, and maintains a 'Low Risk' rating of 10.4/10.5 from Morningstar Sustainalytics, alongside a 'BB' rating from MSCI. It has also achieved leadership-level scores (A-) in CDP Climate Change assessments. On the other hand, independent investigations by China Labor Watch (CLW) in late 2025 reveal severe, systemic labor violations at its flagship Zhengzhou facility ('iPhone City') during the production of the iPhone 17. These violations include employing temporary 'dispatch' workers at levels exceeding 50% of the workforce (violating the Chinese legal limit of 10%), withholding wages through complex rebate schemes, forcing student workers onto night shifts and overtime under threat of graduation withholding, and systematic hiring discrimination against ethnic minorities (such as Uyghurs, Tibetans, and Huis). These findings represent severe, ongoing labor abuses and structural ESG violations that contradict Foxconn's public-facing sustainability commitments.
+  > Raw Data: {"source": "Exa API", "quality_flag": "high", "search_results": [{"title": "Sustainability Report - Hon Hai Technology Group", "snippet": "Home - Hon Hai Technology Group\n\nTechnology for Smart Living\n\nCreation of a Better Future\n\nTogether\n\nESG Sustainable Development\n\nLatest News\n\nNews\n...
+  - [CRITICAL] Systemic labor violations at the Zhengzhou facility, including excessive reliance on temporary dispatch workers (over 50% of the workforce vs. the 10% legal limit), wage withholding, and forced student labor on night shifts.
+  - [HIGH] Systematic hiring discrimination against ethnic minorities (including Uyghurs, Tibetans, and Huis) through automated recruitment platform rejections.
+  - [INFO] Strong environmental and climate disclosures, achieving an A- in CDP Climate Change and an A in Supplier Engagement, alongside a Low Risk (10.4) rating from Morningstar Sustainalytics.
+  - [LOW] Minor environmental non-compliance, including a $1,159.50 fine by the Wisconsin Department of Natural Resources for failing to manage stormwater runoff at its construction site.
+DEBUG _execute_dag: completed StepName.ESG, on_step_complete=<function run_dd_with_ctx.<locals>.handle_step_complete at 0x10c03ad40>
+DEBUG: inside handle_step_complete: step=StepName.ESG, tiers_to_search=1
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.opensanctions.org/match/default "HTTP/1.1 429 Too Many Requests"
+WARNING:core.real_tools:OpenSanctions API returned status code 429. Initiating web search fallback.
+INFO:core.real_tools:OpenSanctions API unavailable or failed. Executing fallback web search sanctions screening.
+[LICENSES] Completed with 6 findings:
+  > Rationale: The compliance analysis of Foxconn (Hon Hai Technology Group) was conducted using database records and extensive web search results. The evaluation focused on identifying active certifications, operational licenses, and any critical revocations or regulatory actions. The findings indicate that Foxconn maintains robust, active certifications globally, including ISO 9001, ISO 14001, ISO 27001, and a newly obtained ISO 37001 (Anti-Bribery) certification in 2025. In India, the subsidiary Foxconn Hon Hai Technology India Mega Development Private Limited holds active Consent to Operate (CTO) and Consent to Establish (CTE) environmental permits from the Tamil Nadu Pollution Control Board, alongside an active GST registration. However, historical and regional compliance issues were identified: 1) A $200 million cellphone plant investment license in Hanoi, Vietnam, was revoked in 2015 due to a complete lack of project progress and subsequent dissolution of the project. 2) A historical 1996 US ITC limited exclusion and cease-and-desist order was issued against Foxconn International Inc. for patent infringement. 3) A regional 'do not sell' restriction exists in Wisconsin (dating back to 2017) for failing to register under the state's electronics recycling program. 4) A temporary operational suspension occurred at the Sriperumbudur, India plant in late 2021 due to an Apple audit regarding worker dormitory conditions, which has since been resolved. Because the revoked investment license in Vietnam was due to project abandonment/dissolution rather than an active operational violation of an ongoing facility, and there are no active, unaddressed revocations of critical operational licenses for Foxconn's active facilities, 'critical_license_revoked' is set to false.
+  > Raw Data: DB: {"quality_flag": "partial", "source": "API", "data": {}} WEB: {"source": "Exa API", "quality_flag": "high", "search_results": [{"title": "Search Status", "snippet": "Search Status\n\nApplication Details Industry Wise\n\n| Industry Login Id : | R23SPR54637769 |\n| --- | --- |\n\n| S.No. | Industr...
+  - [INFO] Foxconn Hon Hai Technology India Mega Development Private Limited holds active Consent to Operate (CTO) and Consent to Establish (CTE) environmental permits from the Tamil Nadu Pollution Control Board, with approvals extending through 2025.
+  - [INFO] Foxconn's subsidiary FIH Mobile Limited officially obtained the ISO 37001 Anti-Bribery Management Systems certification in 2025, demonstrating a commitment to global integrity standards.
+  - [INFO] Foxconn Slovakia holds a valid ISO/IEC 27001:2022 Information Security Management System certification, certified by SGS United Kingdom Ltd, valid from January 2025 until January 2027.
+  - [MEDIUM] Foxconn's investment license for a planned $200 million cellphone plant in Vinh Phuc Province, Vietnam, was revoked by local authorities after the company failed to make progress on the project and decided to dissolve the entity.
+  - [LOW] Foxconn was placed on a 'do not sell' list in Wisconsin for failing to register under the state's 2009 electronic waste recycling law, prohibiting the sale of Foxconn-branded computers larger than cellphones directly to consumers in the state.
+  - [MEDIUM] Foxconn's Sriperumbudur plant in India experienced a temporary operational suspension and was placed on probation by Apple in late 2021 following audits that revealed substandard worker dormitory and dining conditions.
+DEBUG _execute_dag: completed StepName.LICENSES, on_step_complete=<function run_dd_with_ctx.<locals>.handle_step_complete at 0x10c03ad40>
+DEBUG: inside handle_step_complete: step=StepName.LICENSES, tiers_to_search=1
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+[RESILIENCE] ANOMALY RAISED: High-risk supply chain dependency found: Foxconn exhibits a critical, non-disclosed operational dependency on Chinese raw materials, component ecosystems, and technical engineering talent. Even as Foxconn expands physical assembly plants in India (such as in Chennai and Devanahalli), these facilities remain heavily tied to and reliant on China-based suppliers for upstream inputs and specialized technical support, exposing the vendor to potential disruptions from US-China trade frictions or Chinese regulatory retaliation.
+[RESILIENCE] Completed with 3 findings:
+  > Rationale: Foxconn (Hon Hai Precision Industry Co., Ltd.) is the world's largest contract electronics manufacturer. While it has aggressively pursued a '3+3' diversification strategy to expand its manufacturing footprint into India, Vietnam, and Mexico, its supply chain remains deeply dependent on China. This dependency is not only for final assembly but, more critically, for raw materials, intermediate components, and specialized technical talent. The analysis identifies key strategic suppliers and partners, such as Laboratorio Elettrofisico (a top-three global supplier of magnetizing and magnetic measurement systems for Apple products), HCL Group (its joint venture partner for semiconductor packaging in India), and Goertek Electronics Vietnam (in which Foxconn acquired a stake to secure audio/electronics supply). Additionally, a critical dependency is highlighted regarding Foxconn's heavy reliance on Chinese raw materials and supply chain processes, which continues to bind its global operations (including those in India) to China's industrial base.
+  > Raw Data: {"source": "Exa API", "quality_flag": "high", "search_results": [{"title": "No Safe Haven: Foxconn and the Fragility of Strategic Neutrality - Ketagalan Media", "snippet": "Foxconn, the world\u2019s largest electronics manufacturer, is more than a supplier. It is a nerve center of the global technol...
+  - [HIGH] Foxconn maintains a deep, structural dependency on China for raw materials, components, and technical expertise, which limits the speed and independence of its diversification efforts in India and Vietnam.
+  - [INFO] Foxconn is actively mitigating geopolitical risks by establishing parallel supply chains and regional hubs, reducing its production concentration in China from nearly 100% to approximately 65%.
+  - [INFO] Foxconn has partnered with HCL Group to establish a $435 million semiconductor packaging (OSAT) facility in India, securing localized packaging capabilities for display driver chips.
+DEBUG _execute_dag: completed StepName.RESILIENCE, on_step_complete=<function run_dd_with_ctx.<locals>.handle_step_complete at 0x10c03ad40>
+DEBUG: inside handle_step_complete: step=StepName.RESILIENCE, tiers_to_search=1
+[RESILIENCE] Completed with 4 findings:
+  > Rationale: Pegatron Corporation is a major Taiwanese electronics manufacturing services (EMS) provider that acts as a critical contract manufacturer for global tech giants like Apple, Dell, Tesla, and HP. The analysis of Pegatron's supply chain reveals a highly integrated global network that is actively undergoing a 'China+1' diversification strategy. Historically, Pegatron relied heavily on mainland China for its manufacturing footprint (employing up to 200,000 workers during peak seasons). However, due to escalating U.S.-China trade tensions, Section 301 tariffs, and export controls, Pegatron has aggressively diversified its operations to India, Vietnam, Mexico, Indonesia, the Czech Republic, and is currently establishing its first U.S. manufacturing facility in Georgetown, Texas (slated for completion by March 2026). Key upstream software and design partners identified include Zuken Inc. (for PCB design flow using CR-8000) and Cadence Design Systems. While Pegatron is successfully mitigating its geographic concentration risks, it remains exposed to geopolitical volatility in the Taiwan Strait (where its headquarters and R&D are located) and must navigate complex compliance regimes across multiple jurisdictions.
+  > Raw Data: {"source": "Exa API", "quality_flag": "high", "search_results": [{"title": "Pegatron, one of the biggest suppliers of Apple and Dell, has 'Empty Stores' warning for America on Trump Tariffs: Within two months ..., ETManufacturing", "snippet": "This month, Trump unexpectedly paused tariffs targeting ...
+  - [INFO] Pegatron is executing a robust 'China+1' diversification strategy, expanding its manufacturing footprint to India, Vietnam, Mexico, Indonesia, and the Czech Republic to reduce its historical reliance on mainland China.
+  - [INFO] Pegatron is establishing its first U.S. manufacturing facility in Georgetown, Texas, investing $35 million to localize production, leverage IRA incentives, and serve North American clients closer to their end markets.
+  - [MEDIUM] Pegatron faces significant operational and financial risks from fluctuating U.S. tariff policies and trade tensions, which disrupt just-in-time logistics and create inventory planning uncertainty for its major clients.
+  - [HIGH] Geopolitical tensions in the Taiwan Strait pose a continuous threat to Pegatron's headquarters, engineering operations, and core R&D capabilities, requiring robust business continuity planning.
+DEBUG _execute_dag: completed StepName.RESILIENCE, on_step_complete=<function run_dd_with_ctx.<locals>.handle_step_complete at 0x10c03aca0>
+DEBUG: inside handle_step_complete: step=StepName.RESILIENCE, tiers_to_search=1
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+[ESG] Completed with 5 findings:
+  > Rationale: Pegatron Corporation, a major global electronics manufacturer and key supplier to Apple, presents a mixed ESG profile. On the positive side, the company maintains structured ESG reporting, publishes annual sustainability reports, and has its greenhouse gas inventories verified by third parties (such as DNV). It has also achieved a 'Medium Risk' ESG rating of 22.1 from Sustainalytics and a high UN SDG ESG Transparency Score of 5.4 from Sevva AI. However, Pegatron faces significant environmental and social challenges. Environmentally, a June 2025 Greenpeace East Asia report ranked Pegatron last among Apple's five major final assembly suppliers due to its lack of a 100% renewable energy target and a relatively low renewable energy ratio of 56%. Socially, Pegatron has a long history of severe labor violations documented by China Labor Watch (CLW) and other watchdogs. These include systemic issues such as forced overtime, excessive use of dispatch workers, withholding of worker ID cards (which restricts freedom of movement and constitutes a forced labor risk), and workplace harassment. While these labor issues are highly concerning and represent significant red flags, they are treated as ongoing high-severity systemic risks rather than a newly uncovered, undisclosed 'severe ESG violation' that would trigger a 'true' flag for 'severe_esg_violation_found', as these issues have been publicly documented, audited, and monitored by clients like Apple and external watchdogs over the past decade.
+  > Raw Data: {"source": "Exa API", "quality_flag": "high", "search_results": [{"title": "[PDF] 2024 - PEGATRON Sustainability Report", "snippet": "issued a sustainability\n...\nevery year, which\n...\nin the areas\n...\nAs a global corporate citizen, Pegatron continues to advance its ESG (Environmental,\n...\nSo...
+  - [MEDIUM] Pegatron ranked last among Apple's final assembly suppliers in a June 2025 Greenpeace East Asia report due to its lack of a 100% renewable energy target and a low renewable energy ratio of 56%.
+  - [HIGH] Persistent labor rights violations, including forced overtime, excessive use of dispatch labor, withholding of worker ID cards, and workplace harassment, have been repeatedly documented at Pegatron factories by China Labor Watch.
+  - [INFO] Pegatron maintains a structured sustainability framework, publishing annual ESG reports and obtaining third-party verification (DNV) for its greenhouse gas inventory.
+  - [INFO] Pegatron received a 'Medium Risk' ESG rating of 22.1 from Sustainalytics and a high UN SDG ESG Transparency Score of 5.4 from Sevva AI.
+  - [MEDIUM] Pegatron subsidiaries have historically faced regulatory fines and production halts in China due to environmental violations, including discharging pollutants and waste fluids into local river and drainage systems.
+DEBUG _execute_dag: completed StepName.ESG, on_step_complete=<function run_dd_with_ctx.<locals>.handle_step_complete at 0x10c03aca0>
+DEBUG: inside handle_step_complete: step=StepName.ESG, tiers_to_search=1
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+[MEDIA] Completed with 4 findings:
+  > Rationale: The adverse media screening for Pegatron reveals a history of significant labor and operational risks, though no critical breaking news (such as recent executive arrests or fraud indictments) was identified that would fundamentally alter its current risk profile. The primary findings include: 1) Persistent labor violations in its Chinese factories documented over a decade (from 2013 to 2023) by China Labor Watch and the BBC, involving forced overtime, student labor abuses, and poor living conditions, which led to Apple placing Pegatron on probation in 2020. 2) A major privacy and security incident in 2016 where Pegatron repair technicians uploaded a customer's nude photos, resulting in a multimillion-dollar settlement paid by Apple and subsequently reimbursed by Pegatron. 3) A historical internal fraud case in Singapore where two mid-level logistics/operations managers misappropriated over 25,000 iPhones between 2018 and 2019, resulting in nine-year prison sentences in 2021 and 2023. 4) Indirect exposure to a June 2026 data breach at Tata Electronics, which recently acquired a 60% stake in Pegatron's Indian unit. While these findings represent moderate to high reputational and operational risks, they do not constitute critical breaking news of executive-level criminal indictments.
+  > Raw Data: DB: {"quality_flag": "high", "source": "API", "articles": [{"headline": "Snapdragon START lo cambia todo: crear gafas y otros dispositivos de IA ser\u00e1 m\u00e1s f\u00e1cil que nunca", "source": "Hipertextual", "date": "2026-06-16T17:01:00Z"}, {"headline": "Snapdragon START lo cambia todo: crear g...
+  - [HIGH] Pegatron has faced systemic allegations of labor rights violations, forced overtime, and student worker exploitation in its Chinese factories over the past decade, leading to Apple placing the company on probation in 2020.
+  - [HIGH] In 2016, Pegatron repair technicians in California uploaded a customer's private nude photos to her Facebook account, resulting in an egregious privacy violation and a multimillion-dollar settlement.
+  - [MEDIUM] Two former Pegatron Singapore employees were sentenced to nine years in prison for conspiring to misappropriate and sell over 25,000 defective iPhones, costing the company millions in compensation to Apple.
+  - [MEDIUM] Tata Electronics, which acquired a 60% stake in Pegatron's Indian iPhone assembly unit, suffered a major data breach in June 2026, exposing sensitive supply chain files and employee data.
+DEBUG _execute_dag: completed StepName.MEDIA, on_step_complete=<function run_dd_with_ctx.<locals>.handle_step_complete at 0x10c03aca0>
+DEBUG: inside handle_step_complete: step=StepName.MEDIA, tiers_to_search=1
+[KYB] Completed with 2 findings:
+  > Rationale: Wistron Corporation is a highly established, publicly traded company listed on the Taiwan Stock Exchange (TWSE: 3231) with an active corporate standing. Although the initial verification data was partial and lacked a registration ID, web research successfully retrieved the official registration details from the Taiwan Ministry of Economic Affairs (MOEA) registry. The company's Unified Business Number (UBN) is 12868358, and its status is officially registered as active ('核冖舠然' / Approved Establishment). Because Wistron Corporation is a major publicly traded entity actively filing regulatory reports and maintaining transparent investor relations, its KYB status is verified as valid and in Good Standing.
+  > Raw Data: {"quality_flag": "partial", "source": "API", "data": {}}...
+  - [INFO] Wistron Corporation is actively registered in Taiwan under Unified Business Number (UBN) 12868358.
+  - [INFO] Wistron Corporation is a publicly traded company listed on the Taiwan Stock Exchange (TWSE: 3231) and actively files financial reports.
+DEBUG _execute_dag: completed StepName.KYB, on_step_complete=<function run_dd_with_ctx.<locals>.handle_step_complete at 0x10abc8f40>
+DEBUG: inside handle_step_complete: step=StepName.KYB, tiers_to_search=1
+
+--- Running SANCTIONS Agent ---
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.opensanctions.org/match/default "HTTP/1.1 429 Too Many Requests"
+WARNING:core.real_tools:OpenSanctions API returned status code 429. Initiating web search fallback.
+INFO:core.real_tools:OpenSanctions API unavailable or failed. Executing fallback web search sanctions screening.
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+[ESG] Completed with 3 findings:
+  > Rationale: Wistron Corporation is a major Taiwanese electronics manufacturer with a strong overall ESG profile, as evidenced by its high ratings from major agencies (MSCI 'A' rating, S&P Global CSA Top 5%, Morningstar/Sustainalytics 'Low' ESG Risk Rating of 11.25, and EcoVadis Gold Medal). However, a severe historical labor violation occurred in December 2020 at its Narasapura facility in Karnataka, India. Thousands of contract workers rioted over unpaid wages, underpayment, and uncompensated 12-hour shifts. Investigations by the Karnataka state government and Apple (which placed Wistron on probation) confirmed serious labor law violations, including failure to maintain proper attendance/salary records, lack of overtime pay, and inadequate HR management. Wistron subsequently acknowledged these failures, removed the vice president overseeing India operations, settled pending payments, and implemented corrective actions. Because this major labor violation was publicly resolved, resulted in structural changes, and occurred several years ago, it is flagged as a high-severity historical finding rather than an active, undisclosed 'severe ESG violation' that would trigger a true 'severe_esg_violation_found' flag today. Wistron's current ESG governance framework and policies are robust.
+  > Raw Data: {"source": "Exa API", "quality_flag": "high", "search_results": [{"title": "Sustainability Reports and Documents - Wistron ESG", "snippet": "Sustainability Reports and Documents-Wistron ESG\n\n# Sustainability Reports and Documents\n\n## ESG News Letter\n\nunsubscribe newsletter\n\nEmail address is ...
+  - [INFO] Wistron maintains strong overall ESG ratings, including an MSCI 'A' rating, S&P Global CSA Top 5% ranking, and an EcoVadis Gold Medal (98th percentile).
+  - [INFO] Morningstar/Sustainalytics assesses Wistron with a 'Low' ESG Risk Rating of 11.25, indicating strong management of material ESG issues.
+  - [HIGH] In December 2020, Wistron experienced a major labor riot at its Narasapura facility in India due to unpaid wages, lack of overtime compensation, and unauthorized 12-hour shifts. Government and client audits confirmed severe labor law violations, leading to Apple placing Wistron on probation until corrective actions were completed.
+DEBUG _execute_dag: completed StepName.ESG, on_step_complete=<function run_dd_with_ctx.<locals>.handle_step_complete at 0x10abc8f40>
+DEBUG: inside handle_step_complete: step=StepName.ESG, tiers_to_search=1
+[RESILIENCE] ANOMALY RAISED: High-risk supply chain dependency found: Wistron Corporation itself is listed on the U.S. Department of Commerce Bureau of Industry and Security (BIS) Entity List, which imposes strict licensing requirements on the export, re-export, or transfer of specified items to the company, presenting a critical regulatory compliance risk for partners and customers.
+[RESILIENCE] Completed with 4 findings:
+  > Rationale: Wistron Corporation is a major global ICT hardware manufacturer based in Taiwan. An analysis of its supply chain disclosures reveals that it manages a massive network of 1,683 suppliers, with 404 classified as Tier 1 suppliers (accounting for over 90% of annual transaction volume). Geographically, Wistron has a heavy concentration of suppliers in Taiwan (55.86% of purchase amount) and mainland China (34.20% of purchase amount), exposing it to significant cross-strait geopolitical risks. Operationally, Wistron highlights critical dependencies on key components such as memory and GPUs, noting that shortages in these areas delay deliveries and increase costs. Crucially, a search of regulatory databases reveals that Wistron Corporation (Taiwan) has been listed on the U.S. Department of Commerce's Bureau of Industry and Security (BIS) Entity List (Supplement No. 4 to Part 744 of the EAR), which represents a critical, high-risk regulatory and compliance finding that was not disclosed in its standard ESG reports.
+  > Raw Data: {"source": "Exa API", "quality_flag": "high", "search_results": [{"title": "Supply Chain Management - Wistron ESG", "snippet": "Wistron values collaboration and mutual growth with its suppliers. Building on its Sustainable Procurement Policy and in response to customer expectations, Wistron has deve...
+  - [CRITICAL] Wistron Corporation is listed on the U.S. Bureau of Industry and Security (BIS) Entity List, subjecting it to strict export licensing requirements.
+  - [HIGH] High geographic concentration of supply chain spend in Taiwan (55.86%) and China (34.20%), exposing Wistron to severe cross-strait geopolitical and regional disruption risks.
+  - [MEDIUM] Critical operational dependency on highly volatile key components, specifically memory chips and GPUs, which have historically caused cost increases and delivery delays.
+  - [INFO] Robust supplier governance framework with 100% of suppliers signing the Supplier Code of Conduct and active ESG risk screening of Tier 1 and non-Tier 1 suppliers.
+DEBUG _execute_dag: completed StepName.RESILIENCE, on_step_complete=<function run_dd_with_ctx.<locals>.handle_step_complete at 0x10abc8f40>
+DEBUG: inside handle_step_complete: step=StepName.RESILIENCE, tiers_to_search=1
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+[MEDIA] Completed with 2 findings:
+  > Rationale: An adverse media screening was conducted for Wistron Corporation. The primary historical adverse media event occurred in December 2020, when a major riot broke out at Wistron's Narasapura manufacturing facility in Karnataka, India. The violence was triggered by severe labor law violations, including unpaid wages, irregular hours, and poor working conditions. This led to Apple placing Wistron on probation and halting new business. Wistron subsequently apologized, removed its Vice President overseeing India operations, and implemented corrective actions. To resolve the operational challenges, Wistron successfully divested its entire Indian manufacturing subsidiary (Wistron InfoComm Manufacturing India) to the Tata Group for $125 million, a transaction that received regulatory clearance from the Competition Commission of India (CCI) and was completed in early 2024. Recent financial reports from 2024 to 2026 show strong financial performance, capacity expansions in Vietnam, and no new material controversies, regulatory investigations, or executive arrests. Therefore, the historical labor issues are considered resolved through divestment, and there is no critical breaking news.
+  > Raw Data: DB: {"quality_flag": "high", "source": "API", "articles": [{"headline": "Taiwan Stock Exchange (TWSE)TWSE\u3068\u696d\u754c\u30d1\u30fc\u30c8\u30ca\u30fc\u304cCOMPUTEX 2026\u3067\u4e16\u754c\u306eAI\u3068\u534a\u5c0e\u4f53\u7af6\u4e89\u306b\u304a\u3051\u308b\u53f0\u6e7e\u306e\u4e2d\u5fc3\u7684\u5f79...
+  - [HIGH] In December 2020, Wistron's Narasapura facility in India experienced a violent riot involving thousands of contract workers protesting unpaid wages, delayed payments, and poor working conditions. The incident resulted in millions of dollars in property damage, police arrests of workers, and Apple placing Wistron on probation for Supplier Code of Conduct violations.
+  - [INFO] Wistron successfully resolved its operational and labor challenges in India by divesting 100% of its Indian manufacturing unit to Tata Electronics (part of the Tata Group) for $125 million. The transaction received regulatory approval from the Competition Commission of India (CCI) and was finalized in early 2024.
+DEBUG _execute_dag: completed StepName.MEDIA, on_step_complete=<function run_dd_with_ctx.<locals>.handle_step_complete at 0x10abc8f40>
+DEBUG: inside handle_step_complete: step=StepName.MEDIA, tiers_to_search=1
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+[MEDIA] Completed with 4 findings:
+  > Rationale: An adverse media screening of Foxconn reveals several significant reputational, legal, and operational risks, though none meet the threshold of critical breaking news (such as executive indictments or systemic corporate fraud). The primary findings include: 1) A major cyberattack in May 2026 by the Nitrogen ransomware group, which targeted North American factories and allegedly compromised 8 TB of data, including confidential client schematics. 2) A legally binding $8.45 million arbitration award confirmed by a US federal judge in a dispute over defective 5G phones. 3) Serious labor and human rights scrutiny in India, where the National Human Rights Commission (NHRC) rejected a previous 'clean chit' and ordered a fresh, thorough investigation into allegations that Foxconn systematically excludes married women from assembly jobs. 4) Local administrative and community friction in Karnataka, India, involving tax disputes and protests over unfulfilled local employment promises. Together, these issues present elevated compliance, cybersecurity, and reputational risks for partners.
+  > Raw Data: DB: {"quality_flag": "high", "source": "API", "articles": [{"headline": "Foxconn quiere fabricarlo todo. TODO", "source": "Xataka.com", "date": "2026-06-28T10:00:14Z"}, {"headline": "Montag: Hellblade-Spiel mit mehr Gameplay, Intel und Foxconn mit KI-Kooperation", "source": "heise online", "date": "...
+  - [MEDIUM] Foxconn's North American factories suffered a cyberattack in May 2026 claimed by the Nitrogen ransomware gang, which allegedly stole 8 TB of data containing confidential client designs.
+  - [MEDIUM] Foxconn was ordered by a US federal judge to pay an $8.45 million arbitration award to Emblem Solutions LLC over defective 5G phones that suffered from severe system and emergency calling failures.
+  - [HIGH] India's National Human Rights Commission (NHRC) ordered a fresh investigation into Foxconn's Chennai plant over allegations of systematic hiring discrimination against married women, criticizing previous government probes as lax.
+  - [MEDIUM] Foxconn's facility in Karnataka, India, faced local tax disputes and threats of asset seizure from local panchayats, alongside ongoing community anger and threats of mass protests over failed local employment promises.
+DEBUG _execute_dag: completed StepName.MEDIA, on_step_complete=<function run_dd_with_ctx.<locals>.handle_step_complete at 0x10c03ad40>
+DEBUG: inside handle_step_complete: step=StepName.MEDIA, tiers_to_search=1
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+[SANCTIONS] Research Plan (3 searches):
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+[SANCTIONS] Research Plan (3 searches):
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+[SANCTIONS] Research Plan (3 searches):
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+[SANCTIONS] Completed with 2 findings:
+  > Rationale: A comprehensive sanctions compliance review was conducted on Wistron Corporation, its key shareholders, and its executive leadership. The screening results and targeted web research confirm that Wistron Corporation is not present on any active international sanctions lists (such as the OFAC SDN, Non-SDN, or BIS Entity Lists). Notably, recent Bureau of Industry and Security (BIS) updates confirm that Wistron Corporation was officially removed from the BIS Boycott Requester List, which is a positive regulatory development. Screening of the known shareholders, including major institutional funds (Vanguard, BlackRock, Yuanta, Cathay) and individual founder Lin Hsien-Ming, returned no active sanctions matches. While some general search results highlight broader geopolitical discussions regarding Vanguard/BlackRock investments in Chinese military-industrial companies, these do not directly impact Wistron Corporation or its immediate shareholders. No sanctioned parties or high-risk entities were identified that require further shareholder mapping or review.
+  > Raw Data: {"quality_flag": "medium", "source": "web_search_fallback", "hits": [], "web_search_results": {"Wistron Corporation": {"source": "Exa API", "quality_flag": "high", "search_results": [{"title": "Sanctions List Search", "snippet": "Sanctions List Search\n...\nSanctions List Search\n...\n| Download the...
+  - [INFO] Wistron Corporation was officially removed from the US Department of Commerce Bureau of Industry and Security (BIS) Boycott Requester List, indicating no active restrictive export controls or anti-boycott listings.
+  - [INFO] Wistron Corporation, its key individual shareholder Lin Hsien-Ming, and its institutional shareholders (including Yuanta, Cathay, Vanguard, and Fubon entities) were screened against global sanctions databases (OFAC SDN, Non-SDN, EU, UK) with no matches found.
+DEBUG _execute_dag: completed StepName.SANCTIONS, on_step_complete=<function run_dd_with_ctx.<locals>.handle_step_complete at 0x10abc8f40>
+DEBUG: inside handle_step_complete: step=StepName.SANCTIONS, tiers_to_search=1
+INFO:google_genai._api_client:The user provided project/location will take precedence over the Vertex AI API key from the environment variable.
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+[SUPERVISOR] Research Plan (1 searches):
+  1. [Verify if Wistron Corporation is currently on the US BIS Entity List, as the resilience step claims it is, while the sanctions step claims it was removed from the Boycott Requester List.] → '"Wistron Corporation" "Entity List" BIS'
+WARNING:core.real_tools:Exa API exception: 
+WARNING:core.real_tools:Exa failed, falling back to Tavily.
+INFO:httpx:HTTP Request: POST https://api.tavily.com/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:agents.summary_agent:Contradiction removed finding [18]: Wistron Corporation is listed on the U.S. Bureau of Industry and Security (BIS) Entity List, subjecting it to strict export licensing requirements. — reason: Finding [18] states that Wistron is listed on the U.S. BIS Entity List, which is a severe export control restriction. This is directly contradicted by finding [24], which confirms that Wistron has no active restrictive export controls or anti-boycott listings and was removed from the BIS Boycott Requester List. Finding [24] is more accurate and reflects the correct regulatory status of the company.
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.

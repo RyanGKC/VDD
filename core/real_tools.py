@@ -199,10 +199,29 @@ async def screen_sanctions(ctx: DDContext, entities: list[str]) -> str:
                     final_str = json.dumps(result)
                     cache_db.set(cache_key, final_str)
                     return final_str
+                else:
+                    logger.warning(f"OpenSanctions API returned status code {resp.status_code}. Initiating web search fallback.")
         except Exception as e:
-            result["error"] = f"OpenSanctions API error: {e}"
+            logger.warning(f"OpenSanctions API error: {e}. Initiating web search fallback.")
             
-    # Mock local cache fallback
+    # Web search fallback for real mode
+    if entities:
+        logger.info("OpenSanctions API unavailable or failed. Executing fallback web search sanctions screening.")
+        result["source"] = "web_search_fallback"
+        result["quality_flag"] = "medium"
+        result["web_search_results"] = {}
+        
+        for entity in entities:
+            query = f'"{entity}" sanctioned OFAC list PEP'
+            try:
+                search_res = await perform_web_search(ctx, query)
+                result["web_search_results"][entity] = json.loads(search_res)
+            except Exception as se:
+                result["web_search_results"][entity] = {"error": str(se)}
+                
+        return json.dumps(result)
+
+    # Mock local cache fallback if no entities
     result["local_cache_status"] = "OFAC, UN, HMT checked (simulated cached)"
     return json.dumps(result)
 

@@ -22,6 +22,7 @@ from core.models import (
     StepResult,
 )
 from core.tools import perform_web_search
+from core.neo4j_client import Neo4jClient
 
 logger = logging.getLogger(__name__)
 
@@ -110,6 +111,16 @@ class SupervisorAgent:
         )
         for log_entry in ctx.execution_log[-15:]:
             prompt += f"  {log_entry}\n"
+            
+        neo4j = Neo4jClient()
+        risky_neighbors = await neo4j.get_risky_neighbors(ctx.company_details.company_name, max_hops=2)
+        await neo4j.close()
+        
+        if risky_neighbors:
+            prompt += "\n--- GRAPH RAG: RISKY NETWORK CONNECTIONS (N-HOP) ---\n"
+            for n in risky_neighbors:
+                prompt += f"  - Entity: {n['name']} (Risk: {n['risk']})\n"
+            prompt += "  (Consider this network risk in your anomaly assessment.)\n"
             
         base_prompt = (
             "\nReview the findings. If there is an anomaly or missing data that "

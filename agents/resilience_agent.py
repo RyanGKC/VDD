@@ -26,6 +26,7 @@ class ResilienceAgent(BaseResearchAgent):
 
     async def research(self, ctx: DDContext) -> StepResult:
         company_name = ctx.company_details.company_name
+        country = ctx.company_details.country
         
         # Perform web search to find operational resilience and supply chain data
         search_query = f"{company_name} supply chain dependency manufacturing locations resilience"
@@ -36,8 +37,10 @@ class ResilienceAgent(BaseResearchAgent):
             system_instruction=SYSTEM_INSTRUCTION,
             base_prompt=(
                 f"Vendor: {company_name}\n"
+                f"Country: {country}\n"
                 f"Web Search Results: {data}\n"
-                "Assess operational resilience and dependencies."
+                "Extract any explicitly named manufacturing or software suppliers. Focus on critical dependencies. "
+                "CRITICAL INSTRUCTION: You MUST populate the `suppliers` array with the exact names of ALL identified suppliers. Do not leave it empty."
             ),
             schema=_ResilienceAnalysis,
         )

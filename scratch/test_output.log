@@ -1,0 +1,217 @@
+Starting test...
+INFO:google_genai._api_client:The user provided project/location will take precedence over the Vertex AI API key from the environment variable.
+INFO:google_genai._api_client:The user provided project/location will take precedence over the Vertex AI API key from the environment variable.
+INFO:neo4j.notifications:Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT company_name IF NOT EXISTS FOR (e:Company) REQUIRE (e.name) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT company_name FOR (e:Company) REQUIRE (e.name) IS UNIQUE' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE CONSTRAINT company_name IF NOT EXISTS FOR (c:Company) REQUIRE c.name IS UNIQUE'
+INFO:neo4j.notifications:Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE CONSTRAINT person_name IF NOT EXISTS FOR (e:Person) REQUIRE (e.name) IS UNIQUE' has no effect. The index or constraint specified by 'CONSTRAINT person_name FOR (e:Person) REQUIRE (e.name) IS UNIQUE' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: 'CREATE CONSTRAINT person_name IF NOT EXISTS FOR (p:Person) REQUIRE p.name IS UNIQUE'
+INFO:neo4j.notifications:Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description='note: successful completion - index or constraint already exists. The command \'CREATE VECTOR INDEX company_embeddings IF NOT EXISTS FOR (e:Company) ON (e.embedding) OPTIONS {indexConfig: {`vector.dimensions`: 768, `vector.similarity_function`: "cosine"}}\' has no effect. The index or constraint specified by \'VECTOR INDEX company_embeddings FOR (e:Company) ON (e.embedding)\' already exists.', position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: "\n        CREATE VECTOR INDEX company_embeddings IF NOT EXISTS \n        FOR (c:Company) ON (c.embedding) \n        OPTIONS {indexConfig: {`vector.dimensions`: 768, `vector.similarity_function`: 'cosine'}}\n        "
+INFO:neo4j.notifications:Received notification from DBMS server: <GqlStatusObject gql_status='00NA0', status_description="note: successful completion - index or constraint already exists. The command 'CREATE FULLTEXT INDEX entity_names IF NOT EXISTS FOR (e:Company|Person) ON EACH [e.name, e.canonical_name, e.aliases]' has no effect. The index or constraint specified by 'FULLTEXT INDEX entity_names FOR (e:Company|Person) ON EACH [e.name, e.canonical_name, e.aliases]' already exists.", position=None, raw_classification='SCHEMA', classification=<NotificationClassification.SCHEMA: 'SCHEMA'>, raw_severity='INFORMATION', severity=<NotificationSeverity.INFORMATION: 'INFORMATION'>, diagnostic_record={'_classification': 'SCHEMA', '_severity': 'INFORMATION', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: '\n        CREATE FULLTEXT INDEX entity_names IF NOT EXISTS \n        FOR (n:Company|Person) ON EACH [n.name, n.canonical_name, n.aliases]\n        '
+
+--- Running FINANCES Agent ---
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+
+--- Running SHAREHOLDERS Agent ---
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+
+--- Running PROFILE Agent ---
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+
+--- Running LICENSES Agent ---
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+[SHAREHOLDERS] Research Plan (1 searches):
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+[PROFILE] Research Plan (2 searches):
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+[FINANCES] Research Plan (3 searches):
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+[LICENSES] Research Plan (3 searches):
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+[SHAREHOLDERS] Completed with 1 findings:
+  > Rationale: Apple Inc. is a publicly traded corporation listed on the SEC. As a public company, its ownership is highly dispersed among institutional and retail investors rather than a single Ultimate Beneficial Owner (UBO). According to the SEC filings and recent Schedule 13G disclosures, major institutional shareholders include Vanguard Capital Management LLC (holding approximately 7.48% of the class as of early 2026), State Street Corp, BlackRock, Inc., Geode Capital Management, LLC, and FMR LLC. Because this is a publicly traded entity with dispersed ownership, the lack of a single individual UBO is expected and does not constitute a red flag or anomaly.
+  > Raw Data: {"quality_flag": "high", "source": "API", "data": {"entity_type": "Publicly Traded Corporation", "ubo_expectation": "Dispersed/Institutional", "sec_filings": {"accessionNumber": ["0001308179-26-000008", "0000320193-25-000079", "0001308179-25-000008", "0000320193-24-000123", "0001193125-24-036431"], ...
+  - [INFO] Apple Inc. is a publicly traded corporation with highly transparent, dispersed institutional ownership. Major institutional shareholders include Vanguard Capital Management LLC, State Street Corp, and BlackRock, Inc.
+DEBUG _execute_dag: completed StepName.SHAREHOLDERS, on_step_complete=<function run_dd_with_ctx.<locals>.handle_step_complete at 0x10ae65080>
+DEBUG: inside handle_step_complete: step=StepName.SHAREHOLDERS, tiers_to_search=2
+
+--- Running KYB Agent ---
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+[PROFILE] Completed with 3 findings:
+  > Rationale: Apple Inc. is a highly established, global consumer technology giant. The company's core business model relies on a powerful 'ecosystem lock-in' flywheel: selling premium hardware (iPhone, Mac, iPad, Apple Watch, AirPods) to establish a massive active device base (exceeding 2.2 billion devices), and then monetizing that base through high-margin, recurring digital services (App Store, iCloud, Apple Music, Apple Pay, and licensing). Operationally, Apple is unique for its scale because it maintains a functional organizational structure (organized by expertise/function rather than product-specific P&Ls), which centralizes strategic decision-making and ensures tight integration across hardware, software, and services. The company employs approximately 166,000 full-time equivalent employees globally as of its fiscal year 2025. There are no operational discrepancies or red flags; the company's actual operations perfectly align with its public profile as a premier technology and services provider.
+  > Raw Data: {"source": "Exa API", "quality_flag": "high", "search_results": [{"title": "Apple Strategy and Business Model - Umbrex", "snippet": "Apple is a global consumer technology company founded in 1976 and headquartered in Cupertino, California. It designs and sells smartphones, personal computers, tablets...
+  - [INFO] Apple operates a highly successful, integrated business model combining premium hardware sales with a high-margin, recurring Services flywheel (App Store, iCloud, Apple Pay, Apple Music) that drives ecosystem lock-in.
+  - [INFO] Apple maintains a highly established global workforce of approximately 166,000 full-time equivalent employees as of fiscal year 2025, demonstrating massive operational scale and high revenue-per-employee efficiency.
+  - [INFO] Apple utilizes a distinctive functional organizational structure instead of divisional product-based P&Ls, enabling deep technical specialization, strong corporate control, and seamless cross-product integration.
+DEBUG _execute_dag: completed StepName.PROFILE, on_step_complete=<function run_dd_with_ctx.<locals>.handle_step_complete at 0x10ae65080>
+DEBUG: inside handle_step_complete: step=StepName.PROFILE, tiers_to_search=2
+
+--- Running MEDIA Agent ---
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+
+--- Running RESILIENCE Agent ---
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+
+--- Running ESG Agent ---
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+[FINANCES] Completed with 4 findings:
+  > Rationale: Apple Inc. exhibits an exceptionally strong financial profile, characterized by massive liquidity, robust cash generation, and high-grade credit ratings. A review of the latest financial data and credit reports indicates that Apple maintains a significant cash and investment balance (totaling $166 billion as of recent reports) against manageable debt levels, aligning with its long-term 'net-cash-neutral' target. S&P Global Ratings affirms Apple's long-term local currency rating at 'AA+' with a stable outlook as of May 2025, reflecting its strong brand loyalty, high profitability, and conservative balance sheet management. While Apple faces ongoing litigation (such as the $490 million securities settlement in 2024 and a final CJEU ruling in September 2024 requiring the recovery of up to €13 billion in back taxes plus interest in Ireland), these liabilities do not pose a material threat to its solvency or going-concern status given its immense financial resources. No undisclosed related-party debts were identified.
+  > Raw Data: DB: {"quality_flag": "high", "source": "API", "data": {"xbrl_facts": "Available (Truncated for brevity)"}} WEB: (Ingested via RAG)...
+  - [INFO] S&P Global Ratings affirmed Apple's long-term local currency credit rating at 'AA+' with a stable outlook, reflecting its robust market position and conservative balance sheet.
+  - [INFO] Apple maintains substantial liquidity with cash and investments totaling approximately $166 billion, supporting its ongoing shareholder return programs and debt obligations.
+  - [MEDIUM] The Court of Justice of the European Union (CJEU) issued a final ruling upholding the European Commission's 2016 decision, requiring Ireland to recover up to €13 billion plus interest in back taxes from Apple.
+  - [LOW] Apple resolved a long-standing securities fraud class action lawsuit regarding statements about its business prospects in China for a settlement of $490 million in September 2024.
+DEBUG _execute_dag: completed StepName.FINANCES, on_step_complete=<function run_dd_with_ctx.<locals>.handle_step_complete at 0x10ae65080>
+DEBUG: inside handle_step_complete: step=StepName.FINANCES, tiers_to_search=2
+[RESILIENCE] Research Plan (2 searches):
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+[KYB] No web searches needed — data sufficient.
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+[LICENSES] Completed with 5 findings:
+  > Rationale: The compliance verification of Apple Inc. was conducted using both internal database records and extensive web search results. The analysis focused on verifying active registrations, quality and environmental management certifications, and export/sanctions compliance. 1) SAM.gov Registration: Apple Inc. is registered under Unique Entity ID (UEI) HJAKCN4NEU95 and CAGE Code 58839. Although some records show an 'Expired' status flag, the active registration is confirmed through May 12, 2027, with a recent activation date of May 22, 2026. 2) ISO Certifications: Apple maintains robust, active ISO/IEC 27001 and ISO/IEC 27018 certifications for its internet services and privacy practices, audited annually by Coalfire. Additionally, Apple holds active ISO 14001 (environmental management) and ISO 9001:2015 (quality management) certifications, particularly for its European operations (NSAI certified). 3) Export and Sanctions Compliance: Apple is recognized by the Bureau of Industry and Security (BIS) as an approved IC designer under ECCN 3A090.a (as of January 2025). A historical OFAC settlement from 2019 ($466,912) for hosting apps from a blocked Slovenian entity (SIS d.o.o.) was identified; however, this was a non-egregious, voluntarily self-disclosed issue that has been fully remediated. No active or critical license revocations, suspensions, or active sanctions violations were found.
+  > Raw Data: DB: {"quality_flag": "partial", "source": "API", "data": {"sam_gov": "Partial data - SAM API requires setup"}} WEB: {"source": "Exa API", "quality_flag": "high", "search_results": [{"title": "Legal - Global Trade Compliance - Apple", "snippet": "As a global technology company, Apple is committed to ...
+  - [INFO] Apple Inc. maintains active ISO/IEC 27001 and ISO/IEC 27018 certifications for its internet services and global privacy program, verified via Coalfire's certificate directory.
+  - [INFO] Apple Inc. holds active ISO 14001 (environmental management) and ISO 9001:2015 (quality management) certifications, demonstrating long-term operational compliance.
+  - [INFO] Apple Inc. is registered in SAM.gov (UEI: HJAKCN4NEU95, CAGE: 58839) with an active status through May 12, 2027, despite some database records showing partial or expired flags.
+  - [INFO] Apple Inc. is officially listed by the Bureau of Industry and Security (BIS) as an approved IC designer in Supplement No. 6 to Part 740 of the Export Administration Regulations (EAR).
+  - [LOW] Historical OFAC settlement of $466,912 in 2019 for apparent violations of Foreign Narcotics Kingpin Sanctions Regulations. The issue was self-disclosed, non-egregious, and has been fully remediated with enhanced screening software.
+DEBUG _execute_dag: completed StepName.LICENSES, on_step_complete=<function run_dd_with_ctx.<locals>.handle_step_complete at 0x10ae65080>
+DEBUG: inside handle_step_complete: step=StepName.LICENSES, tiers_to_search=2
+[MEDIA] Research Plan (3 searches):
+[ESG] Research Plan (3 searches):
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+[KYB] Completed with 2 findings:
+  > Rationale: Apple Inc. is a highly prominent, publicly traded corporation incorporated in California. Under the critical instructions, because the company is a publicly traded corporation actively filing regulatory reports with the SEC, its KYB status is considered in 'Good Standing' and valid by default. The absence of a private registry ID in the input does not invalidate its registration.
+  > Raw Data: {"quality_flag": "high", "source": "API", "data": {"entity_type": "Publicly Traded Corporation", "company_info": {"name": "Apple Inc.", "sic": "Electronic Computers", "stateOfIncorporation": "CA"}}}...
+  - [INFO] Apple Inc. is a publicly traded corporation in active standing, filing regular reports with the SEC.
+  - [INFO] Active incorporation in the state of California.
+DEBUG _execute_dag: completed StepName.KYB, on_step_complete=<function run_dd_with_ctx.<locals>.handle_step_complete at 0x10ae65080>
+DEBUG: inside handle_step_complete: step=StepName.KYB, tiers_to_search=2
+
+--- Running SANCTIONS Agent ---
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.opensanctions.org/match/default "HTTP/1.1 429 Too Many Requests"
+WARNING:core.real_tools:OpenSanctions API returned status code 429. Initiating web search fallback.
+INFO:core.real_tools:OpenSanctions API unavailable or failed. Executing fallback web search sanctions screening.
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+[RESILIENCE] ANOMALY RAISED: High-risk supply chain dependency found: Apple has sought to source memory chips from ChangXin Memory Technologies (CXMT) and Yangtze Memory Technologies Co Ltd (YMTC) to alleviate pricing pressures. Both entities are designated as Chinese Military Companies on the US Pentagon's 1260H blacklist, posing severe compliance, geopolitical, and reputational risks.
+[RESILIENCE] Completed with 3 findings:
+  > Rationale: Apple Inc. maintains one of the most complex and highly scrutinized supply chains in the world. While Apple has actively pursued diversification strategies by shifting final assembly and component manufacturing to India (e.g., Tamil Nadu and Karnataka) and Vietnam (e.g., for AirPods, iPads, and Apple Watches), its operational footprint remains heavily concentrated in China. Approximately 50% of Apple's facilities are located in China, and the company relies heavily on major Taiwanese and global contract manufacturers operating massive facilities there. Key strategic suppliers identified include Foxconn (Hon Hai Precision Industry), Pegatron, Wistron, Quanta Computer, and major semiconductor/component providers like TSMC, Micron, Samsung, SK Hynix, and Qualcomm. A critical geopolitical and compliance risk was identified regarding Apple's attempts to source memory chips from ChangXin Memory Technologies (CXMT) and Yangtze Memory Technologies Co Ltd (YMTC). Both Chinese memory manufacturers are blacklisted by the US Department of Defense under the Section 1260H Chinese Military Company list. Although Apple reportedly blacklisted CXMT or restricted its components from US-bound products to manage reputational and regulatory risks, its active lobbying and interest in sourcing from these entities represents a high-risk dependency on potentially sanctioned jurisdictions.
+  > Raw Data: {"source": "Exa API", "quality_flag": "high", "search_results": [{"title": "Apple's Supply Chain: Economic and Geopolitical ...", "snippet": "- Over the past decade, many electronics firms have talked about diversifying their supply chains. An analysis of Apple\u2014America\u2019s biggest consumer e...
+  - [HIGH] Apple remains heavily dependent on China-based manufacturing facilities, with approximately 50% of its supply chain facilities located in China despite ongoing diversification efforts to India and Vietnam.
+  - [INFO] Apple is actively diversifying its supply chain, shifting major US-bound iPhone production to India and assembly of iPads, Macs, Apple Watches, and AirPods to Vietnam to mitigate geopolitical and tariff risks.
+  - [HIGH] Apple faced severe reputational and regulatory risks over attempts to source memory chips from ChangXin Memory Technologies (CXMT) and Yangtze Memory Technologies Co Ltd (YMTC), both of which are blacklisted on the US Pentagon's 1260H Chinese Military Company list.
+DEBUG _execute_dag: completed StepName.RESILIENCE, on_step_complete=<function run_dd_with_ctx.<locals>.handle_step_complete at 0x10ae65080>
+DEBUG: inside handle_step_complete: step=StepName.RESILIENCE, tiers_to_search=2
+DEBUG handle_step_complete: extracted suppliers: ['Foxconn', 'Pegatron', 'Wistron Corporation', 'Quanta Computer Incorporated', 'Qualcomm Incorporated', 'Micron Technology', 'Samsung', 'SK Hynix', 'Renesas Electronics Corporation', 'Robert Bosch GmbH', 'TXC Corporation', 'Unimicron Technology Corporation', 'Unitech Printed Circuit Board Corporation', 'Western Digital Corporation', 'Winbond Electronics Corporation', 'Wingtech Technology Co., Ltd.', 'ChangXin Memory Technologies', 'Yangtze Memory Technologies Co Ltd']
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+[SANCTIONS] No web searches needed — data sufficient.
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+[SANCTIONS] Completed with 3 findings:
+  > Rationale: An analysis of Apple Inc. and its listed shareholders was conducted against the provided raw screening data. Apple Inc. itself is not currently on any international sanctions lists, although it has historical sanctions enforcement actions (a 2019 OFAC settlement for dealing with blocked developer SIS, d.o.o., and a 2026 UK OFSI penalty on its subsidiary Apple Distribution International Limited). These historical enforcement actions represent regulatory compliance history rather than active sanctions designations. The listed shareholders (State Street Corp, BlackRock, Inc., Geode Capital Management, LLC, FMR LLC, Price T Rowe Associates Inc, and Northern Trust Corp) are major financial institutions with no active sanctions designations, though some have historical compliance settlements (e.g., State Street's 2019 and subsequent settlements with OFAC). However, a critical match was identified for 'Vanguard Capital Management LLC'. The screening results returned an active OFAC SDN, EU, UK, Canada, and Australia sanctions match for a crude oil tanker named 'Vanguard' (IMO 9311622, formerly 'Vladimir Tikhonov'), which is linked to the sanctioned Russian shipping company PJSC Sovcomflot and Stream Ship Management FZCO. While this is a vessel rather than the shareholder entity 'Vanguard Capital Management LLC', a conservative compliance approach requires flagging this name match to rule out any potential association or asset-linking. No other active sanctions designations were identified for the vendor or its direct shareholders.
+  > Raw Data: {"quality_flag": "medium", "source": "web_search_fallback", "hits": [], "web_search_results": {"Apple Inc": {"source": "Exa API", "quality_flag": "high", "search_results": [{"title": "Apple, Inc. - OpenSanctions", "snippet": "Apple, Inc. - OpenSanctions\n\n## Search OpenSanctions\n\nAdvanced Search\...
+  - [MEDIUM] Apple Inc. has historical sanctions enforcement actions, including a 2019 OFAC settlement ($466,912) for hosting software from a blocked Slovenian developer (SIS, d.o.o.) and a 2026 UK OFSI penalty (£390,000) on its subsidiary Apple Distribution International Limited for Russia-related sanctions violations. The entity itself is not currently sanctioned.
+  - [MEDIUM] A crude oil tanker named 'Vanguard' (IMO 9311622, formerly 'Vladimir Tikhonov') is actively sanctioned by the US (OFAC SDN), UK, EU, Canada, Australia, and Ukraine for its association with sanctioned Russian entity PJSC Sovcomflot and Stream Ship Management FZCO. This is a name match to shareholder 'Vanguard Capital Management LLC' and requires review to confirm no operational or asset-level connection.
+  - [LOW] Shareholder State Street Corp (via its subsidiary Charles River Systems) has a history of sanctions enforcement, including a $7,452,501 settlement with OFAC for apparent violations of the Ukraine-/Russia-Related Sanctions Regulations, and a prior Finding of Violation regarding Iranian Transactions and Sanctions Regulations. The entity itself is not currently sanctioned.
+[MEDIA] Completed with 5 findings:
+  > Rationale: The adverse media screening for Apple Inc. reveals several significant legal, regulatory, and reputational challenges across multiple jurisdictions, though none represent critical breaking news that fundamentally alters the risk profile of a major multinational corporation (such as executive arrests or fraud indictments of current leadership). The most severe reputational and legal risk stems from a first-of-its-kind consumer protection lawsuit filed by the West Virginia Attorney General in February 2026, alleging that Apple's decision to abandon its on-device CSAM detection system in favor of end-to-end encryption turned iCloud into a secure avenue for child sexual abuse material. This lawsuit cites internal communications where Apple's fraud head allegedly called iCloud the 'greatest platform for distributing child porn.' Additionally, Apple faces massive antitrust pressure, including a potential $38 billion fine in India where it has accused the Competition Commission of India (CCI) of copying allegations from rivals, and a new antitrust complaint from 48 Chinese developers over App Store commission rates. On the consumer litigation front, Apple agreed to a $250 million settlement in May 2026 to resolve a class-action lawsuit accusing it of false advertising regarding its 'Apple Intelligence' AI features on the iPhone 15 and 16. Finally, Apple was fined a minor 500,000 rubles in Russia in June 2026 for repeated violations of local internet regulations following its removal of popular Russian VK apps to comply with international sanctions.
+  > Raw Data: DB: {"quality_flag": "high", "source": "API", "articles": [{"headline": "Apple Announces macOS Golden Gate", "source": "MacRumors", "date": "2026-06-08T17:19:09Z"}, {"headline": "WWDC 2026 Spoiler-Free Video Stream", "source": "MacRumors", "date": "2026-06-08T16:12:52Z"}, {"headline": "One Week to G...
+  - [HIGH] West Virginia Attorney General JB McCuskey filed a consumer protection lawsuit against Apple, accusing the company of knowingly allowing iCloud to be used to store and distribute Child Sexual Abuse Material (CSAM) after abandoning its planned CSAM detection tools in favor of end-to-end encryption.
+  - [HIGH] Apple faces a potential $38 billion antitrust fine in India. In response, Apple has accused the Competition Commission of India (CCI) of 'copy-pasting' allegations and graphics directly from rivals and EU rulings without independent verification.
+  - [MEDIUM] Apple agreed to pay $250 million to settle a consolidated class-action lawsuit in California federal court, which accused the company of misleading consumers through false advertising of non-existent 'Apple Intelligence' AI features on the iPhone 15 and 16.
+  - [MEDIUM] A group of 48 China-based iOS developers filed an antitrust complaint against Apple with the State Administration for Market Regulation (SAMR), alleging that Apple abuses its market dominance to charge excessively high App Store commission rates.
+  - [LOW] A Moscow court fined Apple 500,000 rubles for repeated violations of Russian internet regulations. Concurrently, Russian authorities accused Apple of 'political censorship' after the company removed several popular VK Holding applications from the App Store to comply with international sanctions.
+[ESG] Completed with 5 findings:
+  > Rationale: Apple Inc. exhibits a robust overall ESG profile with strong ratings from major agencies, including an MSCI rating of BBB, a Morningstar Sustainalytics ESG Risk Rating of 18.9 (Low Risk), and an S&P Global ESG Score of 85/100. The company has committed to ambitious environmental goals, such as achieving carbon neutrality across its entire supply chain by 2030. However, several notable ESG risks and controversies have emerged. On the environmental front, Apple faced allegations of 'climate-washing' from the Beijing-based Institute of Public and Environmental Affairs (IPE) regarding the transparency of its carbon-neutral Apple Watch claims. Additionally, in November 2025, the U.S. EPA announced a settlement with Apple, including a $261,283 penalty, over hazardous waste management and air emissions violations at its Santa Clara facility. On the social front, Apple has faced significant scrutiny regarding labor rights. The National Labor Relations Board (NLRB) has issued multiple complaints and rulings against Apple for anti-union activities, including illegal interrogation of employees, confiscation of union flyers, and withholding enhanced benefits from unionized workers to discourage organizing. Furthermore, Apple has faced legal challenges and international complaints regarding its supply chain, specifically allegations of using 'conflict materials' (cobalt and 3T minerals) sourced from the Democratic Republic of Congo (DRC). While the U.S. Court of Appeals dismissed a TVPRA lawsuit in 2024 and a French prosecutor closed a related criminal complaint in 2025 due to insufficient evidence, these issues represent ongoing reputational and supply chain risks. No severe, undisclosed ESG violations (such as confirmed modern slavery or catastrophic environmental fines) were found that would trigger a critical red flag, as Apple actively manages and audits its supply chain, removing non-compliant smelters.
+  > Raw Data: {"source": "Exa API", "quality_flag": "high", "search_results": [{"title": "", "snippet": "Social\nGovernance\n...\nReport\n\nApple\u2019s 2022 ESG Report\n...\nGovernance\n70 Corporate governance\n71 Ethics and compliance\n...\nEnvironmental Social Governance\n...\nIntroduction Environment Our Peop...
+  - [INFO] Apple maintains strong overall ESG ratings from major agencies, including a 'Low Risk' rating of 18.9 from Morningstar Sustainalytics and an overall ESG score of 85/100.
+  - [MEDIUM] The National Labor Relations Board (NLRB) has repeatedly accused and ruled against Apple for violating federal labor laws through anti-union practices, including coercive interrogation, confiscating union flyers, and withholding benefits from unionized stores.
+  - [LOW] Apple settled with the U.S. EPA for $261,283 in November 2025 to resolve federal hazardous waste management and air emissions violations at its Santa Clara, California facility.
+  - [LOW] Apple faced allegations of 'climate-washing' from the Institute of Public and Environmental Affairs (IPE), which questioned the transparency and supplier disclosure behind Apple's carbon-neutral product claims.
+  - [MEDIUM] Apple faces ongoing scrutiny and legal complaints regarding the sourcing of cobalt and 3T minerals from the Democratic Republic of Congo (DRC), though major lawsuits and criminal complaints have been dismissed or closed due to lack of direct liability.
+WARNING:neo4j.notifications:Received notification from DBMS server: <GqlStatusObject gql_status='01N01', status_description='warn: feature deprecated with replacement. db.index.vector.queryNodes is deprecated. It is replaced by SEARCH.', position=<SummaryInputPosition line=2, column=9, offset=9>, raw_classification='DEPRECATION', classification=<NotificationClassification.DEPRECATION: 'DEPRECATION'>, raw_severity='WARNING', severity=<NotificationSeverity.WARNING: 'WARNING'>, diagnostic_record={'_classification': 'DEPRECATION', '_severity': 'WARNING', '_position': {'offset': 9, 'line': 2, 'column': 9}, 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: "\n        CALL db.index.vector.queryNodes('company_embeddings', 1, $embedding)\n        YIELD node, score\n        WHERE score >= $threshold\n        RETURN node.name AS name, score\n        "
+DEBUG _execute_dag: completed StepName.SANCTIONS, on_step_complete=<function run_dd_with_ctx.<locals>.handle_step_complete at 0x10ae65080>
+DEBUG: inside handle_step_complete: step=StepName.SANCTIONS, tiers_to_search=2
+DEBUG _execute_dag: completed StepName.MEDIA, on_step_complete=<function run_dd_with_ctx.<locals>.handle_step_complete at 0x10ae65080>
+DEBUG: inside handle_step_complete: step=StepName.MEDIA, tiers_to_search=2
+DEBUG _execute_dag: completed StepName.ESG, on_step_complete=<function run_dd_with_ctx.<locals>.handle_step_complete at 0x10ae65080>
+DEBUG: inside handle_step_complete: step=StepName.ESG, tiers_to_search=2
+INFO:google_genai._api_client:The user provided project/location will take precedence over the Vertex AI API key from the environment variable.
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+[SUPERVISOR] Research Plan (3 searches):
+  1. [Verify if Apple settled a class-action lawsuit for $250 million regarding Apple Intelligence false advertising.] → 'Apple 250 million settlement Apple Intelligence class action'
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+  2. [Verify if West Virginia AG filed a consumer protection lawsuit against Apple over iCloud CSAM.] → 'West Virginia Attorney General JB McCuskey Apple iCloud CSAM lawsuit'
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+  3. [Verify if Apple faces a potential $38 billion antitrust fine in India.] → 'Apple antitrust fine India 38 billion'
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+DONE.
+
+--- EXECUTION LOG ---
+2026-07-01T11:34:28.992209+00:00 | SYSTEM: Spawning DAG execution for 9 steps...
+2026-07-01T11:34:28.992505+00:00 | START step=finances
+2026-07-01T11:34:28.992586+00:00 | [EVENT] {"entity": "Apple Inc", "agent": "finances", "status": "running", "role": "root", "parent_entity": null}
+2026-07-01T11:34:29.040099+00:00 | START step=shareholders
+2026-07-01T11:34:29.040121+00:00 | [EVENT] {"entity": "Apple Inc", "agent": "shareholders", "status": "running", "role": "root", "parent_entity": null}
+2026-07-01T11:34:29.047875+00:00 | START step=profile
+2026-07-01T11:34:29.047923+00:00 | [EVENT] {"entity": "Apple Inc", "agent": "profile", "status": "running", "role": "root", "parent_entity": null}
+2026-07-01T11:34:29.050815+00:00 | START step=licenses
+2026-07-01T11:34:29.050832+00:00 | [EVENT] {"entity": "Apple Inc", "agent": "licenses", "status": "running", "role": "root", "parent_entity": null}
+2026-07-01T11:34:31.145056+00:00 | [SHAREHOLDERS] Executing search 1/1: 'Apple Inc DEF 14A proxy statement 2026 major shareholders Vanguard BlackRock'
+2026-07-01T11:34:31.367031+00:00 | [PROFILE] Executing search 1/2: 'Apple Inc global employee count 2024 2025'
+2026-07-01T11:34:31.367433+00:00 | [PROFILE] Executing search 2/2: 'Apple Inc corporate structure and executive leadership team'
+2026-07-01T11:34:31.933119+00:00 | [FINANCES] Executing search 1/3: 'Apple Inc SEC Form 10-K 2023 2024 total debt liquidity cash equivalents'
+2026-07-01T11:34:31.934282+00:00 | [FINANCES] Executing search 2/3: 'Apple Inc credit rating Moody's S&P Fitch 2024'
+2026-07-01T11:34:31.935090+00:00 | [FINANCES] Executing search 3/3: 'Apple Inc undisclosed debt related party transactions litigation 2024'
+2026-07-01T11:34:31.986052+00:00 | [LICENSES] Executing search 1/3: 'Apple Inc SAM.gov registration status active'
+2026-07-01T11:34:31.986645+00:00 | [LICENSES] Executing search 2/3: 'Apple Inc ISO 9001 ISO 14001 certification status'
+2026-07-01T11:34:31.987392+00:00 | [LICENSES] Executing search 3/3: 'Apple Inc export violations BIS OFAC penalties 2024 2025'
+2026-07-01T11:34:34.885792+00:00 | DONE step=shareholders findings=1
+2026-07-01T11:34:34.885831+00:00 | [EVENT] {"entity": "Apple Inc", "agent": "shareholders", "status": "completed", "role": "root", "parent_entity": null}
+2026-07-01T11:34:34.886250+00:00 | START step=kyb
+2026-07-01T11:34:34.886257+00:00 | [EVENT] {"entity": "Apple Inc", "agent": "kyb", "status": "running", "role": "root", "parent_entity": null}
+2026-07-01T11:34:36.387074+00:00 | DONE step=profile findings=3
+2026-07-01T11:34:36.387109+00:00 | [EVENT] {"entity": "Apple Inc", "agent": "profile", "status": "completed", "role": "root", "parent_entity": null}
+2026-07-01T11:34:36.389701+00:00 | START step=media
+2026-07-01T11:34:36.389725+00:00 | [EVENT] {"entity": "Apple Inc", "agent": "media", "status": "running", "role": "root", "parent_entity": null}
+2026-07-01T11:34:36.397001+00:00 | START step=resilience
+2026-07-01T11:34:36.397035+00:00 | [EVENT] {"entity": "Apple Inc", "agent": "resilience", "status": "running", "role": "root", "parent_entity": null}
+2026-07-01T11:34:36.400817+00:00 | START step=esg
+2026-07-01T11:34:36.400838+00:00 | [EVENT] {"entity": "Apple Inc", "agent": "esg", "status": "running", "role": "root", "parent_entity": null}
+2026-07-01T11:34:37.286969+00:00 | DONE step=finances findings=4
+2026-07-01T11:34:37.287034+00:00 | [EVENT] {"entity": "Apple Inc", "agent": "finances", "status": "completed", "role": "root", "parent_entity": null}
+2026-07-01T11:34:38.285868+00:00 | [RESILIENCE] Executing search 1/2: 'Apple top suppliers list 2024 2025'
+2026-07-01T11:34:38.287891+00:00 | [RESILIENCE] Executing search 2/2: 'Apple supply chain high risk sanctioned dependencies'
+2026-07-01T11:34:39.469260+00:00 | DONE step=licenses findings=5
+2026-07-01T11:34:39.469341+00:00 | [EVENT] {"entity": "Apple Inc", "agent": "licenses", "status": "completed", "role": "root", "parent_entity": null}
+2026-07-01T11:34:42.070046+00:00 | [MEDIA] Executing search 1/3: 'Apple fined in Russia June 2026'
+2026-07-01T11:34:42.374839+00:00 | [ESG] Executing search 1/3: 'Apple ESG rating MSCI Sustainalytics S&P Global'
+2026-07-01T11:34:43.687223+00:00 | [MEDIA] Executing search 2/3: 'Apple executive arrest fraud indictment 2026'
+2026-07-01T11:34:43.711277+00:00 | DONE step=kyb findings=2
+2026-07-01T11:34:43.711296+00:00 | [EVENT] {"entity": "Apple Inc", "agent": "kyb", "status": "completed", "role": "root", "parent_entity": null}
+2026-07-01T11:34:43.711547+00:00 | START step=sanctions
+2026-07-01T11:34:43.711557+00:00 | [EVENT] {"entity": "Apple Inc", "agent": "sanctions", "status": "running", "role": "root", "parent_entity": null}
+2026-07-01T11:34:43.953269+00:00 | [ESG] Executing search 2/3: 'Apple severe ESG violations modern slavery environmental fines 2023 2024'
+2026-07-01T11:34:44.835334+00:00 | ANOMALY step=resilience severity=medium reason=High-risk supply chain dependency found: Apple has sought to source memory chips from ChangXin Memory Technologies (CXMT) and Yangtze Memory Technologies Co Ltd (YMTC) to alleviate pricing pressures. Both entities are designated as Chinese Military Companies on the US Pentagon's 1260H blacklist, posing severe compliance, geopolitical, and reputational risks.
+2026-07-01T11:34:44.835499+00:00 | DONE step=resilience findings=3
+2026-07-01T11:34:44.835555+00:00 | [EVENT] {"entity": "Apple Inc", "agent": "resilience", "status": "completed", "role": "root", "parent_entity": null}
+2026-07-01T11:34:45.664799+00:00 | [MEDIA] Executing search 3/3: 'West Virginia lawsuit Apple iCloud CSAM updates'
+2026-07-01T11:34:46.191824+00:00 | [ESG] Executing search 3/3: 'Apple labor union busting NLRB violations 2023 2024'
+2026-07-01T11:34:52.875214+00:00 | DONE step=sanctions findings=3
+2026-07-01T11:34:52.875266+00:00 | [EVENT] {"entity": "Apple Inc", "agent": "sanctions", "status": "completed", "role": "root", "parent_entity": null}
+2026-07-01T11:34:54.042808+00:00 | DONE step=media findings=5
+2026-07-01T11:34:54.042850+00:00 | [EVENT] {"entity": "Apple Inc", "agent": "media", "status": "completed", "role": "root", "parent_entity": null}
+2026-07-01T11:34:55.688572+00:00 | DONE step=esg findings=5
+2026-07-01T11:34:55.688646+00:00 | [EVENT] {"entity": "Apple Inc", "agent": "esg", "status": "completed", "role": "root", "parent_entity": null}
+2026-07-01T11:34:57.227398+00:00 | DAG ERROR: resilience failed with 'DDContext' object has no attribute 'document_store'
+2026-07-01T11:34:57.227559+00:00 | SUPERVISOR batch reviewing all completed results...
+2026-07-01T11:35:04.186503+00:00 | WEB SEARCH step=supervisor query='Apple 250 million settlement Apple Intelligence class action' goal='Verify if Apple settled a class-action lawsuit for $250 million regarding Apple Intelligence false advertising.'
+2026-07-01T11:35:05.197850+00:00 | WEB SEARCH step=supervisor query='West Virginia Attorney General JB McCuskey Apple iCloud CSAM lawsuit' goal='Verify if West Virginia AG filed a consumer protection lawsuit against Apple over iCloud CSAM.'
+2026-07-01T11:35:06.339937+00:00 | WEB SEARCH step=supervisor query='Apple antitrust fine India 38 billion' goal='Verify if Apple faces a potential $38 billion antitrust fine in India.'
+2026-07-01T11:35:09.679209+00:00 | SUPERVISOR rationale: All completed steps have been reviewed. The web search results successfully verified the accuracy of the high-profile media and legal findings (the $250 million Apple Intelligence class-action settlement, the West Virginia AG's consumer protection lawsuit regarding iCloud CSAM, and the potential $38 billion antitrust fine exposure in India). The DAG error noted in the execution log for the resilience step was a system-level document store error rather than a data-driven anomaly requiring parameter adjustments. No contradictions, missing data, or parameter errors were identified.
+2026-07-01T11:35:09.680381+00:00 | SUMMARY: Running contradiction detection across all findings

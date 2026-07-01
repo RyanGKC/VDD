@@ -63,17 +63,99 @@ class BaseResearchAgent(AgentExecutor, abc.ABC):
                 schema=schema
             )
         
-        # --- Phase 2: Execute all planned searches ---
+        # --- Phase 2: Execute all planned searches with async RAG orchestration ---
         print(f"[{step_val.upper()}] Research Plan ({len(queries)} searches):")
         search_results = []
         for i, q in enumerate(queries):
             query_str = q.query
             goal_str = q.goal
-            print(f"  {i+1}. [{goal_str}] → '{query_str}'")
-            ctx.log(f"WEB SEARCH step={step_val} query='{query_str}' goal='{goal_str}'")
-            
-            result_str = await perform_web_search(ctx, query_str)
-            search_results.append(f"Search {i+1} — Goal: {goal_str}\nQuery: {query_str}\nResults: {result_str}")
+            ctx.log(f"[{step_val.upper()}] Executing search {i+1}/{len(queries)}: '{query_str}'")
+
+            result_str: str | None = None
+
+            # ── Step A: Cache Gate pre-check ──────────────────────────────
+            cache_gate = getattr(ctx, 'cache_gate', None)
+            if cache_gate and getattr(ctx, 'enable_rag', True):
+                cache_res = await cache_gate.check(
+                    entity_name=ctx.company_details.company_name,
+                    entity_type="company",
+                    document_kind=step_val,
+                    run_id=ctx.run_id,
+                )
+                if cache_res.status == "HIT" and cache_res.chunks:
+                    result_str = "...\n".join(cache_res.chunks)
+                    ctx.log(f"RAG CACHE HIT step={step_val} — skipped external API call")
+
+            # ── Step B: MISS path — singleflight-coordinated fetch ────────
+            if result_str is None:
+                sf = getattr(ctx, 'singleflight', None)
+                run_id = getattr(ctx, 'run_id', None)
+
+                if sf and run_id:
+                    import hashlib
+                    fp_key = hashlib.sha256(
+                        f"{step_val}|{query_str}".encode()
+                    ).hexdigest()
+
+                    outcome = await sf.acquire_or_wait(fp_key, run_id)
+
+                    if outcome.role == "follower" and outcome.data is not None:
+                        # Another agent already fetched — reuse its raw data
+                        result_str = outcome.data
+                        ctx.log(f"SingleFlight FOLLOWER step={step_val} — reused leader's fetch")
+                    else:
+                        # This agent is the leader — perform the real fetch
+                        try:
+                            result_str = await perform_web_search(ctx, query_str)
+                            sf.resolve(fp_key, run_id, result_str)
+                        except Exception as fetch_exc:
+                            sf.fail(fp_key, run_id, fetch_exc)
+                            raise
+                else:
+                    # No singleflight available — fall back to direct fetch
+                    result_str = await perform_web_search(ctx, query_str)
+
+            # ── Step C: Fire-and-forget background ingestion ──────────────
+            bg = getattr(ctx, 'background_tasks', None)
+            ingestion_pipeline = getattr(ctx, 'ingestion_pipeline', None)
+            run_id = getattr(ctx, 'run_id', None)
+
+            if bg and ingestion_pipeline and result_str and run_id and getattr(ctx, 'enable_rag', True):
+                bg.schedule(
+                    ingestion_pipeline.ingest_document(
+                        text=result_str,
+                        source_url=query_str,
+                        source_type=step_val,
+                        run_id=run_id,
+                    ),
+                    run_id,
+                )
+                # Agent does NOT await ingestion — proceeds immediately
+
+            # ── Step D: Try retrieval engine for a focused context window ─
+            # (Only if data was already indexed from a prior agent's fetch)
+            retrieval_engine = getattr(ctx, 'retrieval_engine', None)
+            if retrieval_engine and run_id and getattr(ctx, 'enable_rag', True):
+                try:
+                    retrieval_res = await retrieval_engine.retrieve(
+                        query=goal_str,
+                        entity_name=ctx.company_details.company_name,
+                        entity_type="company",
+                        collection_name="run_documents",
+                        run_id=run_id,
+                        top_k=4,
+                    )
+                    distilled = retrieval_res.primary
+                    if distilled:
+                        retrieval_text = "...\n".join(distilled)
+                        result_str = f"Raw Data:\n{result_str}\n\nRetrieved Context:\n{retrieval_text}"
+                        ctx.log(f"RAG DISTILLATION step={step_val} returned targeted chunks")
+                except Exception:
+                    pass  # Retrieval failure is non-fatal; use raw result_str
+
+            search_results.append(
+                f"Search {i+1} — Goal: {goal_str}\nQuery: {query_str}\nResults: {result_str}"
+            )
         
         # --- Phase 3: Final analysis with all search results ---
         final_prompt = (
@@ -89,8 +171,6 @@ class BaseResearchAgent(AgentExecutor, abc.ABC):
             schema=schema
         )
         
-        return analysis
-
         return analysis
 
     # A2A discovery: advertise what this agent can do.

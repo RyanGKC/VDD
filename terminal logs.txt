@@ -1,0 +1,423 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2870
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 --- Running FINANCES Agent ---\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+\
+--- Running PROFILE Agent ---\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+\
+--- Running LICENSES Agent ---\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+\
+--- Running SHAREHOLDERS Agent ---\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+[WS] Sending 9 new logs to client\
+\
+--- Running FINANCES Agent ---\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+\
+--- Running PROFILE Agent ---\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+\
+--- Running LICENSES Agent ---\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+\
+--- Running SHAREHOLDERS Agent ---\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+[WS] Sending 9 new logs to client\
+WebSocket disconnected for job z93zw06vm8b\
+[SHAREHOLDERS] Research Plan (2 searches):\
+[WS] Sending 1 new logs to client\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': '43jqmp3vmqi'\} in get.\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': '43jqmp3vmqi'\} in get.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+[LICENSES] Research Plan (3 searches):\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': '43jqmp3vmqi'\} in get.\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': '43jqmp3vmqi'\} in get.\
+[WS] Sending 3 new logs to client\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:watchfiles.main:4 changes detected\
+[FINANCES] Research Plan (3 searches):\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': '43jqmp3vmqi'\} in get.\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': '43jqmp3vmqi'\} in get.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+[WS] Sending 2 new logs to client\
+[LICENSES] Research Plan (3 searches):\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': 'z93zw06vm8b'\} in get.\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': 'z93zw06vm8b'\} in get.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+[PROFILE] Research Plan (2 searches):\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': '43jqmp3vmqi'\} in get.\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': '43jqmp3vmqi'\} in get.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+[WS] Sending 2 new logs to client\
+[PROFILE] Research Plan (2 searches):\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': 'z93zw06vm8b'\} in get.\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': 'z93zw06vm8b'\} in get.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+[SHAREHOLDERS] Research Plan (2 searches):\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': 'z93zw06vm8b'\} in get.\
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': '43jqmp3vmqi'\} in get.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+[WS] Sending 1 new logs to client\
+INFO:watchfiles.main:3 changes detected\
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': 'z93zw06vm8b'\} in get.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': '43jqmp3vmqi'\} in get.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+[WS] Sending 1 new logs to client\
+INFO:watchfiles.main:3 changes detected\
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:watchfiles.main:3 changes detected\
+[FINANCES] Research Plan (3 searches):\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': 'z93zw06vm8b'\} in get.\
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': 'z93zw06vm8b'\} in get.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:watchfiles.main:2 changes detected\
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:watchfiles.main:3 changes detected\
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:watchfiles.main:2 changes detected\
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"\
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': 'z93zw06vm8b'\} in get.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:watchfiles.main:3 changes detected\
+[PROFILE] Completed with 2 findings:\
+  > Rationale: The corporate profile of Apple Inc. was assessed using the provided web research results. Apple Inc. is a highly established, globally dominant consumer technology company founded in 1976 and headquartered in Cupertino, California. Its core business model relies on a tightly integrated ecosystem of proprietary hardware (iPhone, Mac, iPad, Apple Watch, AirPods, Vision Pro), software (iOS, macOS, etc.), and high-margin recurring digital services (App Store, iCloud, Apple Music, Apple TV+, Apple Pay). The company operates with a massive global footprint, employing approximately 166,000 full-time employees as of its fiscal year ending September 2025. Key leadership is highly stable, led by CEO Tim Cook, CFO Kevan Parekh, and COO Sabih Khan. There are no operational discrepancies or red flags identified; the company's actual operations perfectly align with its claimed industry and market presence.\
+  > Raw Data: \{"source": "Exa API", "quality_flag": "high", "search_results": [\{"title": "Apple Strategy and Business Model", "snippet": "Apple is a global consumer technology company founded in 1976 and headquartered in Cupertino, California. It designs and sells smartphones, personal computers, tablets, wearabl...\
+  - [INFO] Apple Inc. operates as a highly established global leader in consumer electronics, software, and digital services, supported by a massive workforce of approximately 166,000 employees as of late 2025.\
+  - [INFO] The company's business model successfully drives high-margin recurring revenue by leveraging a tightly integrated ecosystem that transitions transactional hardware buyers into long-term digital services subscribers.\
+\
+--- Running MEDIA Agent ---\
+\
+--- Running RESILIENCE Agent ---\
+\
+--- Running ESG Agent ---\
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': 'z93zw06vm8b'\} in get.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:watchfiles.main:2 changes detected\
+INFO:httpx:HTTP Request: GET https://newsapi.org/v2/everything?q=%22Apple%20Inc.%22&apiKey=d962fe06dec746ae8151e57c148f3fe3 "HTTP/1.1 200 OK"\
+INFO:watchfiles.main:2 changes detected\
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:watchfiles.main:3 changes detected\
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:watchfiles.main:2 changes detected\
+[LICENSES] Completed with 4 findings:\
+  > Rationale: The compliance verification of Apple Inc. was conducted using both the provided database records and the supplementary web research results. The analysis confirms that Apple Inc. is in active standing and maintains robust compliance certifications. First, Apple Inc.'s corporate status is active, as verified by the Florida Department of State (Sunbiz) and California Secretary of State guidelines, showing a long-standing active registration since its incorporation. Second, Apple Inc. maintains strong information security and privacy certifications, specifically ISO/IEC 27001 and ISO/IEC 27018, which are audited annually by an independent registrar (Coalfire). Third, Apple Operations Europe holds an ISO 9001:2015 Quality Management System certification issued by the National Standards Authority of Ireland (NSAI), which was valid through July 16, 2023, and is subject to ongoing maintenance and re-audits. Fourth, Apple Inc. is registered with the U.S. Government's System for Award Management (SAM.gov) under Unique Entity ID (UEI) HJAKCN4NEU95 and CAGE Code 58839, with an active registration status extending through May 12, 2027. Finally, Apple maintains a dedicated Global Trade Compliance program to adhere to US Export Administration Regulations (EAR). No critical operational licenses or certifications were found to be revoked, expired, or fraudulent.\
+  > Raw Data: DB: \{"quality_flag": "partial", "source": "API", "data": \{"sam_gov": "Partial data - SAM API requires setup"\}\} WEB: \{"source": "Exa API", "quality_flag": "high", "search_results": [\{"title": "Detail by Entity Name", "snippet": "Foreign Profit Corporation\\n...\\nAPPLE INC.\\n...\\nCross Reference Name A...\
+  - [INFO] Apple Inc. maintains active ISO/IEC 27001 and ISO/IEC 27018 certifications for its internet services, which are independently audited on an annual basis to ensure robust information security and privacy practices.\
+  - [INFO] Apple Operations Europe holds an ISO 9001:2015 Quality Management System certification issued by the National Standards Authority of Ireland (NSAI) covering EMEIA operational activities.\
+  - [INFO] Apple Inc. is registered with the U.S. Government's System for Award Management (SAM.gov) with Unique Entity ID HJAKCN4NEU95 and CAGE Code 58839, showing an active status valid through May 12, 2027.\
+  - [INFO] Apple Inc. is registered as an active Foreign Profit Corporation, originally filed in 1982, demonstrating long-term corporate compliance.\
+[WS] Sending 2 new logs to client\
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:watchfiles.main:2 changes detected\
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"\
+[SHAREHOLDERS] Completed with 2 findings:\
+  > Rationale: Apple Inc. is a publicly traded corporation (NASDAQ: AAPL) with highly dispersed and institutional ownership. According to the most recent SEC filings and market data from 2026, the company's largest shareholders are major institutional investment managers, specifically BlackRock, Inc. (holding approximately 7.79%) and Vanguard Capital Management LLC / The Vanguard Group, Inc. (holding approximately 7.48%). Other significant institutional holders include State Street Corporation, Geode Capital Management, and Berkshire Hathaway. Because Apple Inc. is a publicly traded entity subject to strict SEC reporting requirements, the lack of a single individual Ultimate Beneficial Owner (UBO) is standard and does not constitute a risk or anomaly. Consequently, no hidden UBO was identified.\
+  > Raw Data: \{"quality_flag": "high", "source": "API", "data": \{"entity_type": "Publicly Traded Corporation", "ubo_expectation": "Dispersed/Institutional", "sec_filings": \{"accessionNumber": ["0001308179-26-000008", "0000320193-25-000079", "0001308179-25-000008", "0000320193-24-000123", "0001193125-24-036431"], ...\
+  - [INFO] Apple Inc. is a publicly traded corporation with highly transparent, regulated, and dispersed institutional ownership.\
+  - [INFO] Vanguard Capital Management LLC and BlackRock, Inc. are the largest institutional shareholders, holding approximately 7.48% and 7.79% of the common stock respectively.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+\
+--- Running KYB Agent ---\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+[WS] Sending 4 new logs to client\
+INFO:watchfiles.main:3 changes detected\
+[PROFILE] Completed with 3 findings:\
+  > Rationale: The corporate profile of Apple Inc. was evaluated using the provided search results. The analysis focused strictly on the company's core business model, market role, employee count, and primary products/services, while avoiding restricted areas such as financial health, supply chain dependencies, and media scandals. Apple Inc. is a highly established, legitimate global technology giant founded in 1976. Its business model successfully integrates proprietary hardware (iPhone, Mac, iPad, Wearables) with a rapidly growing, high-margin Services ecosystem (App Store, iCloud, Apple Pay, Apple TV+). As of late 2025, the company employs approximately 166,000 people globally, reflecting its massive operational scale. There are no operational discrepancies or red flags; the company's actual operations perfectly align with its public profile as a consumer electronics and digital services leader.\
+  > Raw Data: \{"source": "Exa API", "quality_flag": "high", "search_results": [\{"title": "Apple Strategy and Business Model", "snippet": "Apple is a global consumer technology company founded in 1976 and headquartered in Cupertino, California. It designs and sells smartphones, personal computers, tablets, wearabl...\
+  - [INFO] Apple Inc. operates a highly successful, vertically integrated business model that combines premium hardware sales with a growing, high-margin recurring services ecosystem, driving strong customer retention and lifetime value.\
+  - [INFO] Apple maintains a massive global workforce, reporting approximately 166,000 full-time employees as of its fiscal year ended September 27, 2025, up from 164,000 in 2024.\
+  - [INFO] Apple holds a leading global market position across multiple consumer technology categories, supported by an active installed device base exceeding 2.2 billion units.\
+\
+--- Running MEDIA Agent ---\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+\
+--- Running RESILIENCE Agent ---\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+\
+--- Running ESG Agent ---\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+[LICENSES] Completed with 5 findings:\
+  > Rationale: The compliance verification of Apple Inc. was conducted using database records and extensive web search results. The analysis confirms that Apple Inc. maintains active corporate status and robust security and quality certifications, with no critical operational licenses revoked. Key findings include: 1) Apple Inc. is an active Foreign Profit Corporation in Florida (Sunbiz) and holds an active registration on SAM.gov (UEI HJAKCN4NEU95) valid through May 12, 2027. 2) Apple maintains valid ISO/IEC 27001 and ISO/IEC 27018 certifications for its internet services, audited annually. 3) Apple Operations Europe holds a valid ISO 9001:2015 Quality Management System certification (originally valid to July 2023, with ongoing framework adherence). 4) Regulatory actions were identified but do not constitute a revocation of critical operational licenses: a CFPB consent order from October 2024 regarding Apple Card was terminated and waived in September 2025 after a $25M penalty was paid, and a UK OFSI financial sanctions penalty of \'a3390,000 was levied against Apple's Irish subsidiary (ADI) in March 2026 for 2022 Russian sanctions breaches, which has since been settled with enhanced compliance controls implemented.\
+  > Raw Data: DB: \{"quality_flag": "partial", "source": "API", "data": \{"sam_gov": "Partial data - SAM API requires setup"\}\} WEB: \{"source": "Exa API", "quality_flag": "high", "search_results": [\{"title": "Detail by Entity Name", "snippet": "Foreign Profit Corporation\\n...\\nAPPLE INC.\\n...\\nCross Reference Name A...\
+  - [INFO] Apple Inc. maintains an active corporate status in Florida (Sunbiz) and an active registration on SAM.gov (UEI HJAKCN4NEU95) expiring on May 12, 2027, allowing it to bid for and conduct business with the US Federal Government.\
+  - [INFO] Apple maintains active, annually audited ISO/IEC 27001 and ISO/IEC 27018 certifications covering its global internet services, information security, and privacy practices.\
+  - [INFO] Apple Operations Europe holds an established ISO 9001:2015 Quality Management System certification covering EMEIA operational activities, manufacturing, sales, and delivery.\
+  - [LOW] The Consumer Financial Protection Bureau (CFPB) terminated a 2024 consent order against Apple Inc. in September 2025 and waived alleged non-compliance after Apple paid a $25 million civil penalty regarding Apple Card dispute handling.\
+  - [MEDIUM] Apple's Irish subsidiary, Apple Distribution International Limited (ADI), was penalized \'a3390,000 by the UK's OFSI in March 2026 for 2022 Russian financial sanctions breaches. ADI voluntarily disclosed the issue and enhanced its screening systems.\
+[WS] Sending 8 new logs to client\
+[KYB] Research Plan (2 searches):\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': '43jqmp3vmqi'\} in get.\
+[WS] Sending 1 new logs to client\
+[SHAREHOLDERS] Completed with 2 findings:\
+  > Rationale: Apple Inc. is a highly transparent, publicly traded corporation (SEC CIK: 0000320193). As a public company, it does not have a single Ultimate Beneficial Owner (UBO); instead, its ownership is dispersed among institutional and retail investors. According to recent SEC Schedule 13G filings and proxy statements (DEF 14A), the largest institutional shareholders are BlackRock, Inc. (holding approximately 7.79% of shares as of March 31, 2026) and Vanguard Capital Management LLC (holding approximately 7.48% of shares as of March 31, 2026). Other major institutional holders include State Street Corporation, Geode Capital Management, FMR LLC, and Berkshire Hathaway. Top individual insider shareholders include Arthur Levinson and Tim Cook. Because ownership is dispersed and fully disclosed via SEC filings, there are no hidden UBOs or red flags.\
+  > Raw Data: \{"quality_flag": "high", "source": "API", "data": \{"entity_type": "Publicly Traded Corporation", "ubo_expectation": "Dispersed/Institutional", "sec_filings": \{"accessionNumber": ["0001308179-26-000008", "0000320193-25-000079", "0001308179-25-000008", "0000320193-24-000123", "0001193125-24-036431"], ...\
+  - [INFO] Apple Inc. is a publicly traded corporation with highly transparent, dispersed institutional ownership.\
+  - [INFO] BlackRock, Inc. and Vanguard Capital Management LLC are the largest institutional shareholders, holding 7.79% and 7.48% of outstanding shares respectively.\
+\
+--- Running KYB Agent ---\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+[RESILIENCE] Research Plan (2 searches):\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': '43jqmp3vmqi'\} in get.\
+[WS] Sending 1 new logs to client\
+[RESILIENCE] Research Plan (2 searches):\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': 'z93zw06vm8b'\} in get.\
+[MEDIA] Research Plan (3 searches):\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': '43jqmp3vmqi'\} in get.\
+[WS] Sending 1 new logs to client\
+[ESG] Research Plan (3 searches):\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': '43jqmp3vmqi'\} in get.\
+[WS] Sending 1 new logs to client\
+[KYB] Research Plan (2 searches):\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': 'z93zw06vm8b'\} in get.\
+[ESG] Research Plan (3 searches):\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': 'z93zw06vm8b'\} in get.\
+ERROR:agents.base_agent:Agent finances failed\
+Traceback (most recent call last):\
+  File "/Users/ryangoh/VDD Prototype/agents/base_agent.py", line 219, in run\
+    result = await self.research(ctx)\
+             ^^^^^^^^^^^^^^^^^^^^^^^^\
+  File "/Users/ryangoh/VDD Prototype/agents/finances_agent.py", line 62, in research\
+    raw_data=f"DB: \{db_data\}\\nWEB: \{web_data\}",\
+                                    ^^^^^^^^\
+NameError: name 'web_data' is not defined. Did you mean: 'db_data'?\
+[FINANCES] Agent failed with error: name 'web_data' is not defined\
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': 'z93zw06vm8b'\} in get.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:watchfiles.main:3 changes detected\
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': '43jqmp3vmqi'\} in get.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+[WS] Sending 1 new logs to client\
+INFO:watchfiles.main:2 changes detected\
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"\
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': '43jqmp3vmqi'\} in get.\
+[WS] Sending 1 new logs to client\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': '43jqmp3vmqi'\} in get.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+[WS] Sending 1 new logs to client\
+INFO:watchfiles.main:3 changes detected\
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': '43jqmp3vmqi'\} in get.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+[WS] Sending 1 new logs to client\
+INFO:watchfiles.main:2 changes detected\
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': 'z93zw06vm8b'\} in get.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:watchfiles.main:3 changes detected\
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': 'z93zw06vm8b'\} in get.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:watchfiles.main:3 changes detected\
+[MEDIA] Research Plan (3 searches):\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': 'z93zw06vm8b'\} in get.\
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': '43jqmp3vmqi'\} in get.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+[WS] Sending 1 new logs to client\
+INFO:watchfiles.main:3 changes detected\
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:watchfiles.main:2 changes detected\
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': '43jqmp3vmqi'\} in get.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+[WS] Sending 1 new logs to client\
+INFO:watchfiles.main:3 changes detected\
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': 'z93zw06vm8b'\} in get.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:watchfiles.main:3 changes detected\
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': 'z93zw06vm8b'\} in get.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:watchfiles.main:2 changes detected\
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:watchfiles.main:3 changes detected\
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:watchfiles.main:3 changes detected\
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': 'z93zw06vm8b'\} in get.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:watchfiles.main:2 changes detected\
+[KYB] Completed with 2 findings:\
+  > Rationale: Apple Inc. is a highly prominent, publicly traded corporation actively filing regulatory reports with the SEC (CIK: 0000320193). Under the critical instructions, its KYB status is considered 'Good Standing' and valid by default. Furthermore, web research confirms its active legal existence with the California Secretary of State (Entity# 00806592) since its incorporation on January 3, 1977. There are no red flags or registration invalidities.\
+  > Raw Data: \{"quality_flag": "high", "source": "API", "data": \{"entity_type": "Publicly Traded Corporation", "company_info": \{"name": "Apple Inc.", "sic": "Electronic Computers", "stateOfIncorporation": "CA"\}\}\}...\
+  - [INFO] Apple Inc. is an active, publicly traded corporation in good standing, registered in California (Entity# 00806592) since January 3, 1977.\
+  - [INFO] Apple Inc. actively files regulatory reports with the SEC under CIK 0000320193, confirming its active public corporate standing.\
+\
+--- Running SANCTIONS Agent ---\
+[WS] Sending 4 new logs to client\
+[KYB] Completed with 2 findings:\
+  > Rationale: Apple Inc. is verified as an active, publicly traded corporation in excellent legal standing. Web research confirms its active registration with the California Secretary of State under Entity Number 00806592, dating back to its incorporation on January 3, 1977. Furthermore, SEC EDGAR filings confirm that Apple Inc. (CIK: 0000320193) is actively filing all required regulatory reports (such as Form 10-Q and Form 8-K) as a large accelerated filer. Because it is a highly regulated, active public corporation, its KYB status is fully valid and in good standing.\
+  > Raw Data: \{"quality_flag": "high", "source": "API", "data": \{"entity_type": "Publicly Traded Corporation", "company_info": \{"name": "Apple Inc.", "sic": "Electronic Computers", "stateOfIncorporation": "CA"\}\}\}...\
+  - [INFO] Apple Inc. is actively registered as a domestic stock corporation with the California Secretary of State (Entity #00806592) since January 3, 1977.\
+  - [INFO] Apple Inc. is an active SEC registrant (CIK: 0000320193) in compliance with federal reporting requirements, regularly filing Form 10-K, 10-Q, and 8-K reports.\
+\
+--- Running SANCTIONS Agent ---\
+INFO:httpx:HTTP Request: POST https://api.opensanctions.org/match/default "HTTP/1.1 429 Too Many Requests"\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:httpx:HTTP Request: POST https://api.opensanctions.org/match/default "HTTP/1.1 429 Too Many Requests"\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:watchfiles.main:3 changes detected\
+[RESILIENCE] ANOMALY RAISED: High-risk supply chain dependency found: Apple has an absolute, critical dependency on TSMC in Taiwan for its proprietary Apple Silicon chips. Additionally, despite expanding assembly to India and Vietnam, these secondary hubs remain heavily dependent on China for raw materials, sub-components, and specialized engineering support, meaning any major disruption in US-China relations or a cross-strait conflict would immediately halt Apple's global production.\
+[RESILIENCE] Completed with 3 findings:\
+  > Rationale: Apple Inc. maintains a highly complex, multinational supply chain that is heavily centered in China, presenting significant geopolitical and operational concentration risks. While Apple has actively pursued a 'China plus one' strategy\'97expanding assembly operations in India (e.g., Tamil Nadu and Karnataka) and Vietnam\'97the underlying component manufacturing, precision engineering, and raw materials remain deeply dependent on China-based facilities. Key assembly partners like Foxconn (Hon Hai Precision Industry), Pegatron, and Luxshare Precision Industry have established footprints in India and Vietnam, but these facilities still rely heavily on Chinese technical talent, raw materials, and upstream supply chain processes. Furthermore, Apple's advanced silicon chips are exclusively manufactured by Taiwan Semiconductor Manufacturing Company (TSMC), creating a critical single-point-of-failure dependency on Taiwan, which is subject to severe geopolitical tensions. Although Apple has made strides in diversifying its final assembly, its high-tech component sourcing and semiconductor fabrication remain highly concentrated in geopolitically sensitive regions (China and Taiwan).\
+  > Raw Data: \{"source": "Exa API", "quality_flag": "high", "search_results": [\{"title": "Apple\\u2019s Supply Chain: Economic and", "snippet": "We find that Apple has begun to shift its supply chain\\u2014but that change has been more limited than headlines might suggest. iPhone assembly began in the Indian state ...\
+  - [CRITICAL] Extreme geographic concentration of advanced semiconductor manufacturing in Taiwan via TSMC, posing a critical single-point-of-failure risk.\
+  - [HIGH] Persistent deep dependency on China-based factories and upstream supply chains, despite public efforts to diversify final assembly to India and Vietnam.\
+  - [MEDIUM] Successful expansion of final assembly diversification, with India's supplier base growing threefold and overtaking Vietnam in total supplier count by 2025/2026.\
+[RESILIENCE] ANOMALY RAISED: High-risk supply chain dependency found: Apple has an absolute, near-exclusive dependency on Taiwan Semiconductor Manufacturing Company (TSMC) in Taiwan for its cutting-edge proprietary processors. This dependency is highly vulnerable to a Chinese military blockade, invasion, or political annexation of Taiwan. Furthermore, even chips fabricated in TSMC's new Arizona facilities must be shipped back to Taiwan for advanced packaging, meaning Apple cannot bypass Taiwanese geographic risk in the near-to-medium term.\
+[RESILIENCE] Completed with 4 findings:\
+  > Rationale: Apple Inc. maintains a highly complex, multinational supply chain that is heavily concentrated in East Asia, particularly China and Taiwan. While Apple has initiated diversification efforts to shift assembly operations to India (e.g., Tamil Nadu and Karnataka) and Vietnam, the core of its high-tech component manufacturing and precision engineering remains deeply anchored in China. Furthermore, Apple has an extreme, single-point-of-failure dependency on Taiwan Semiconductor Manufacturing Company (TSMC) for its advanced A-series and M-series silicon chips. Classified intelligence briefings have warned of severe geopolitical risks, including a potential Chinese blockade or invasion of Taiwan by 2027. Despite TSMC's investments in Arizona, US-made chips still require shipping back to Taiwan for advanced packaging, and US facilities remain a generation behind due to Taiwanese legal restrictions. This creates an acute, unmitigated geographic and operational risk for Apple's entire product portfolio.\
+  > Raw Data: \{"source": "Exa API", "quality_flag": "high", "search_results": [\{"title": "Apple\\u2019s Supply Chain: Economic and", "snippet": "We find that Apple has begun to shift its supply chain\\u2014but that change has been more limited than headlines might suggest. iPhone assembly began in the Indian state ...\
+  - [CRITICAL] Extreme, single-source dependency on TSMC in Taiwan for advanced proprietary silicon chips, representing a critical single point of failure.\
+  - [HIGH] Geopolitical exposure to China remains high, as approximately 50% of Apple's supplier facilities are located in mainland China, and key precision manufacturing segments cannot easily decouple.\
+  - [INFO] Active supply chain diversification is underway, successfully scaling up iPhone assembly in India (Tamil Nadu and Karnataka) and AirPods assembly in Vietnam.\
+  - [HIGH] Advanced semiconductor packaging remains bottlenecked in Taiwan; even chips fabricated at TSMC's Arizona plants must currently be shipped back to Taiwan for final packaging.\
+[WS] Sending 3 new logs to client\
+[SANCTIONS] Research Plan (3 searches):\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': '43jqmp3vmqi'\} in get.\
+[WS] Sending 1 new logs to client\
+INFO:watchfiles.main:1 change detected\
+[SANCTIONS] Research Plan (3 searches):\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': 'z93zw06vm8b'\} in get.\
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': '43jqmp3vmqi'\} in get.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+[WS] Sending 1 new logs to client\
+INFO:watchfiles.main:2 changes detected\
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': 'z93zw06vm8b'\} in get.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:watchfiles.main:3 changes detected\
+[ESG] ANOMALY RAISED: Severe ESG Violation: A September 2025 investigative report by China Labor Watch documented systemic labor abuses at Apple's primary iPhone 17 manufacturing facility (Foxconn Zhengzhou). The findings include an illegal reliance on dispatch workers (comprising over half the workforce), coercive student labor where night shifts and overtime were tied to graduation requirements, wage withholding, and unaddressed verbal and sexual harassment. These practices violate local labor laws and meet international indicators of forced labor.\
+[ESG] Completed with 5 findings:\
+  > Rationale: Apple Inc. exhibits a complex ESG profile characterized by ambitious sustainability targets alongside notable supply chain, environmental, and governance risks. On the environmental front, Apple has committed to becoming carbon neutral across its entire value chain by 2030. However, this has drawn skepticism and allegations of 'climate-washing' from the Institute of Public and Environmental Affairs (IPE) due to transparency concerns regarding supplier emissions. Additionally, Apple was fined $261,283 by the US EPA in November 2025 for hazardous waste management and air emissions violations at its Santa Clara facility. On the social front, a September 2025 investigation by China Labor Watch (CLW) at Foxconn Zhengzhou (a major iPhone 17 supplier) revealed severe labor rights concerns, including excessive reliance on temporary dispatch workers, student labor coercion, wage withholding, and harassment. While Apple maintains strict anti-modern slavery policies and has facilitated millions in recruitment fee repayments, the persistent issues in its supply chain represent a significant social risk. Governance risks are highlighted by multiple high-profile shareholder lawsuits, including a $490 million settlement in 2024 over misleading statements regarding iPhone sales in China, and ongoing litigation regarding anticompetitive practices and misleading AI integration claims.\
+  > Raw Data: \{"source": "Exa API", "quality_flag": "high", "search_results": [\{"title": "[PDF] Apple 2025 Environmental Progress Report", "snippet": "Science and transparency guide our efforts. Our emissions reduction targets\\n...\\nwith what current climate science\\n...\\nis necessary to adhere to a 1.5\\u00b0 C p...\
+  - [HIGH] A September 2025 China Labor Watch investigation at Apple's primary iPhone 17 supplier (Foxconn Zhengzhou) revealed severe labor violations, including excessive reliance on dispatch workers, coercive student labor arrangements, wage withholding, and harassment.\
+  - [MEDIUM] In November 2025, the US EPA announced a settlement and a $261,283 penalty against Apple for multiple hazardous waste management and air emissions violations at its Santa Clara, California facility.\
+  - [INFO] Apple has committed to a comprehensive 'Apple 2030' roadmap to achieve carbon neutrality across its entire value chain and has successfully transitioned its corporate operations to 100% renewable electricity.\
+  - [MEDIUM] Apple faced greenwashing allegations and a consumer class-action lawsuit over its 'carbon neutral' Apple Watch claims, with critics like the IPE arguing that Apple lacks sufficient supplier transparency to substantiate these claims.\
+  - [HIGH] Apple has faced significant governance controversies, including a $490 million class-action settlement in 2024 over misleading statements regarding China sales, and ongoing shareholder lawsuits regarding anticompetitive practices and misleading AI capabilities.\
+[WS] Sending 3 new logs to client\
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': '43jqmp3vmqi'\} in get.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+[WS] Sending 1 new logs to client\
+INFO:watchfiles.main:2 changes detected\
+[ESG] Completed with 6 findings:\
+  > Rationale: Apple Inc. demonstrates a robust ESG framework with strong environmental commitments, including its 'Apple 2030' carbon neutrality roadmap and high ratings from major ESG agencies (MSCI BBB, Sustainalytics Low Risk of 18.9, and CDP A-rating). However, significant ESG risks persist in its supply chain and corporate governance. Undercover investigations by China Labor Watch (CLW) in 2023 and late 2025 reveal persistent labor violations at major suppliers like Foxconn and Pegatron, including excessive use of dispatch workers (exceeding 50% of the workforce, far above China's 10% legal limit), wage withholding, and excessive overtime (60 to 75 hours per week). On the governance front, Apple faces severe regulatory and antitrust penalties, notably a \'801.8 billion fine by the European Commission in 2024 for anti-steering practices and a \'80150 million fine by the French Autorit\'e9 de la concurrence in 2025 for abusing its dominant position with its App Tracking Transparency framework. While these supply chain labor issues and antitrust fines represent high-severity risks, they do not currently trigger the 'severe_esg_violation_found' flag, which is reserved for systemic, unaddressed modern slavery or catastrophic environmental disasters.\
+  > Raw Data: \{"source": "Exa API", "quality_flag": "high", "search_results": [\{"title": "[PDF] Apple 2025 Environmental Progress Report", "snippet": "Science and transparency guide our efforts. Our emissions reduction targets\\n...\\nwith what current climate science\\n...\\nis necessary to adhere to a 1.5\\u00b0 C p...\
+  - [INFO] Apple maintains strong ESG ratings from major providers, including a 'Low Risk' rating of 18.9 from Morningstar Sustainalytics, a BBB rating from MSCI, and an 'A' score from CDP, reflecting robust corporate sustainability programs.\
+  - [INFO] Apple's 2025 Environmental Progress Report outlines its 'Apple 2030' roadmap to achieve carbon neutrality across its entire value chain, emphasizing circular supply chains, 100% third-party audited smelters/refiners, and transition to recycled materials.\
+  - [HIGH] Persistent labor rights violations reported at key suppliers (Foxconn and Pegatron) in China, including excessive use of temporary dispatch workers (over 50% of staff), wage withholding, and excessive overtime reaching 60 to 75 hours per week.\
+  - [HIGH] The European Commission fined Apple over \'801.8 billion in March 2024 for abusing its dominant market position by applying restrictive 'anti-steering' rules on music streaming developers in the App Store.\
+  - [MEDIUM] The French Autorit\'e9 de la concurrence fined Apple \'80150 million in March 2025 for abusing its dominant position through discriminatory and non-neutral implementation of its App Tracking Transparency (ATT) framework.\
+  - [MEDIUM] Apple faced greenwashing allegations and litigation regarding its 'carbon neutral' Apple Watch claims, with critics pointing to a lack of supplier transparency and reliance on carbon offsets. While a US federal judge dismissed the class action in 2026, Apple removed the 'carbon neutral' label in Europe due to legislative bans.\
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"\
+WARNING:rag.cache_gate:CacheGate error (defaulting MISS): Expected where to have exactly one operator, got \{'primary_entity_id': 'Apple Inc.', 'source_type': 'web_search', 'run_id': 'z93zw06vm8b'\} in get.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:watchfiles.main:2 changes detected\
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:watchfiles.main:3 changes detected\
+INFO:httpx:HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:watchfiles.main:2 changes detected\
+INFO:watchfiles.main:1 change detected\
+WARNING:neo4j.notifications:Received notification from DBMS server: <GqlStatusObject gql_status='01N01', status_description='warn: feature deprecated with replacement. db.index.vector.queryNodes is deprecated. It is replaced by SEARCH.', position=<SummaryInputPosition line=2, column=9, offset=9>, raw_classification='DEPRECATION', classification=<NotificationClassification.DEPRECATION: 'DEPRECATION'>, raw_severity='WARNING', severity=<NotificationSeverity.WARNING: 'WARNING'>, diagnostic_record=\{'_classification': 'DEPRECATION', '_severity': 'WARNING', '_position': \{'offset': 9, 'line': 2, 'column': 9\}, 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'\}> for query: "\\n        CALL db.index.vector.queryNodes('company_embeddings', 1, $embedding)\\n        YIELD node, score\\n        WHERE score >= $threshold\\n        RETURN node.name AS name, score\\n        "\
+WARNING:neo4j.notifications:Received notification from DBMS server: <GqlStatusObject gql_status='01N01', status_description='warn: feature deprecated with replacement. db.index.vector.queryNodes is deprecated. It is replaced by SEARCH.', position=<SummaryInputPosition line=2, column=9, offset=9>, raw_classification='DEPRECATION', classification=<NotificationClassification.DEPRECATION: 'DEPRECATION'>, raw_severity='WARNING', severity=<NotificationSeverity.WARNING: 'WARNING'>, diagnostic_record=\{'_classification': 'DEPRECATION', '_severity': 'WARNING', '_position': \{'offset': 9, 'line': 2, 'column': 9\}, 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'\}> for query: "\\n        CALL db.index.vector.queryNodes('company_embeddings', 1, $embedding)\\n        YIELD node, score\\n        WHERE score >= $threshold\\n        RETURN node.name AS name, score\\n        "\
+[SANCTIONS] Completed with 3 findings:\
+  > Rationale: An analysis of Apple Inc. and its major shareholders was conducted using the provided screening hits and extensive open-source intelligence. The raw screening hits returned no direct matches. However, web research revealed historical and recent regulatory enforcement actions involving Apple Inc. and its subsidiaries. Specifically, in November 2019, Apple Inc. entered into a $466,912 settlement agreement with the U.S. Department of the Treasury's Office of Foreign Assets Control (OFAC) for apparent violations of the Foreign Narcotics Kingpin Sanctions Regulations by hosting and selling software applications of a blocked Slovenian company, SIS d.o.o. Additionally, in March 2026, the UK's Office of Financial Sanctions Implementation (OFSI) imposed a \'a3390,000 penalty on Apple's Irish subsidiary, Apple Distribution International Limited (ADI), for making payments to Okko LLC, an app developer owned by a UK-designated Russian entity (JSC New Opportunities, previously linked to Sberbank). Furthermore, reports indicate Apple has faced reputational and supply chain scrutiny regarding potential transactions with Chinese military companies (such as CXMT and YMTC) on the Pentagon's 1260H list, though these do not currently carry direct statutory blocking sanctions. None of the listed major shareholders (BlackRock, Vanguard, State Street, Berkshire Hathaway, FMR) are sanctioned. Because Apple Inc. itself is not currently a designated/blocked entity on any active sanctions list, 'has_sanctions' is set to false. However, the recent subsidiary-level enforcement actions represent a medium compliance risk that warrants documentation.\
+  > Raw Data: \{"quality_flag": "partial", "source": "API", "hits": [], "local_cache_status": "OFAC, UN, HMT checked (simulated cached)"\}...\
+  - [MEDIUM] Apple Inc.'s Irish subsidiary, Apple Distribution International Limited (ADI), was penalized \'a3390,000 by the UK's Office of Financial Sanctions Implementation (OFSI) in March 2026 for making payments to Okko LLC, which was owned/controlled by a UK-designated Russian entity (JSC New Opportunities).\
+  - [LOW] Apple Inc. previously entered into a settlement agreement with US OFAC in November 2019, paying $466,912 to resolve civil liability for hosting and selling software from SIS d.o.o., a designated foreign narcotics trafficker.\
+  - [LOW] Apple Inc. has faced supply chain scrutiny and potential procurement risks regarding Chinese memory chipmakers ChangXin Memory Technologies (CXMT) and Yangtze Memory Technologies Co Ltd (YMTC), which are designated on the US Pentagon's 1260H Chinese Military Companies list.\
+[WS] Sending 3 new logs to client\
+[SANCTIONS] Completed with 2 findings:\
+  > Rationale: An analysis of Apple Inc., its major shareholders, and recent regulatory actions reveals no active sanctions designations against Apple Inc. itself or its listed shareholders (such as BlackRock, Vanguard, State Street, Berkshire Hathaway, Tim Cook, or Arthur Levinson). However, research reveals significant historical and recent sanctions enforcement actions involving Apple Inc. and its subsidiaries. First, in November 2019, Apple Inc. entered into a $466,912 settlement agreement with the U.S. Department of the Treasury's Office of Foreign Assets Control (OFAC) for apparent violations of the Foreign Narcotics Kingpin Sanctions Regulations by hosting and facilitating transactions for SIS d.o.o., a designated Slovenian software company. Second, on March 19, 2026, the UK's Office of Financial Sanctions Implementation (OFSI) imposed a \'a3390,000 monetary penalty on Apple's Irish subsidiary, Apple Distribution International Limited (ADI), for making payments to Okko LLC, which was owned or controlled by a UK-designated Russian entity (JSC New Opportunities / Sberbank). While Apple Inc. itself is not currently a sanctioned entity, these enforcement actions represent medium-to-high compliance risks that require ongoing monitoring of its subsidiary operations and screening tools. No sanctioned parties were identified within the provided shareholder map, and no new high-risk shareholders require immediate review.\
+  > Raw Data: \{"quality_flag": "partial", "source": "API", "hits": [], "local_cache_status": "OFAC, UN, HMT checked (simulated cached)"\}...\
+  - [MEDIUM] Apple Inc. entered into a $466,912 settlement with US OFAC in November 2019 for dealing in the property of SIS d.o.o., a designated significant foreign narcotics trafficker on the SDN List.\
+  - [HIGH] Apple's Irish subsidiary, Apple Distribution International Limited (ADI), was penalized \'a3390,000 by the UK's Office of Financial Sanctions Implementation (OFSI) in March 2026 for making payments to Okko LLC, an app developer owned/controlled by a UK-sanctioned Russian entity.\
+[MEDIA] Completed with 5 findings:\
+  > Rationale: The adverse media screening for Apple Inc. reveals several significant legal and regulatory challenges across multiple jurisdictions. The most severe reputational risk stems from a first-of-its-kind lawsuit filed by the West Virginia Attorney General in February 2026, accusing Apple of failing to curb child sexual abuse material (CSAM) on iCloud and citing highly damaging internal executive communications. Financially, Apple faces a massive potential antitrust fine of up to $38 billion in India, where the Competition Commission of India (CCI) has investigated its App Store practices. Additionally, Apple agreed to a $250 million settlement in May 2026 to resolve a class-action lawsuit alleging false advertising of its 'Apple Intelligence' AI features. Other findings include ongoing App Store antitrust disputes in the US (Epic Games Supreme Court petition) and China (SAMR complaint), alongside a minor administrative fine in Russia. While these issues present high regulatory and reputational risks, they do not constitute critical breaking news such as executive indictments or immediate corporate insolvency.\
+  > Raw Data: DB: \{"quality_flag": "high", "source": "API", "articles": [\{"headline": "Apple Announces macOS Golden Gate", "source": "MacRumors", "date": "2026-06-08T17:19:09Z"\}, \{"headline": "WWDC 2026 Spoiler-Free Video Stream", "source": "MacRumors", "date": "2026-06-08T16:12:52Z"\}, \{"headline": "One Week to G...\
+  - [HIGH] West Virginia Attorney General JB McCuskey filed a consumer protection lawsuit against Apple, accusing the company of knowingly allowing iCloud to be used to store and distribute child sexual abuse material (CSAM) after abandoning its planned CSAM detection system. The lawsuit cites internal communications where Apple's fraud head allegedly described iCloud as the 'greatest platform for distributing child porn.'\
+  - [HIGH] Apple is facing a potential antitrust fine of up to $38 billion in India, where the Competition Commission of India (CCI) concluded that the company abused its dominant market position regarding App Store payment rules. Apple has challenged the penalty-calculation rules and accused the CCI of 'copy-pasting' allegations from rivals.\
+  - [MEDIUM] Apple agreed to pay up to $250 million to settle a consolidated class-action lawsuit in California federal court. The lawsuit accused Apple of false advertising and misleading consumers regarding the availability and capabilities of its 'Apple Intelligence' AI features and Siri enhancements on the iPhone 15 and 16.\
+  - [MEDIUM] Apple continues to face global antitrust challenges, including petitioning the US Supreme Court to reverse a contempt finding in its ongoing legal battle with Epic Games over App Store steering rules, and facing a new complaint from 48 Chinese developers with China's State Administration for Market Regulation (SAMR) over commission rates.\
+  - [LOW] A Moscow court fined Apple 500,000 rubles (approximately $5,700 USD) for repeated failure to comply with Russian internet laws (specifically the 'ORI' law requiring metadata storage and data sharing with local authorities).\
+INFO:google_genai._api_client:The user provided project/location will take precedence over the Vertex AI API key from the environment variable.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.\
+[MEDIA] Completed with 5 findings:\
+  > Rationale: Apple Inc. is facing several significant legal and regulatory challenges globally. The most severe is a consumer protection lawsuit filed by the West Virginia Attorney General alleging that Apple's iCloud has become a secure avenue for child sexual abuse material (CSAM) due to its end-to-end encryption and lack of detection tools. Additionally, Apple is embroiled in a massive antitrust dispute in India with the Competition Commission of India (CCI), where it faces a potential $38 billion fine based on global turnover; Apple has aggressively countered by accusing the regulator of copy-pasting rivals' claims. In the US, Apple has agreed to a $250 million settlement over allegations of false advertising regarding its 'Apple Intelligence' AI features, and the US Supreme Court has agreed to hear its appeal of a civil contempt finding in its ongoing battle with Epic Games. Finally, Apple faces new antitrust complaints from developers in China. While these issues represent substantial regulatory and reputational risks, they do not constitute critical breaking news like executive indictments that would fundamentally alter Apple's operational viability.\
+  > Raw Data: DB: \{"quality_flag": "high", "source": "API", "articles": [\{"headline": "Apple Announces macOS Golden Gate", "source": "MacRumors", "date": "2026-06-08T17:19:09Z"\}, \{"headline": "WWDC 2026 Spoiler-Free Video Stream", "source": "MacRumors", "date": "2026-06-08T16:12:52Z"\}, \{"headline": "One Week to G...\
+  - [HIGH] West Virginia Attorney General JB McCuskey filed a lawsuit accusing Apple of violating consumer protection laws by allowing iCloud to be used for storing and distributing child sexual abuse material (CSAM) after abandoning its planned detection tools.\
+  - [HIGH] Apple faces a potential $38 billion antitrust fine in India over App Store practices. Apple has escalated the dispute by accusing the Competition Commission of India (CCI) of copy-pasting rivals' claims without independent verification.\
+  - [MEDIUM] Apple agreed to pay $250 million to settle a class-action lawsuit alleging it misled consumers by falsely advertising non-existent 'Apple Intelligence' AI features on iPhone 15 and 16 models.\
+  - [MEDIUM] The US Supreme Court agreed to hear Apple's appeal of a civil contempt ruling arising from its antitrust battle with Epic Games over App Store steering rules and commission fees.\
+  - [MEDIUM] A group of 48 Chinese iOS developers filed an antitrust complaint with China's market regulator (SAMR) accusing Apple of abusing its market dominance and charging excessively high commission fees.\
+[WS] Sending 2 new logs to client\
+INFO:rag.background_tasks:BackgroundTasks flushing 23 pending ingestion task(s) for run=z93zw06vm8b}

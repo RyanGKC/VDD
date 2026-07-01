@@ -63,7 +63,12 @@ class FlowEngine:
             for step in list(pending):
                 deps = DAG_DEPENDENCIES.get(step, [])
                 # A step is ready if all its dependencies have been completed in ANY round
-                unmet_deps = [d for d in deps if d not in ctx.results and d not in completed_this_round]
+                # However, if a dependency is scheduled to be re-run in THIS round (pending or running), we MUST wait for it.
+                unmet_deps = [
+                    d for d in deps 
+                    if (d in pending or d in running_tasks.values()) or 
+                       (d not in ctx.results and d not in completed_this_round)
+                ]
                 if not unmet_deps:
                     ready_to_run.append(step)
 
@@ -97,6 +102,7 @@ class FlowEngine:
                 try:
                     result = task.result()
                     completed_this_round.add(step)
+                    print(f"DEBUG _execute_dag: completed {step}, on_step_complete={on_step_complete}")
                     if on_step_complete:
                         await on_step_complete(step, ctx)
                 except Exception as e:
@@ -136,9 +142,29 @@ class FlowEngine:
                 else:
                     replans += 1
                     ctx.log(f"SUPERVISOR detected anomaly (replan #{replans})")
-                    plan = new_plan
+                    uncompleted_original = [s for s in IDEAL_FLOW if s not in all_completed and s not in new_plan]
+                    plan = new_plan + uncompleted_original
                     ctx.log(f"NEW PLAN: {[s.value for s in plan]}")
             else:
                 break # All good, no replans needed
+
+        # ── Post-run: flush pending background ingestion tasks ─────────────────
+        # This is the single synchronization point. All agent nodes have completed;
+        # now we wait for any still-running background ingestion tasks so that
+        # documents fetched late in the run are guaranteed to be in the vector store
+        # before the run is marked done.
+        run_id = getattr(ctx, 'run_id', None)
+        bg = getattr(ctx, 'background_tasks', None)
+        sf = getattr(ctx, 'singleflight', None)
+
+        if bg and run_id:
+            pending = bg.pending_count(run_id)
+            if pending > 0:
+                ctx.log(f"SYSTEM: Flushing {pending} pending background ingestion task(s)...")
+            await bg.await_all(run_id)
+            bg.clear_run(run_id)
+
+        if sf and run_id:
+            sf.clear_run(run_id)
 
         return ctx

@@ -137,6 +137,11 @@ class StepResult(BaseModel):
 
 from pydantic import BaseModel, Field, ConfigDict
 import asyncio
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+env_path = Path(__file__).resolve().parent.parent / '.env'
+load_dotenv(dotenv_path=env_path)
 
 class DDContext(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -170,6 +175,15 @@ class DDContext(BaseModel):
     entity_role: str = Field(default='root')
     # Name of the entity that spawned this context (for edge drawing)
     parent_entity: str | None = Field(default=None)
+    # Shared document store for the entire run (Document RAG)
+    run_id: str | None = Field(default=None, exclude=True)
+    retrieval_engine: Any = Field(default=None, exclude=True)
+    ingestion_pipeline: Any = Field(default=None, exclude=True)
+    enable_rag: bool = Field(default_factory=lambda: os.getenv("ENABLE_RAG", "true").lower() == "true")
+    # Async RAG orchestration layer
+    cache_gate: Any = Field(default=None, exclude=True)
+    singleflight: Any = Field(default=None, exclude=True)
+    background_tasks: Any = Field(default=None, exclude=True)
 
     def log(self, message: str) -> None:
         stamped = f"{datetime.now(timezone.utc).isoformat()} | {message}"

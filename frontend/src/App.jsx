@@ -300,8 +300,15 @@ const AGENT_LIST = ["shareholders", "kyb", "sanctions", "profile", "licenses", "
 
 const LoadingGraphNode = ({ data }) => {
   return (
-    <div className="bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-600 rounded-lg p-3 shadow-md w-[260px] flex flex-col items-center">
-      <Handle type="target" position={Position.Left} className="w-2 h-2" />
+    <div className="bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-600 rounded-lg p-3 shadow-md w-[260px] min-h-[110px] flex flex-col items-center justify-between">
+      {/* Top handle: used by ownership lines (parent above, child below) */}
+      <Handle type="target" position={Position.Top} id="top" className="opacity-0" />
+      {/* Left handle: supplier connects from its left side to the target */}
+      <Handle type="source" position={Position.Left} id="left" className="opacity-0" />
+      {/* Bottom handle: used by ownership lines */}
+      <Handle type="source" position={Position.Bottom} id="bottom" className="opacity-0" />
+      {/* Right handle: supplied company receives on its right side */}
+      <Handle type="target" position={Position.Right} id="right" className="opacity-0" />
       <div className="font-bold text-slate-800 dark:text-slate-100 mb-2 text-center w-full truncate" title={data.entity}>
         {data.entity}
       </div>
@@ -562,34 +569,9 @@ const ProcessingTerminal = ({ onComplete, onError, onCancel, companyDetails }) =
     }
   });
 
-  const supplyEdges = edges.filter(e => !e.id.includes('-owns-'));
-  const { nodes: layoutedNodes } = getLayoutedElements(nodes, supplyEdges, 'LR');
+  // Pass ALL edges (including ownership) so getLayoutedElements can partition groups
+  const { nodes: layoutedNodes } = getLayoutedElements(nodes, edges, 'LR');
   
-  const NODE_HEIGHT = 90;
-  const PARENT_GAP = 200; // vertical gap between parent and subsidiary
-  edges
-    .filter(e => e.id.includes('-owns-'))
-    .forEach(edge => {
-      const parentNode = layoutedNodes.find(n => n.id === edge.source);
-      const subsidNode = layoutedNodes.find(n => n.id === edge.target);
-      if (parentNode && subsidNode) {
-        parentNode.position = {
-          x: subsidNode.position.x,
-          y: subsidNode.position.y - NODE_HEIGHT - PARENT_GAP,
-        };
-      }
-    });
-
-  edges
-    .filter(e => e.id.includes('-supplies-'))
-    .forEach(supplyEdge => {
-      const supplierNode = layoutedNodes.find(n => n.id === supplyEdge.source);
-      const suppliedNode = layoutedNodes.find(n => n.id === supplyEdge.target);
-      if (supplierNode && suppliedNode && suppliedNode.position.y < -100) {
-        supplierNode.position.y = suppliedNode.position.y;
-      }
-    });
-
   const layoutedEdges = edges;
 
   return (
@@ -664,35 +646,189 @@ const ProcessingTerminal = ({ onComplete, onError, onCancel, companyDetails }) =
 };
 
 const getLayoutedElements = (nodes, edges, direction = 'LR') => {
-  const dagreGraph = new dagre.graphlib.Graph();
-  dagreGraph.setDefaultEdgeLabel(() => ({}));
-
-  const nodeWidth = 220;
+  const nodeWidth = 240; 
   const nodeHeight = 110;
-  dagreGraph.setGraph({ rankdir: direction, ranksep: 140, nodesep: 80 });
+  const PADDING = 40;
 
-  nodes.forEach((node) => {
-    dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
+  const parentIds = new Set(edges.filter(e => e.id.includes('-owns-')).map(e => e.source));
+  
+  const groupAssignments = new Map();
+  parentIds.forEach(parentId => {
+    const groupId = `group-${parentId}`;
+    groupAssignments.set(parentId, groupId);
+    const queue = [parentId];
+    while (queue.length > 0) {
+      const current = queue.shift();
+      edges.forEach(e => {
+        if (e.target === current && e.id.includes('-supplies-')) {
+          if (!groupAssignments.has(e.source)) {
+            groupAssignments.set(e.source, groupId);
+            queue.push(e.source);
+          }
+        }
+      });
+    }
   });
 
-  edges.forEach((edge) => {
-    // Reverse for dagre so that the "supplied company" ranks LEFT and its suppliers rank RIGHT
-    dagreGraph.setEdge(edge.target, edge.source);
+  const TARGET_GROUP = 'group-target';
+  nodes.forEach(node => {
+    if (!groupAssignments.has(node.id)) {
+      groupAssignments.set(node.id, TARGET_GROUP);
+    }
   });
 
-  dagre.layout(dagreGraph);
+  const groups = {
+    [TARGET_GROUP]: { id: TARGET_GROUP, nodes: [], edges: [] }
+  };
+  parentIds.forEach(pid => {
+    const gid = `group-${pid}`;
+    groups[gid] = { id: gid, nodes: [], edges: [] };
+  });
 
-  const layoutedNodes = nodes.map((node) => {
-    const nodeWithPosition = dagreGraph.node(node.id);
-    node.position = {
-      x: nodeWithPosition.x,
-      y: nodeWithPosition.y,
+  nodes.forEach(node => {
+    const gid = groupAssignments.get(node.id);
+    groups[gid].nodes.push(node);
+  });
+
+  edges.forEach(edge => {
+    if (edge.id.includes('-supplies-')) {
+      const sourceGid = groupAssignments.get(edge.source);
+      const targetGid = groupAssignments.get(edge.target);
+      if (sourceGid && sourceGid === targetGid) {
+        groups[sourceGid].edges.push(edge);
+      }
+    }
+  });
+
+  const finalNodes = [];
+  const groupMetas = {};
+
+  const groupIds = Object.keys(groups).filter(id => id !== TARGET_GROUP);
+  groupIds.push(TARGET_GROUP);
+
+  groupIds.forEach((gid) => {
+    const group = groups[gid];
+    if (group.nodes.length === 0) return;
+
+    const dagreGraph = new dagre.graphlib.Graph();
+    dagreGraph.setDefaultEdgeLabel(() => ({}));
+    dagreGraph.setGraph({ rankdir: direction, ranksep: 140, nodesep: 80 });
+
+    group.nodes.forEach(node => {
+      dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
+    });
+
+    group.edges.forEach(edge => {
+      dagreGraph.setEdge(edge.target, edge.source);
+    });
+
+    dagre.layout(dagreGraph);
+
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    group.nodes.forEach(node => {
+      const pos = dagreGraph.node(node.id);
+      if (pos.x < minX) minX = pos.x;
+      if (pos.x > maxX) maxX = pos.x;
+      if (pos.y < minY) minY = pos.y;
+      if (pos.y > maxY) maxY = pos.y;
+    });
+
+    const trueMinX = minX - nodeWidth / 2 - PADDING;
+    const trueMaxX = maxX + nodeWidth / 2 + PADDING;
+    const trueMinY = minY - nodeHeight / 2 - PADDING;
+    const trueMaxY = maxY + nodeHeight / 2 + PADDING;
+    
+    const groupWidth = trueMaxX - trueMinX;
+    const groupHeight = trueMaxY - trueMinY;
+
+    group.nodes.forEach(node => {
+      const pos = dagreGraph.node(node.id);
+      node.position = {
+        x: pos.x - trueMinX,
+        y: pos.y - trueMinY,
+      };
+      node.parentNode = gid;
+      node.extent = 'parent';
+      node.origin = [0.5, 0.5]; // Centers the node on the coordinate
+      finalNodes.push(node);
+    });
+
+    groupMetas[gid] = {
+      width: groupWidth,
+      height: groupHeight
     };
-    node.origin = [0.5, 0.5]; // Centers the node on the coordinate, allowing dynamic height growth
-    return node;
   });
 
-  return { nodes: layoutedNodes, edges };
+  const placedGroups = {
+    [TARGET_GROUP]: { x: 0, y: 0 }
+  };
+  
+  if (groupMetas[TARGET_GROUP]) {
+    finalNodes.push({
+      id: TARGET_GROUP,
+      type: 'group',
+      position: { x: 0, y: 0 },
+      style: {
+        width: groupMetas[TARGET_GROUP].width,
+        height: groupMetas[TARGET_GROUP].height,
+        backgroundColor: 'rgba(241, 245, 249, 0.2)',
+        border: '2px dashed rgba(148, 163, 184, 0.4)',
+        borderRadius: '16px',
+        zIndex: -1
+      }
+    });
+  }
+
+  let currentYOffset = groupMetas[TARGET_GROUP] ? - (groupMetas[TARGET_GROUP].height / 2 + 100) : 0;
+
+  const ownsEdges = edges.filter(e => e.id.includes('-owns-'));
+  
+  ownsEdges.forEach(edge => {
+    const parentId = edge.source;
+    const subsidId = edge.target;
+    const gid = `group-${parentId}`;
+    
+    if (groupMetas[gid]) {
+      const parentNode = finalNodes.find(n => n.id === parentId);
+      const subsidNode = finalNodes.find(n => n.id === subsidId);
+      
+      if (parentNode && subsidNode) {
+        const subsidGroupGid = subsidNode.parentNode;
+        const subsidGroupCoords = placedGroups[subsidGroupGid] || { x: 0, y: 0 };
+        const subsidGroupMeta = groupMetas[subsidGroupGid];
+        
+        const globalSubsidX = subsidGroupCoords.x - subsidGroupMeta.width/2 + subsidNode.position.x;
+        
+        const parentGroupWidth = groupMetas[gid].width;
+        const parentLocalX = parentNode.position.x;
+        
+        const parentGroupX = globalSubsidX - parentLocalX + parentGroupWidth/2;
+        
+        const parentGroupHeight = groupMetas[gid].height;
+        const parentGroupY = currentYOffset - parentGroupHeight/2;
+        
+        placedGroups[gid] = { x: parentGroupX, y: parentGroupY };
+        
+        finalNodes.push({
+          id: gid,
+          type: 'group',
+          position: { x: parentGroupX, y: parentGroupY },
+          style: {
+            width: parentGroupWidth,
+            height: parentGroupHeight,
+            backgroundColor: 'rgba(241, 245, 249, 0.2)',
+            border: '2px dashed rgba(148, 163, 184, 0.4)',
+            borderRadius: '16px',
+            zIndex: -1
+          }
+        });
+        
+        currentYOffset = parentGroupY - parentGroupHeight/2 - 100;
+      }
+    }
+  });
+
+  return { nodes: finalNodes, edges };
 };
 
 const CustomNode = ({ data }) => {
@@ -798,47 +934,9 @@ const SupplyChainGraph = ({ report, theme, onNodeSelect }) => {
 
   buildGraph(report);
 
-  // Use LR so supply chain flows right
-  // Only feed supply chain edges to dagre — ownership edges are handled by manual positioning
-  const supplyEdges = initialEdges.filter(e => !e.id.includes('-owns-'));
-  const { nodes: layoutedNodes } = getLayoutedElements(initialNodes, supplyEdges, 'LR');
+  // Pass ALL initialEdges (including ownership) to support ReactFlow Group Node partitioning
+  const { nodes: layoutedNodes } = getLayoutedElements(initialNodes, initialEdges, 'LR');
   
-  // dagre LR puts ALL source nodes to the left of their targets, including parent companies.
-  // We want parent companies ABOVE their subsidiaries, so we manually override their positions
-  // after dagre has already placed the supply chain nodes correctly.
-  const NODE_HEIGHT = 90;
-  const PARENT_GAP = 200; // vertical gap between parent and subsidiary
-  initialEdges
-    .filter(e => e.id.includes('-owns-'))
-    .forEach(edge => {
-      // edge.source = parent company, edge.target = subsidiary
-      const parentNode = layoutedNodes.find(n => n.id === edge.source);
-      const subsidNode = layoutedNodes.find(n => n.id === edge.target);
-      if (parentNode && subsidNode) {
-        // Place parent directly above the subsidiary, centered horizontally
-        parentNode.position = {
-          x: subsidNode.position.x,
-          y: subsidNode.position.y - NODE_HEIGHT - PARENT_GAP,
-        };
-      }
-    });
-
-  // After positioning parent above subsidiary, also shift the parent's suppliers
-  // to be at the same vertical level as the parent
-  initialEdges
-    .filter(e => e.id.includes('-supplies-'))
-    .forEach(supplyEdge => {
-      // supplyEdge.source = supplier, supplyEdge.target = company being supplied
-      const supplierNode = layoutedNodes.find(n => n.id === supplyEdge.source);
-      const suppliedNode = layoutedNodes.find(n => n.id === supplyEdge.target);
-      // We only want to adjust suppliers belonging to parents (who have negative Y positions relative to the main tree)
-      if (supplierNode && suppliedNode && suppliedNode.position.y < -100) {
-        // Align supplier's Y to the company it supplies (which may have been moved up for parent)
-        supplierNode.position.y = suppliedNode.position.y;
-      }
-    });
-
-  // We need to pass the full initialEdges to ReactFlow, not just the supplyEdges used for layout
   const layoutedEdges = initialEdges;
 
   const onNodeClick = (event, node) => {
@@ -1317,7 +1415,7 @@ export default function App() {
               <History className="w-5 h-5" />
             </button>
             <Shield className="w-8 h-8 text-blue-600 dark:text-blue-500" />
-            <span className="font-bold text-xl tracking-tight text-slate-800 dark:text-slate-100">A2A Due Diligence</span>
+            <span className="font-bold text-xl tracking-tight text-slate-800 dark:text-slate-100">Vendor Due Diligence</span>
           </div>
           <div className="flex items-center gap-4">
             {view === 'dashboard' && (

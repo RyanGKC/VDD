@@ -86,7 +86,9 @@ class GeminiClient:
         )
         
         if not response.text:
-            raise ValueError("Gemini returned an empty response.")
+            finish_reason = getattr(response.candidates[0], 'finish_reason', 'UNKNOWN') if response.candidates else 'NO_CANDIDATES'
+            logger.error(f"Gemini returned an empty response. Finish reason: {finish_reason}")
+            raise ValueError(f"Gemini returned an empty response. Finish reason: {finish_reason}")
             
         try:
             # Parse JSON using pydantic

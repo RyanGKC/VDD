@@ -28,20 +28,18 @@ class FinancesAgent(BaseResearchAgent):
         company_name = ctx.company_details.company_name
         registration_id = ctx.company_details.registration_number
 
-        # Hybrid approach: fetch DB financials and web search for debt news
+        # Hybrid approach: fetch structured DB financials directly
+        # Web search for debt news is now handled completely by generate_with_web_search via the Document RAG pipeline.
         db_data = await fetch_financials(ctx, company_name, registration_id)
-        search_query = f"{company_name} financial health debt obligations funding bankruptcy"
-        web_data = await perform_web_search(ctx, search_query)
         
         combined_data = {
             "database_financials": json.loads(db_data),
-            "web_news": json.loads(web_data)
         }
         
         analysis = await self.generate_with_web_search(
             ctx=ctx,
             system_instruction=SYSTEM_INSTRUCTION,
-            base_prompt=f"Vendor: {company_name}\nFinancials: {json.dumps(combined_data)}",
+            base_prompt=f"Vendor: {company_name}\nStructured Financials (Bypassing RAG): {json.dumps(combined_data)}",
             schema=_FinAnalysis,
         )
         
@@ -61,7 +59,7 @@ class FinancesAgent(BaseResearchAgent):
             findings=findings,
             structured_data=analysis.model_dump(),
             sources=[s for f in findings for s in f.sources],
-            raw_data=f"DB: {db_data}\nWEB: {web_data}",
+            raw_data=f"DB: {db_data}\nWEB: (Ingested via RAG)",
             rationale=analysis.rationale,
         )
         

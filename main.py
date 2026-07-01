@@ -26,8 +26,10 @@ from core.openai_client import OpenAIClient
 from core.gemini_client import GeminiClient
 from core.models import CompanyDetails, DDContext, DDReport, StepName, Severity
 import os
-from typing import Any
+from core.tools import fetch_corporate_registry
 from core.neo4j_client import Neo4jClient
+from core.document_store import DocumentStore
+from typing import Any
 
 logging.basicConfig(level=logging.INFO)
 
@@ -65,28 +67,40 @@ async def run_dd_with_ctx(ctx: DDContext) -> DDReport:
         await neo4j.save_company_node(ctx.company_details.company_name, "PENDING")
 
         async def handle_step_complete(step: StepName, current_ctx: DDContext):
+            print(f"DEBUG: inside handle_step_complete: step={step}, tiers_to_search={current_ctx.tiers_to_search}")
+
             if step == StepName.SHAREHOLDERS and current_ctx.enable_parent_company:
                 parent_name = current_ctx.results[StepName.SHAREHOLDERS].structured_data.get("parent_company")
                 if parent_name:
                     async with current_ctx.visited_lock:
-                        is_duplicate = parent_name.lower() in current_ctx.visited_companies
+                        # Semantic Graph Deduplication
+                        similar_entity = await neo4j.find_similar_company(parent_name)
+                        canonical_parent = similar_entity if similar_entity else parent_name
+                        
+                        is_duplicate = canonical_parent.lower() in current_ctx.visited_companies
                         if not is_duplicate:
-                            current_ctx.visited_companies.add(parent_name.lower())
+                            current_ctx.visited_companies.add(canonical_parent.lower())
                             
-                    await neo4j.save_ownership_edge(parent_name, current_ctx.company_details.company_name)
+                    await neo4j.save_ownership_edge(canonical_parent, current_ctx.company_details.company_name)
                     
                     if not is_duplicate:
                         parent_ctx = DDContext(
-                            company_details=CompanyDetails(company_name=parent_name),
+                            company_details=CompanyDetails(company_name=canonical_parent),
                             use_mock=current_ctx.use_mock,
                             tiers_to_search=current_ctx.tiers_to_search if current_ctx.enable_parent_supply_chain else 1,
                             max_suppliers_per_node=current_ctx.max_suppliers_per_node,
                             visited_companies=current_ctx.visited_companies,
                             visited_lock=current_ctx.visited_lock,
                             enable_parent_company=False,
-                            enable_parent_supply_chain=False,
+                            enable_parent_supply_chain=current_ctx.enable_parent_supply_chain,
                             entity_role='parent',
                             parent_entity=current_ctx.company_details.company_name,
+                            run_id=current_ctx.run_id,
+                            retrieval_engine=current_ctx.retrieval_engine,
+                            ingestion_pipeline=current_ctx.ingestion_pipeline,
+                            cache_gate=current_ctx.cache_gate,
+                            singleflight=current_ctx.singleflight,
+                            background_tasks=current_ctx.background_tasks,
                         )
                         # Assign by reference AFTER construction to bypass Pydantic's deep copy
                         parent_ctx.execution_log = current_ctx.execution_log
@@ -94,9 +108,9 @@ async def run_dd_with_ctx(ctx: DDContext) -> DDReport:
                         current_ctx.log(f"SYSTEM: Spawning sub-pipeline for parent company: {parent_name}")
                         current_ctx.parent_task = asyncio.create_task(run_dd_with_ctx(parent_ctx))
                     else:
-                        current_ctx.log(f"SYSTEM: Parent {parent_name} already visited. Linking edge only.")
+                        current_ctx.log(f"SYSTEM: Parent {canonical_parent} already visited. Linking edge only.")
                         stub = DDReport(
-                            vendor_name=parent_name, overall_risk=Severity.INFO,
+                            vendor_name=canonical_parent, overall_risk=Severity.INFO,
                             strengths=[], red_flags=[], recommendations=[], sources=[],
                             executive_summary="Duplicate node (already researched elsewhere in graph)."
                         )
@@ -105,19 +119,24 @@ async def run_dd_with_ctx(ctx: DDContext) -> DDReport:
 
             if step == StepName.RESILIENCE and current_ctx.tiers_to_search > 1:
                 suppliers = current_ctx.results[StepName.RESILIENCE].structured_data.get("suppliers", [])
+                print(f"DEBUG handle_step_complete: extracted suppliers: {suppliers}")
                 suppliers = suppliers[:current_ctx.max_suppliers_per_node]
                 
                 for supplier_name in suppliers:
                     async with current_ctx.visited_lock:
-                        is_duplicate = supplier_name.lower() in current_ctx.visited_companies
+                        # Semantic Graph Deduplication
+                        similar_entity = await neo4j.find_similar_company(supplier_name)
+                        canonical_supplier = similar_entity if similar_entity else supplier_name
+                        
+                        is_duplicate = canonical_supplier.lower() in current_ctx.visited_companies
                         if not is_duplicate:
-                            current_ctx.visited_companies.add(supplier_name.lower())
+                            current_ctx.visited_companies.add(canonical_supplier.lower())
                     
-                    await neo4j.save_supply_edge(supplier_name, current_ctx.company_details.company_name)
+                    await neo4j.save_supply_edge(canonical_supplier, current_ctx.company_details.company_name)
                     
                     if not is_duplicate:
                         child_ctx = DDContext(
-                            company_details=CompanyDetails(company_name=supplier_name),
+                            company_details=CompanyDetails(company_name=canonical_supplier),
                             use_mock=current_ctx.use_mock,
                             tiers_to_search=current_ctx.tiers_to_search - 1,
                             max_suppliers_per_node=current_ctx.max_suppliers_per_node,
@@ -125,17 +144,23 @@ async def run_dd_with_ctx(ctx: DDContext) -> DDReport:
                             visited_lock=current_ctx.visited_lock,
                             entity_role='supplier',
                             parent_entity=current_ctx.company_details.company_name,
+                            run_id=current_ctx.run_id,
+                            retrieval_engine=current_ctx.retrieval_engine,
+                            ingestion_pipeline=current_ctx.ingestion_pipeline,
+                            cache_gate=current_ctx.cache_gate,
+                            singleflight=current_ctx.singleflight,
+                            background_tasks=current_ctx.background_tasks,
                         )
                         # Assign by reference AFTER construction to bypass Pydantic's deep copy
                         child_ctx.execution_log = current_ctx.execution_log
                         child_ctx.detailed_audit_log = current_ctx.detailed_audit_log
-                        current_ctx.log(f"SYSTEM: Spawning sub-pipeline for supplier: {supplier_name}")
+                        current_ctx.log(f"SYSTEM: Spawning sub-pipeline for supplier: {canonical_supplier}")
                         task = asyncio.create_task(run_dd_with_ctx(child_ctx))
                         current_ctx.child_tasks.append(task)
                     else:
-                        current_ctx.log(f"SYSTEM: Supplier {supplier_name} already visited. Linking edge only.")
+                        current_ctx.log(f"SYSTEM: Supplier {canonical_supplier} already visited. Linking edge only.")
                         stub = DDReport(
-                            vendor_name=supplier_name, overall_risk=Severity.INFO,
+                            vendor_name=canonical_supplier, overall_risk=Severity.INFO,
                             strengths=[], red_flags=[], recommendations=[], sources=[],
                             executive_summary="Duplicate node (already researched elsewhere in graph)."
                         )
@@ -155,12 +180,19 @@ async def run_dd_with_ctx(ctx: DDContext) -> DDReport:
         # Wait for all dynamically spawned child pipelines to finish
         if ctx.child_tasks:
             ctx.log(f"SYSTEM: Awaiting {len(ctx.child_tasks)} sub-pipelines for suppliers...")
-            sub_reports = await asyncio.gather(*ctx.child_tasks)
-            report.supply_chain.extend(sub_reports)
+            results = await asyncio.gather(*ctx.child_tasks, return_exceptions=True)
+            for res in results:
+                if isinstance(res, Exception):
+                    ctx.log(f"SYSTEM: Child pipeline failed with: {res}")
+                elif res:
+                    report.supply_chain.append(res)
             
         if ctx.parent_task:
             ctx.log(f"SYSTEM: Awaiting sub-pipeline for parent company...")
-            report.parent_company = await ctx.parent_task
+            try:
+                report.parent_company = await ctx.parent_task
+            except Exception as e:
+                ctx.log(f"SYSTEM: Parent pipeline failed with: {e}")
 
         await neo4j.save_company_node(ctx.company_details.company_name, report.overall_risk.value)
         await neo4j.close()
@@ -196,14 +228,27 @@ async def run_dd(
     vendor_registration_id: str | None = None,
     use_mock: bool = False,
 ) -> DDReport:
-    # Public function: run full due diligence and return the report.
+    import uuid
+    from core.dependencies import (
+        retrieval_engine, ingestion_pipeline,
+        cache_gate, singleflight, background_tasks
+    )
+
+    run_id = str(uuid.uuid4())
+    
     ctx = DDContext(
         company_details=CompanyDetails(
             company_name=vendor_name,
             country=vendor_country,
             registration_number=vendor_registration_id,
         ),
-        use_mock=use_mock
+        use_mock=use_mock,
+        run_id=run_id,
+        retrieval_engine=retrieval_engine,
+        ingestion_pipeline=ingestion_pipeline,
+        cache_gate=cache_gate,
+        singleflight=singleflight,
+        background_tasks=background_tasks,
     )
     return await run_dd_with_ctx(ctx)
 
