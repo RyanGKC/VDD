@@ -270,22 +270,58 @@ class WebSearchResponse(BaseModel):
     search_results: list[SearchResultSnippet] = Field(description="A list of search results found on the internet")
 
 async def perform_web_search(ctx: DDContext, query: str) -> str:
-    result = {"quality_flag": "partial", "source": "Tavily", "search_results": []}
-    api_key = os.getenv("TAVILY_API_KEY")
-    cache_key = None
+    result = {"quality_flag": "partial", "source": "Unknown", "search_results": []}
+    provider = os.getenv("SEARCH_PROVIDER", "exa").lower()
     
-    if api_key:
-        payload = {
-            "api_key": api_key,
+    async def _try_exa():
+        exa_api_key = os.getenv("EXA_API_KEY")
+        if not exa_api_key:
+            return None
+        exa_payload = {
             "query": query,
-            "search_depth": "basic",
-            "include_answer": False,
-            "max_results": 5
+            "type": "auto",
+            "numResults": 5,
+            "contents": {"highlights": True}
         }
-        
+        exa_cache_key = f"https://api.exa.ai/search|{json.dumps(exa_payload, sort_keys=True)}"
+        cached = cache_db.get(exa_cache_key)
+        if cached:
+            return cached
+            
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                headers = {"x-api-key": exa_api_key, "Content-Type": "application/json"}
+                resp = await client.post("https://api.exa.ai/search", json=exa_payload, headers=headers)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    res_obj = {"source": "Exa API", "quality_flag": "high", "search_results": []}
+                    for res in data.get("results", []):
+                        highlights = res.get("highlights", [])
+                        snippet = " ".join(highlights) if highlights else "No snippet available."
+                        res_obj["search_results"].append({
+                            "title": res.get("title", ""),
+                            "snippet": snippet,
+                            "url": res.get("url", "")
+                        })
+                    final_str = json.dumps(res_obj)
+                    cache_db.set(exa_cache_key, final_str)
+                    return final_str
+                else:
+                    logger.warning(f"Exa API failed: {resp.status_code}")
+        except Exception as e:
+            logger.warning(f"Exa API exception: {str(e)}")
+        return None
+
+    async def _try_tavily():
+        api_key = os.getenv("TAVILY_API_KEY")
+        if not api_key:
+            return None
+        payload = {
+            "api_key": api_key, "query": query, "search_depth": "basic",
+            "include_answer": False, "max_results": 5
+        }
         cache_payload = {k: v for k, v in payload.items() if k != "api_key"}
         cache_key = f"https://api.tavily.com/search|{json.dumps(cache_payload, sort_keys=True)}"
-        
         cached = cache_db.get(cache_key)
         if cached:
             return cached
@@ -295,68 +331,33 @@ async def perform_web_search(ctx: DDContext, query: str) -> str:
                 resp = await client.post("https://api.tavily.com/search", json=payload)
                 if resp.status_code == 200:
                     data = resp.json()
-                    result["quality_flag"] = "high"
-                    result["search_results"] = [
+                    res_obj = {"source": "Tavily", "quality_flag": "high", "search_results": []}
+                    res_obj["search_results"] = [
                         {"title": res.get("title"), "snippet": res.get("content"), "url": res.get("url")}
                         for res in data.get("results", [])
                     ]
-                    final_str = json.dumps(result)
+                    final_str = json.dumps(res_obj)
                     cache_db.set(cache_key, final_str)
                     return final_str
                 else:
-                    logger.warning(f"Tavily API returned status {resp.status_code}. Triggering Gemini fallback.")
+                    logger.warning(f"Tavily API failed: {resp.status_code}")
         except Exception as e:
-            logger.warning(f"Tavily API exception: {str(e)}. Triggering Gemini fallback.")
-            
-    # --- EXA FALLBACK LOGIC ---
-    exa_api_key = os.getenv("EXA_API_KEY")
-    if exa_api_key:
-        exa_payload = {
-            "query": query,
-            "type": "auto",
-            "numResults": 5,
-            "contents": {"highlights": True}
-        }
-        
-        exa_cache_key = f"https://api.exa.ai/search|{json.dumps(exa_payload, sort_keys=True)}"
-        cached = cache_db.get(exa_cache_key)
-        if cached:
-            return cached
-            
-        try:
-            async with httpx.AsyncClient(timeout=15.0) as client:
-                headers = {
-                    "x-api-key": exa_api_key,
-                    "Content-Type": "application/json"
-                }
-                resp = await client.post("https://api.exa.ai/search", json=exa_payload, headers=headers)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    result["source"] = "Exa API"
-                    result["quality_flag"] = "high"
-                    
-                    search_results = []
-                    for res in data.get("results", []):
-                        # Highlights is a list of strings
-                        highlights = res.get("highlights", [])
-                        snippet = " ".join(highlights) if highlights else "No snippet available."
-                        search_results.append({
-                            "title": res.get("title", ""),
-                            "snippet": snippet,
-                            "url": res.get("url", "")
-                        })
-                        
-                    result["search_results"] = search_results
-                    final_str = json.dumps(result)
-                    cache_db.set(exa_cache_key, final_str)
-                    return final_str
-                else:
-                    logger.warning(f"Exa API returned status {resp.status_code}: {resp.text}")
-                    result["error"] = f"Exa API failed with status {resp.status_code}"
-        except Exception as e:
-            logger.warning(f"Exa API exception: {str(e)}")
-            result["error"] = f"Exa API exception: {str(e)}"
+            logger.warning(f"Tavily API exception: {str(e)}")
+        return None
+
+    # Execute based on preference with fallback
+    if provider == "tavily":
+        res_str = await _try_tavily()
+        if res_str: return res_str
+        logger.warning("Tavily failed, falling back to Exa.")
+        res_str = await _try_exa()
+        if res_str: return res_str
     else:
-        result["error"] = "No fallback API keys available (Tavily/Exa)."
-        
+        res_str = await _try_exa()
+        if res_str: return res_str
+        logger.warning("Exa failed, falling back to Tavily.")
+        res_str = await _try_tavily()
+        if res_str: return res_str
+
+    result["error"] = "No fallback API keys available or all providers failed (Tavily/Exa)."
     return json.dumps(result)
