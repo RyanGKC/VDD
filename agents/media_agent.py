@@ -23,6 +23,13 @@ to true and provide details.
 class MediaAgent(BaseResearchAgent):
     step = StepName.MEDIA
 
+    @property
+    def default_queries(self) -> list[str]:
+        return [
+            "{company} scandal fraud controversy news",
+            "{company} lawsuit litigation"
+        ]
+
     async def research(self, ctx: DDContext) -> StepResult:
         company_name = ctx.company_details.company_name
         

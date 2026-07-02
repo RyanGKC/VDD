@@ -23,6 +23,13 @@ the 'related_party_name'.
 class FinancesAgent(BaseResearchAgent):
     step = StepName.FINANCES
 
+    @property
+    def default_queries(self) -> list[str]:
+        return [
+            "{company} financial statements revenue",
+            "{company} bankruptcy insolvency"
+        ]
+
     async def research(self, ctx: DDContext) -> StepResult:
         # Extract data using the updated CompanyDetails model
         company_name = ctx.company_details.company_name

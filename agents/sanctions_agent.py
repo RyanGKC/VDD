@@ -33,6 +33,13 @@ class SanctionsAgent(BaseResearchAgent):
 
     step = StepName.SANCTIONS
 
+    @property
+    def default_queries(self) -> list[str]:
+        return [
+            "{company} OFAC sanctions list",
+            "{company} export control violations"
+        ]
+
     async def research(self, ctx: DDContext) -> StepResult:
         # 1. Gather entities to screen: the vendor + any shareholders found
         #    by the upstream shareholders agent.

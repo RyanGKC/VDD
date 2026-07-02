@@ -38,9 +38,11 @@ class FlowEngine:
         self,
         agents: dict[StepName, "BaseResearchAgent"],
         supervisor: "SupervisorAgent",
+        summary_agent=None,
     ) -> None:
         self._agents = agents
         self._supervisor = supervisor
+        self._summary = summary_agent
         
         # Validation: Ensure we have an agent for every step in the Ideal Flow
         missing_agents = [step for step in IDEAL_FLOW if step not in self._agents]
@@ -128,12 +130,34 @@ class FlowEngine:
             completed_this_round = await self._execute_dag(plan, ctx, step_execution_counts, on_step_complete)
             all_completed.update(completed_this_round)
 
-            # 2. Batched Supervisor Review
+            # 2. Batched Supervisor Review & Speculative Contradiction Detection
             ctx.log("SUPERVISOR batch reviewing all completed results...")
-            new_plan, is_anomaly = await self._supervisor.review(
-                ctx=ctx,
-                completed=all_completed,
-            )
+            
+            import asyncio
+            supervisor_task = self._supervisor.review(ctx=ctx, completed=all_completed)
+            
+            # Speculative contradiction detection: If no replan occurs, we keep the cleaned findings.
+            if self._summary:
+                all_findings = []
+                from agents.summary_agent import _STEP_LABELS
+                for step_name, r in ctx.results.items():
+                    category_name = _STEP_LABELS.get(step_name, step_name.value) if hasattr(step_name, 'value') else step_name
+                    for f in r.findings:
+                        f.category = category_name
+                        for s in f.sources:
+                            title_lower = s.title.lower()
+                            if not s.url or "registry" in title_lower or "database" in title_lower or "sec " in title_lower or "sanctions" in title_lower:
+                                s.is_database = True
+                        all_findings.append(f)
+                        
+                contradiction_task = self._summary._detect_contradictions(all_findings)
+                (new_plan, is_anomaly), removal_indices = await asyncio.gather(supervisor_task, contradiction_task)
+                
+                # Store it in ctx so synthesise can skip the LLM call
+                ctx._cached_contradiction_indices = removal_indices
+                ctx._cached_all_findings = all_findings
+            else:
+                new_plan, is_anomaly = await supervisor_task
 
             if is_anomaly and new_plan:
                 if replans >= MAX_REPLANS:
@@ -142,6 +166,11 @@ class FlowEngine:
                 else:
                     replans += 1
                     ctx.log(f"SUPERVISOR detected anomaly (replan #{replans})")
+                    # Clear the speculative cache because we're getting more findings!
+                    if hasattr(ctx, '_cached_contradiction_indices'):
+                        del ctx._cached_contradiction_indices
+                        del ctx._cached_all_findings
+                        
                     uncompleted_original = [s for s in IDEAL_FLOW if s not in all_completed and s not in new_plan]
                     plan = new_plan + uncompleted_original
                     ctx.log(f"NEW PLAN: {[s.value for s in plan]}")

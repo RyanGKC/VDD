@@ -22,6 +22,13 @@ class ESGAgent(BaseResearchAgent):
 
     step = StepName.ESG
 
+    @property
+    def default_queries(self) -> list[str]:
+        return [
+            "{company} ESG report",
+            "{company} environmental violations controversy"
+        ]
+
     async def research(self, ctx: DDContext) -> StepResult:
         company_name = ctx.company_details.company_name
         

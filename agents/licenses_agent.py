@@ -23,6 +23,13 @@ to true and provide the 'license_details'.
 class LicensesAgent(BaseResearchAgent):
     step = StepName.LICENSES
 
+    @property
+    def default_queries(self) -> list[str]:
+        return [
+            "{company} regulatory licenses certifications",
+            "{company} regulatory fines loss of license"
+        ]
+
     async def research(self, ctx: DDContext) -> StepResult:
         company_name = ctx.company_details.company_name
         country = ctx.company_details.country

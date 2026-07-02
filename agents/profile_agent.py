@@ -27,6 +27,13 @@ shell company for mining), set 'drastic_model_discrepancy' to true and describe 
 class ProfileAgent(BaseResearchAgent):
     step = StepName.PROFILE
 
+    @property
+    def default_queries(self) -> list[str]:
+        return [
+            "{company} business model products services",
+            "{company} major competitors market share"
+        ]
+
     async def research(self, ctx: DDContext) -> StepResult:
         company_name = ctx.company_details.company_name
         website = ctx.company_details.website

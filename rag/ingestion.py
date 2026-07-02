@@ -79,31 +79,26 @@ class IngestionPipeline:
                 "4. The fiscal period (e.g., 'FY2024') if applicable, else null."
             )
 
-            for chunk in chunks:
-                if not chunk.strip():
-                    continue
-                    
+            batch_docs = []
+            batch_metas = []
+            batch_ids = []
+
+            import asyncio
+            async def _process_chunk(chunk: str):
+                if not chunk.strip(): return None
                 try:
-                    # Fast Gemini Flash call
                     tagging = await self.gemini.generate_structured(
                         system_instruction=system_instruction,
                         prompt=f"Passage: {chunk}",
                         schema=ChunkTaggingResult,
                     )
                     
-                    # Resolve primary entity
                     resolved_primary = await self.resolver.resolve_entity(tagging.primary_entity_name)
-                    
-                    primary_entity_id = resolved_primary.node_id
-                    if resolved_primary.status == "pending_resolution":
-                        primary_entity_id = "pending_resolution"
+                    primary_entity_id = resolved_primary.node_id if resolved_primary.status != "pending_resolution" else "pending_resolution"
                         
-                    # 4. Confidence Gate
-                    # If primary_entity_id is pending_resolution, it will be excluded in retrieval
-                    
                     metadata = {
                         "primary_entity_id": primary_entity_id or tagging.primary_entity_name,
-                        "mentioned_entities": ",".join(tagging.mentioned_entities), # Chroma metadata doesn't support list of strings well in old versions, join by comma
+                        "mentioned_entities": ",".join(tagging.mentioned_entities),
                         "relationship_context": tagging.relationship_context,
                         "document_date": document_date,
                         "fiscal_period": tagging.fiscal_period or "",
@@ -112,18 +107,27 @@ class IngestionPipeline:
                         "document_fingerprint": fingerprint,
                         "run_id": run_id
                     }
-                    
-                    chunk_id = str(uuid.uuid4())
-                    collection.add(
-                        documents=[chunk],
-                        metadatas=[metadata],
-                        ids=[chunk_id]
-                    )
-                    chunk_ids.append(chunk_id)
-                    
+                    return (chunk, metadata, str(uuid.uuid4()))
                 except Exception as e:
                     logger.error(f"Error tagging chunk: {e}")
-                    
+                    return None
+
+            results = await asyncio.gather(*[_process_chunk(c) for c in chunks])
+            for res in results:
+                if res:
+                    c, m, i = res
+                    batch_docs.append(c)
+                    batch_metas.append(m)
+                    batch_ids.append(i)
+                    chunk_ids.append(i)
+
+            if batch_docs:
+                collection.add(
+                    documents=batch_docs,
+                    metadatas=batch_metas,
+                    ids=batch_ids
+                )
+
             return chunk_ids
         finally:
             self._inflight_fingerprints.discard(fingerprint)

@@ -37,7 +37,7 @@ class EntityResolver:
         # 1. Exact or Alias Match via Full-Text Index
         # We query the fulltext index 'entity_names'
         exact_query = f"""
-        CALL db.index.fulltext.queryNodes("entity_names", $query)
+        CALL db.index.fulltext.queryNodes("entity_names", $search_term)
         YIELD node, score
         WHERE '{label}' IN labels(node)
         RETURN node.name AS name, score
@@ -63,7 +63,7 @@ class EntityResolver:
                     return res
                 
                 # Try full-text index first before downloading everything
-                ft_result = await session.run(exact_query, query=name)
+                ft_result = await session.run(exact_query, search_term=name)
                 ft_records = await ft_result.data()
                 
                 best_match = None

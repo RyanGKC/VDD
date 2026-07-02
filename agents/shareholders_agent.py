@@ -25,6 +25,13 @@ If you identify a direct Corporate Parent company (i.e. a higher-level holding c
 class ShareholdersAgent(BaseResearchAgent):
     step = StepName.SHAREHOLDERS
 
+    @property
+    def default_queries(self) -> list[str]:
+        return [
+            "{company} ultimate beneficial owners UBO",
+            "{company} major shareholders parent company"
+        ]
+
     async def research(self, ctx: DDContext) -> StepResult:
         company_name = ctx.company_details.company_name
         country = ctx.company_details.country

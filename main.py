@@ -27,7 +27,7 @@ from core.gemini_client import GeminiClient
 from core.models import CompanyDetails, DDContext, DDReport, StepName, Severity
 import os
 from core.tools import fetch_corporate_registry
-from core.neo4j_client import Neo4jClient
+from core.dependencies import neo4j
 from core.document_store import DocumentStore
 from typing import Any
 
@@ -49,8 +49,9 @@ def build_engine(client: Any) -> tuple[FlowEngine, SummaryAgent]:
         StepName.MEDIA: MediaAgent(client),
     }
     supervisor = SupervisorAgent(client)
-    engine = FlowEngine(agents=agents, supervisor=supervisor)
-    return engine, SummaryAgent(client)
+    summary = SummaryAgent(client)
+    engine = FlowEngine(agents=agents, supervisor=supervisor, summary_agent=summary)
+    return engine, summary
 
 
 async def run_dd_with_ctx(ctx: DDContext) -> DDReport:
@@ -62,8 +63,6 @@ async def run_dd_with_ctx(ctx: DDContext) -> DDReport:
         
     try:
         engine, summary_agent = build_engine(client)
-        neo4j = Neo4jClient()
-        await neo4j.setup_constraints()
         await neo4j.save_company_node(ctx.company_details.company_name, "PENDING")
 
         async def handle_step_complete(step: StepName, current_ctx: DDContext):
@@ -167,6 +166,18 @@ async def run_dd_with_ctx(ctx: DDContext) -> DDReport:
                         async def return_stub_child(s=stub): return s
                         current_ctx.child_tasks.append(asyncio.create_task(return_stub_child()))
 
+        # Pre-warm the entity resolver cache so all 9 agents hit memory instead of Neo4j on their first search
+        if ctx.retrieval_engine and ctx.retrieval_engine.resolver:
+            ctx.log("SYSTEM: Pre-warming entity resolver cache...")
+            await ctx.retrieval_engine.resolver.resolve_entity(ctx.company_details.company_name, ctx.run_id)
+
+        # Optimization 2: Dynamic Search Budget
+        # Complex public companies (have CIK or known to be big) get 3. Others get 2. Local/small could get 1.
+        has_cik = bool(ctx.company_details.cik)
+        is_tech_corp = "Tech Corp" in ctx.company_details.company_name
+        ctx.search_budget = 3 if (has_cik or is_tech_corp) else 2
+        ctx.log(f"SYSTEM: Assigned dynamic search budget of {ctx.search_budget} per agent.")
+
         # 1. Run the adaptive pipeline asynchronously.
         ctx = await engine.run(ctx, on_step_complete=handle_step_complete)
 
@@ -195,7 +206,6 @@ async def run_dd_with_ctx(ctx: DDContext) -> DDReport:
                 ctx.log(f"SYSTEM: Parent pipeline failed with: {e}")
 
         await neo4j.save_company_node(ctx.company_details.company_name, report.overall_risk.value)
-        await neo4j.close()
         
         # 3. Compile the full audit log using the chronological detailed_audit_log
         audit_lines = [

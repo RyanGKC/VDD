@@ -151,8 +151,13 @@ class SummaryAgent:
                 all_findings.append(f)
 
         # --- Contradiction detection pass ---
-        ctx.log("SUMMARY: Running contradiction detection across all findings")
-        removal_indices = await self._detect_contradictions(all_findings)
+        if hasattr(ctx, '_cached_contradiction_indices'):
+            ctx.log("SUMMARY: Using speculative contradiction detection results from FlowEngine")
+            removal_indices = ctx._cached_contradiction_indices
+            all_findings = ctx._cached_all_findings
+        else:
+            ctx.log("SUMMARY: Running contradiction detection across all findings")
+            removal_indices = await self._detect_contradictions(all_findings)
 
         if removal_indices:
             ctx.log(

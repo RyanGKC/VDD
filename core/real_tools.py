@@ -9,6 +9,7 @@ from core.cache import PersistentCache
 import logging
 from pydantic import BaseModel, Field
 from core.gemini_client import GeminiClient
+from core.dependencies import http_client
 
 logger = logging.getLogger(__name__)
 
@@ -21,12 +22,11 @@ async def fetch_json(ctx: DDContext, url: str, headers: dict = None, auth=None) 
         return json.loads(cached)
     
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.get(url, headers=headers, auth=auth)
-            if resp.status_code == 200:
-                data = resp.json()
-                cache_db.set(url, json.dumps(data))
-                return data
+        resp = await http_client.get(url, headers=headers, auth=auth)
+        if resp.status_code == 200:
+            data = resp.json()
+            cache_db.set(url, json.dumps(data))
+            return data
     except Exception as e:
         print(f"Error fetching {url}: {e}")
     return None
@@ -37,12 +37,11 @@ async def fetch_text(ctx: DDContext, url: str, headers: dict = None, auth=None) 
         return cached
     
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.get(url, headers=headers, auth=auth)
-            if resp.status_code == 200:
-                text = resp.text
-                cache_db.set(url, text)
-                return text
+        resp = await http_client.get(url, headers=headers, auth=auth)
+        if resp.status_code == 200:
+            text = resp.text
+            cache_db.set(url, text)
+            return text
     except Exception as e:
         print(f"Error fetching {url}: {e}")
     return None
@@ -183,24 +182,23 @@ async def screen_sanctions(ctx: DDContext, entities: list[str]) -> str:
             return cached
 
         try:
-            async with httpx.AsyncClient(timeout=15.0) as client:
-                headers = {"Authorization": f"ApiKey {api_key}"}
-                resp = await client.post("https://api.opensanctions.org/match/default", json=payload, headers=headers)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    result["quality_flag"] = "high"
-                    for qid, qres in data.get("responses", {}).items():
-                        for match in qres.get("results", []):
-                            result["hits"].append({
-                                "entity": match.get("id"),
-                                "caption": match.get("caption"),
-                                "score": match.get("score")
-                            })
-                    final_str = json.dumps(result)
-                    cache_db.set(cache_key, final_str)
-                    return final_str
-                else:
-                    logger.warning(f"OpenSanctions API returned status code {resp.status_code}. Initiating web search fallback.")
+            headers = {"Authorization": f"ApiKey {api_key}"}
+            resp = await http_client.post("https://api.opensanctions.org/match/default", json=payload, headers=headers)
+            if resp.status_code == 200:
+                data = resp.json()
+                result["quality_flag"] = "high"
+                for qid, qres in data.get("responses", {}).items():
+                    for match in qres.get("results", []):
+                        result["hits"].append({
+                            "entity": match.get("id"),
+                            "caption": match.get("caption"),
+                            "score": match.get("score")
+                        })
+                final_str = json.dumps(result)
+                cache_db.set(cache_key, final_str)
+                return final_str
+            else:
+                logger.warning(f"OpenSanctions API returned status code {resp.status_code}. Initiating web search fallback.")
         except Exception as e:
             logger.warning(f"OpenSanctions API error: {e}. Initiating web search fallback.")
             
@@ -313,25 +311,24 @@ async def perform_web_search(ctx: DDContext, query: str) -> str:
             return cached
             
         try:
-            async with httpx.AsyncClient(timeout=15.0) as client:
-                headers = {"x-api-key": exa_api_key, "Content-Type": "application/json"}
-                resp = await client.post("https://api.exa.ai/search", json=exa_payload, headers=headers)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    res_obj = {"source": "Exa API", "quality_flag": "high", "search_results": []}
-                    for res in data.get("results", []):
-                        highlights = res.get("highlights", [])
-                        snippet = " ".join(highlights) if highlights else "No snippet available."
-                        res_obj["search_results"].append({
-                            "title": res.get("title", ""),
-                            "snippet": snippet,
-                            "url": res.get("url", "")
-                        })
-                    final_str = json.dumps(res_obj)
-                    cache_db.set(exa_cache_key, final_str)
-                    return final_str
-                else:
-                    logger.warning(f"Exa API failed: {resp.status_code}")
+            headers = {"x-api-key": exa_api_key, "Content-Type": "application/json"}
+            resp = await http_client.post("https://api.exa.ai/search", json=exa_payload, headers=headers)
+            if resp.status_code == 200:
+                data = resp.json()
+                res_obj = {"source": "Exa API", "quality_flag": "high", "search_results": []}
+                for res in data.get("results", []):
+                    highlights = res.get("highlights", [])
+                    snippet = " ".join(highlights) if highlights else "No snippet available."
+                    res_obj["search_results"].append({
+                        "title": res.get("title", ""),
+                        "snippet": snippet,
+                        "url": res.get("url", "")
+                    })
+                final_str = json.dumps(res_obj)
+                cache_db.set(exa_cache_key, final_str)
+                return final_str
+            else:
+                logger.warning(f"Exa API failed: {resp.status_code}")
         except Exception as e:
             logger.warning(f"Exa API exception: {str(e)}")
         return None
@@ -351,20 +348,19 @@ async def perform_web_search(ctx: DDContext, query: str) -> str:
             return cached
 
         try:
-            async with httpx.AsyncClient(timeout=15.0) as client:
-                resp = await client.post("https://api.tavily.com/search", json=payload)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    res_obj = {"source": "Tavily", "quality_flag": "high", "search_results": []}
-                    res_obj["search_results"] = [
-                        {"title": res.get("title"), "snippet": res.get("content"), "url": res.get("url")}
-                        for res in data.get("results", [])
-                    ]
-                    final_str = json.dumps(res_obj)
-                    cache_db.set(cache_key, final_str)
-                    return final_str
-                else:
-                    logger.warning(f"Tavily API failed: {resp.status_code}")
+            resp = await http_client.post("https://api.tavily.com/search", json=payload)
+            if resp.status_code == 200:
+                data = resp.json()
+                res_obj = {"source": "Tavily", "quality_flag": "high", "search_results": []}
+                res_obj["search_results"] = [
+                    {"title": res.get("title"), "snippet": res.get("content"), "url": res.get("url")}
+                    for res in data.get("results", [])
+                ]
+                final_str = json.dumps(res_obj)
+                cache_db.set(cache_key, final_str)
+                return final_str
+            else:
+                logger.warning(f"Tavily API failed: {resp.status_code}")
         except Exception as e:
             logger.warning(f"Tavily API exception: {str(e)}")
         return None

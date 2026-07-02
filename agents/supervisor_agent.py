@@ -112,9 +112,8 @@ class SupervisorAgent:
         for log_entry in ctx.execution_log[-15:]:
             prompt += f"  {log_entry}\n"
             
-        neo4j = Neo4jClient()
+        from core.dependencies import neo4j
         risky_neighbors = await neo4j.get_risky_neighbors(ctx.company_details.company_name, max_hops=2)
-        await neo4j.close()
         
         if risky_neighbors:
             prompt += "\n--- GRAPH RAG: RISKY NETWORK CONNECTIONS (N-HOP) ---\n"

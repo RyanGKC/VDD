@@ -23,6 +23,13 @@ CRITICAL INSTRUCTION: If the company is a publicly traded corporation actively f
 class KYBAgent(BaseResearchAgent):
     step = StepName.KYB
 
+    @property
+    def default_queries(self) -> list[str]:
+        return [
+            "{company} corporate registration details",
+            "{company} headquarters address contact"
+        ]
+
     async def research(self, ctx: DDContext) -> StepResult:
         company_name = ctx.company_details.company_name
         reg_id = ctx.company_details.registration_number

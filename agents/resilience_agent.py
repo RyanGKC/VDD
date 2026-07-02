@@ -24,6 +24,13 @@ to true and describe it.
 class ResilienceAgent(BaseResearchAgent):
     step = StepName.RESILIENCE
 
+    @property
+    def default_queries(self) -> list[str]:
+        return [
+            "{company} supply chain disruption cyber attack",
+            "{company} operational resilience redundancy"
+        ]
+
     async def research(self, ctx: DDContext) -> StepResult:
         company_name = ctx.company_details.company_name
         country = ctx.company_details.country

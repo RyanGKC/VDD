@@ -22,6 +22,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.on_event("startup")
+async def startup_event():
+    from core.dependencies import neo4j
+    await neo4j.setup_constraints()
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    from core.dependencies import http_client
+    await http_client.aclose()
+
 active_jobs = {}
 active_tasks = {}
 
@@ -215,4 +225,4 @@ async def delete_history(request: DeleteHistoryRequest):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=False)

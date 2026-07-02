@@ -182,6 +182,7 @@ class DDContext(BaseModel):
     enable_rag: bool = Field(default_factory=lambda: os.getenv("ENABLE_RAG", "true").lower() == "true")
     # Async RAG orchestration layer
     cache_gate: Any = Field(default=None, exclude=True)
+    search_budget: int = Field(default=3, description="Dynamically allocated max web searches per agent")
     singleflight: Any = Field(default=None, exclude=True)
     background_tasks: Any = Field(default=None, exclude=True)
 
