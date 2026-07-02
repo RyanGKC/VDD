@@ -25,6 +25,13 @@ class IngestionPipeline:
         self.fingerprinter = Fingerprinter(self.vs)
         self.gemini = gemini
         self._inflight_fingerprints: set[str] = set()
+        
+        import asyncio
+        import os
+        # Prevent thundering herd network collapse on low-bandwidth connections.
+        # Can be scaled up (e.g., to 50) on faster connections via environment variable.
+        concurrency_limit = int(os.getenv("INGESTION_CONCURRENCY", "10"))
+        self._semaphore = asyncio.Semaphore(concurrency_limit)
 
     def chunk_text(self, text: str, chunk_size: int = 1500, overlap: int = 200) -> List[str]:
         """Simple structural chunking fallback"""
@@ -86,31 +93,32 @@ class IngestionPipeline:
             import asyncio
             async def _process_chunk(chunk: str):
                 if not chunk.strip(): return None
-                try:
-                    tagging = await self.gemini.generate_structured(
-                        system_instruction=system_instruction,
-                        prompt=f"Passage: {chunk}",
-                        schema=ChunkTaggingResult,
-                    )
-                    
-                    resolved_primary = await self.resolver.resolve_entity(tagging.primary_entity_name)
-                    primary_entity_id = resolved_primary.node_id if resolved_primary.status != "pending_resolution" else "pending_resolution"
+                async with self._semaphore:
+                    try:
+                        tagging = await self.gemini.generate_structured(
+                            system_instruction=system_instruction,
+                            prompt=f"Passage: {chunk}",
+                            schema=ChunkTaggingResult,
+                        )
                         
-                    metadata = {
-                        "primary_entity_id": primary_entity_id or tagging.primary_entity_name,
-                        "mentioned_entities": ",".join(tagging.mentioned_entities),
-                        "relationship_context": tagging.relationship_context,
-                        "document_date": document_date,
-                        "fiscal_period": tagging.fiscal_period or "",
-                        "source_tier": source_tier,
-                        "source_type": source_type,
-                        "document_fingerprint": fingerprint,
-                        "run_id": run_id
-                    }
-                    return (chunk, metadata, str(uuid.uuid4()))
-                except Exception as e:
-                    logger.error(f"Error tagging chunk: {e}")
-                    return None
+                        resolved_primary = await self.resolver.resolve_entity(tagging.primary_entity_name)
+                        primary_entity_id = resolved_primary.node_id if resolved_primary.status != "pending_resolution" else "pending_resolution"
+                            
+                        metadata = {
+                            "primary_entity_id": primary_entity_id or tagging.primary_entity_name,
+                            "mentioned_entities": ",".join(tagging.mentioned_entities),
+                            "relationship_context": tagging.relationship_context,
+                            "document_date": document_date,
+                            "fiscal_period": tagging.fiscal_period or "",
+                            "source_tier": source_tier,
+                            "source_type": source_type,
+                            "document_fingerprint": fingerprint,
+                            "run_id": run_id
+                        }
+                        return (chunk, metadata, str(uuid.uuid4()))
+                    except Exception as e:
+                        logger.error(f"Error tagging chunk: {e}")
+                        return None
 
             results = await asyncio.gather(*[_process_chunk(c) for c in chunks])
             for res in results:

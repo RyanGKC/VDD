@@ -185,6 +185,7 @@ class DDContext(BaseModel):
     search_budget: int = Field(default=3, description="Dynamically allocated max web searches per agent")
     singleflight: Any = Field(default=None, exclude=True)
     background_tasks: Any = Field(default=None, exclude=True)
+    saved_to_history: bool = Field(default=False, exclude=True)
 
     def log(self, message: str) -> None:
         stamped = f"{datetime.now(timezone.utc).isoformat()} | {message}"

@@ -15,7 +15,8 @@ class HistoryDB:
                     company_name TEXT,
                     timestamp DATETIME,
                     overall_risk TEXT,
-                    report_json TEXT
+                    report_json TEXT,
+                    UNIQUE(company_name, date(timestamp))
                 )
             ''')
             conn.commit()
@@ -24,7 +25,7 @@ class HistoryDB:
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute(
-                "INSERT OR REPLACE INTO reports (job_id, company_name, timestamp, overall_risk, report_json) VALUES (?, ?, ?, ?, ?)",
+                "INSERT OR IGNORE INTO reports (job_id, company_name, timestamp, overall_risk, report_json) VALUES (?, ?, ?, ?, ?)",
                 (job_id, company_name, datetime.now().isoformat(), overall_risk, report_json)
             )
             conn.commit()

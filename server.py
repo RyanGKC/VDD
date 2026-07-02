@@ -87,6 +87,14 @@ async def generate_dd_report(request: DDRequest):
         active_jobs[request.job_id] = ctx
         
     try:
+        # Prevent concurrent duplicate requests from the frontend for the same company
+        for existing_job_id, existing_ctx in active_jobs.items():
+            if existing_job_id != request.job_id and existing_ctx.company_details.company_name.lower() == request.company_name.lower():
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"A research job for '{request.company_name}' is already in progress (job_id: {existing_job_id})"
+                )
+
         # Wrap in a dedicated asyncio Task so we can safely cancel it externally
         task = asyncio.create_task(run_dd_with_ctx(ctx))
         if request.job_id:
@@ -95,7 +103,8 @@ async def generate_dd_report(request: DDRequest):
         report = await task
         
         # Save to history database
-        if request.job_id:
+        if request.job_id and not ctx.saved_to_history:
+            ctx.saved_to_history = True
             history_db.save_report(
                 job_id=request.job_id,
                 company_name=request.company_name,
@@ -165,6 +174,7 @@ async def ws_dd_status(websocket: WebSocket, job_id: str):
         return
         
     last_log_index = 0
+    idle_counter = 0
     try:
         while True:
             current_len = len(ctx.execution_log)
@@ -181,6 +191,15 @@ async def ws_dd_status(websocket: WebSocket, job_id: str):
                 print(f"[WS] Sending {len(new_logs)} new logs to client")
                 await websocket.send_json({"logs": new_logs})
                 last_log_index = current_len
+                idle_counter = 0
+            else:
+                idle_counter += 1
+                if idle_counter >= 100:  # 10 seconds (100 * 0.1s)
+                    try:
+                        await websocket.send_json({"logs": []})  # Keep-alive ping
+                    except Exception:
+                        pass
+                    idle_counter = 0
                 
             # Exit loop if job finished or was removed
             if job_id not in active_jobs and last_log_index >= len(ctx.execution_log):
