@@ -87,6 +87,7 @@ class BaseResearchAgent(AgentExecutor, abc.ABC):
                     ctx.log(f"RAG CACHE HIT step={step_val} — skipped external API call")
 
             # ── Step B: MISS path — singleflight-coordinated fetch ────────
+            is_sf_follower = False
             if result_str is None:
                 sf = getattr(ctx, 'singleflight', None)
                 run_id = getattr(ctx, 'run_id', None)
@@ -102,6 +103,7 @@ class BaseResearchAgent(AgentExecutor, abc.ABC):
                     if outcome.role == "follower" and outcome.data is not None:
                         # Another agent already fetched — reuse its raw data
                         result_str = outcome.data
+                        is_sf_follower = True
                         ctx.log(f"SingleFlight FOLLOWER step={step_val} — reused leader's fetch")
                     else:
                         # This agent is the leader — perform the real fetch
@@ -120,7 +122,7 @@ class BaseResearchAgent(AgentExecutor, abc.ABC):
             ingestion_pipeline = getattr(ctx, 'ingestion_pipeline', None)
             run_id = getattr(ctx, 'run_id', None)
 
-            if bg and ingestion_pipeline and result_str and run_id and getattr(ctx, 'enable_rag', True):
+            if bg and ingestion_pipeline and result_str and run_id and getattr(ctx, 'enable_rag', True) and not is_sf_follower:
                 bg.schedule(
                     ingestion_pipeline.ingest_document(
                         text=result_str,

@@ -91,15 +91,15 @@ async def generate_dd_report(request: DDRequest):
             )
             
             # Embed into historical_reports for cross-run RAG comparison
-            import uuid
-            hist_id = str(uuid.uuid4())
+            import hashlib
+            hist_id = hashlib.sha256(f"{request.company_name}|{request.job_id}".encode()).hexdigest()
             metadata = {
                 "primary_entity_id": request.company_name,
                 "report_id": request.job_id,
                 "risk_rating": report.overall_risk.value,
                 "date_generated": datetime.now(timezone.utc).isoformat()
             }
-            vs.get_collection("historical_reports").add(
+            vs.get_collection("historical_reports").upsert(
                 documents=[f"Summary: {report.executive_summary}\n\nStrengths: {report.strengths}\n\nRed Flags: {report.red_flags}"],
                 metadatas=[metadata],
                 ids=[hist_id]
