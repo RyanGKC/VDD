@@ -191,11 +191,13 @@ class BaseResearchAgent(AgentExecutor, abc.ABC):
             "\n\n".join(search_results) +
             "\n\nUsing ALL of the data above (both the original data and the web research results), provide your final analysis."
         )
-        
-        analysis = await self.gemini.generate_structured(
-            system_instruction=system_instruction,
-            prompt=final_prompt,
-            schema=schema
+        from rag.rate_limiter import run_foreground_generation
+        analysis = await run_foreground_generation(
+            lambda: self.gemini.generate_structured(
+                system_instruction=system_instruction,
+                prompt=final_prompt,
+                schema=schema
+            )
         )
         
         return analysis

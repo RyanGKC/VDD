@@ -138,10 +138,13 @@ class SupervisorAgent:
             "If no verification is needed, return an empty research_plan."
         )
         
-        plan_result = await self.gemini.generate_structured(
-            system_instruction=SYSTEM_INSTRUCTION,
-            prompt=plan_prompt,
-            schema=_ReviewPlan,
+        from rag.rate_limiter import run_foreground_generation
+        plan_result = await run_foreground_generation(
+            lambda: self.gemini.generate_structured(
+                system_instruction=SYSTEM_INSTRUCTION,
+                prompt=plan_prompt,
+                schema=_ReviewPlan,
+            )
         )
         
         queries = plan_result.research_plan[:max_searches] if plan_result.research_plan else []
@@ -177,10 +180,13 @@ class SupervisorAgent:
         if search_context:
             final_prompt += "\n\nUsing the research results above, make your final decision."
         
-        decision = await self.gemini.generate_structured(
-            system_instruction=SYSTEM_INSTRUCTION,
-            prompt=final_prompt,
-            schema=_ReviewDecision,
+        from rag.rate_limiter import run_foreground_generation
+        decision = await run_foreground_generation(
+            lambda: self.gemini.generate_structured(
+                system_instruction=SYSTEM_INSTRUCTION,
+                prompt=final_prompt,
+                schema=_ReviewDecision,
+            )
         )
 
         ctx.log(f"SUPERVISOR rationale: {decision.rationale}")

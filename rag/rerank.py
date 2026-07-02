@@ -39,10 +39,13 @@ class Reranker:
         prompt = "\n".join(prompt_parts)
         
         try:
-            res = await self.gemini.generate_structured(
-                system_instruction=system_instruction,
-                prompt=prompt,
-                schema=BatchedRerankResult,
+            from rag.rate_limiter import run_foreground_generation
+            res = await run_foreground_generation(
+                lambda: self.gemini.generate_structured(
+                    system_instruction=system_instruction,
+                    prompt=prompt,
+                    schema=BatchedRerankResult,
+                )
             )
             
             valid_chunks = []

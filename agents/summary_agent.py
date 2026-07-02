@@ -113,14 +113,17 @@ class SummaryAgent:
         )
 
         try:
-            result = await self.gemini.generate_structured(
-                system_instruction=CONTRADICTION_INSTRUCTION,
-                prompt=(
-                    "Here are the findings to review:\n\n"
-                    f"{numbered}\n\n"
-                    "Identify contradictions and return the indices to remove."
-                ),
-                schema=_ContradictionResult,
+            from rag.rate_limiter import run_foreground_generation
+            result = await run_foreground_generation(
+                lambda: self.gemini.generate_structured(
+                    system_instruction=CONTRADICTION_INSTRUCTION,
+                    prompt=(
+                        "Here are the findings to review:\n\n"
+                        f"{numbered}\n\n"
+                        "Identify contradictions and return the indices to remove."
+                    ),
+                    schema=_ContradictionResult,
+                )
             )
 
             # Log what was removed for auditability
@@ -196,19 +199,22 @@ class SummaryAgent:
 
         # Call Gemini asynchronously using the cleaned context
         try:
-            summary = await self.gemini.generate_structured(
-                system_instruction=SYSTEM_INSTRUCTION,
-                prompt=(
-                    f"Vendor: {ctx.company_details.company_name}\n"
-                    f"Overall Risk (Must align summary with this): {computed_risk.value}\n"
-                    f"Strengths: {[f.summary for f in strengths]}\n"
-                    f"Red flags: "
-                    f"{[(f.severity.value, f.summary) for f in red_flags]}\n"
-                    f"Per-step risk scores: {step_risk_scores}\n"
-                    f"Execution log (for context): {ctx.execution_log[-20:]}\n"
-                    "Write the executive summary and recommendations."
-                ),
-                schema=_SummaryModel,
+            from rag.rate_limiter import run_foreground_generation
+            summary = await run_foreground_generation(
+                lambda: self.gemini.generate_structured(
+                    system_instruction=SYSTEM_INSTRUCTION,
+                    prompt=(
+                        f"Vendor: {ctx.company_details.company_name}\n"
+                        f"Overall Risk (Must align summary with this): {computed_risk.value}\n"
+                        f"Strengths: {[f.summary for f in strengths]}\n"
+                        f"Red flags: "
+                        f"{[(f.severity.value, f.summary) for f in red_flags]}\n"
+                        f"Per-step risk scores: {step_risk_scores}\n"
+                        f"Execution log (for context): {ctx.execution_log[-20:]}\n"
+                        "Write the executive summary and recommendations."
+                    ),
+                    schema=_SummaryModel,
+                )
             )
             exec_summary = summary.executive_summary
             recs = summary.recommendations
