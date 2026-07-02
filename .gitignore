@@ -5,3 +5,4 @@ cache.db
 /.agents
 node_modules/
 history.db
+/chroma_db
