@@ -1,4 +1,6 @@
 import asyncio
+import logging
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -10,7 +12,18 @@ from core.history_db import HistoryDB
 from datetime import datetime, timezone
 import json
 
-app = FastAPI(title="VDD Prototype API")
+# Hide neo4j notifications unless they are warnings or higher
+logging.getLogger("neo4j.notifications").setLevel(logging.WARNING)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    from core.dependencies import neo4j
+    await neo4j.setup_constraints()
+    yield
+    from core.dependencies import http_client
+    await http_client.aclose()
+
+app = FastAPI(title="VDD Prototype API", lifespan=lifespan)
 history_db = HistoryDB()
 
 # Setup CORS to allow frontend communication
@@ -21,16 +34,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-@app.on_event("startup")
-async def startup_event():
-    from core.dependencies import neo4j
-    await neo4j.setup_constraints()
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    from core.dependencies import http_client
-    await http_client.aclose()
 
 active_jobs = {}
 active_tasks = {}

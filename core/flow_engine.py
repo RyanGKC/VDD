@@ -97,7 +97,12 @@ class FlowEngine:
                 break
 
             # Wait for at least one task to complete
-            done, _ = await asyncio.wait(running_tasks.keys(), return_when=asyncio.FIRST_COMPLETED)
+            try:
+                done, _ = await asyncio.wait(running_tasks.keys(), return_when=asyncio.FIRST_COMPLETED)
+            except asyncio.CancelledError:
+                for t in running_tasks.keys():
+                    t.cancel()
+                raise
             
             for task in done:
                 step = running_tasks.pop(task)

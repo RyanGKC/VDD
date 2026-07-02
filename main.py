@@ -229,6 +229,14 @@ async def run_dd_with_ctx(ctx: DDContext) -> DDReport:
         report.audit_log = "\n".join(audit_lines)
         
         return report
+    except asyncio.CancelledError:
+        ctx.log("SYSTEM: Cancellation received, aborting sub-pipelines...")
+        for task in getattr(ctx, "child_tasks", []):
+            if not task.done():
+                task.cancel()
+        if getattr(ctx, "parent_task", None) and not ctx.parent_task.done():
+            ctx.parent_task.cancel()
+        raise
     finally:
         await client.close()
 
