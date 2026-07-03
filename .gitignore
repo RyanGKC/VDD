@@ -6,3 +6,4 @@ cache.db
 node_modules/
 history.db
 /chroma_db
+CLAUDE.md
