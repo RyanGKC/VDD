@@ -17,7 +17,7 @@ neo4j = Neo4jClient()
 gemini = GeminiClient()
 
 # Opt 5: Faster/cheaper model for simple entity extraction/tagging
-tagging_gemini = GeminiClient(model=os.getenv("GEMINI_TAGGING_MODEL", "gemini-2.0-flash-lite"))
+tagging_gemini = GeminiClient(model=os.getenv("GEMINI_TAGGING_MODEL", "gemini-2.5-flash-lite"))
 
 # Opt 3: Shared HTTP client to reuse connections across all agents
 http_client = httpx.AsyncClient(timeout=15.0, limits=httpx.Limits(max_connections=20))
