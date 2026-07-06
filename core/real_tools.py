@@ -4,6 +4,8 @@ import asyncio
 import httpx
 from datetime import datetime
 from typing import Any
+import re
+import urllib.parse
 from core.models import DDContext
 from core.cache import PersistentCache
 import logging
@@ -240,9 +242,28 @@ async def fetch_financials(ctx: DDContext, company_name: str, registration_id: s
     provider = os.getenv("FINANCIAL_DATA_PROVIDER", "fmp").lower()
     
     if provider == "yfinance":
-        url = f"https://query2.finance.yahoo.com/v1/finance/search?q={company_name}"
-        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
-        search_data = await fetch_json(ctx, url, headers=headers)
+        # Sanitize company name to improve Yahoo Finance search accuracy
+        # Yahoo Finance is fragile with exact suffixes like "Holdings N.V."
+        clean_name = re.sub(r'(?i)\b(inc|llc|corp|corporation|ltd|limited|plc|nv|n\.v\.|holdings?|group|ag|sa|ab|spa)(?:\b|\.|$)', '', company_name)
+        # Remove trailing punctuation or whitespace
+        clean_name = re.sub(r'[,\.\s]+', ' ', clean_name).strip()
+        search_query = clean_name if clean_name else company_name
+        search_query = urllib.parse.quote(search_query)
+
+        url = f"https://query2.finance.yahoo.com/v1/finance/search?q={search_query}"
+        try:
+            from curl_cffi import requests as cffi_requests
+            # Use curl_cffi to bypass Yahoo's strict TLS/User-Agent blocks
+            resp = await asyncio.to_thread(
+                cffi_requests.get,
+                url,
+                impersonate="chrome",
+                timeout=10
+            )
+            search_data = resp.json() if resp.status_code == 200 else None
+        except Exception as e:
+            logger.error(f"Failed to search yfinance for {search_query}: {e}")
+            search_data = None
         
         ticker = None
         if search_data and search_data.get("quotes"):
@@ -392,8 +413,30 @@ async def perform_web_search(ctx: DDContext, query: str) -> str:
             logger.warning(f"Tavily API exception: {str(e)}")
         return None
 
+    async def _try_custom():
+        try:
+            from custom_tools.web_search_tool import search_web
+            custom_data = await search_web(query, max_results=5)
+            if custom_data and custom_data.get("results"):
+                res_obj = {"source": "Custom Scraper", "quality_flag": "high", "search_results": []}
+                for res in custom_data["results"]:
+                    res_obj["search_results"].append({
+                        "title": res.get("title", ""),
+                        "snippet": res.get("truncated_content", ""),
+                        "url": res.get("url", "")
+                    })
+                return json.dumps(res_obj)
+        except Exception as e:
+            logger.error(f"Custom search failed: {e}")
+        return None
+
     # Execute based on preference with fallback
-    if provider == "tavily":
+    if provider == "custom":
+        res_str = await _try_custom()
+        if res_str: return res_str
+        result["error"] = "Custom search provider failed. (Strict failure mode, no fallback)"
+        return json.dumps(result)
+    elif provider == "tavily":
         res_str = await _try_tavily()
         if res_str: return res_str
         logger.warning("Tavily failed, falling back to Exa.")

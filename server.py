@@ -11,6 +11,18 @@ from core.models import DDReport, DDContext, CompanyDetails
 from core.history_db import HistoryDB
 from datetime import datetime, timezone
 import json
+from fastapi.responses import Response
+from jinja2 import Environment, FileSystemLoader
+import os
+
+# Ensure WeasyPrint can find Homebrew libraries on macOS Apple Silicon
+if "DYLD_FALLBACK_LIBRARY_PATH" not in os.environ:
+    os.environ["DYLD_FALLBACK_LIBRARY_PATH"] = "/opt/homebrew/lib"
+    
+try:
+    from weasyprint import HTML
+except ImportError:
+    HTML = None
 
 # Hide neo4j notifications unless they are warnings or higher
 logging.getLogger("neo4j.notifications").setLevel(logging.WARNING)
@@ -37,6 +49,7 @@ app.add_middleware(
 
 active_jobs = {}
 active_tasks = {}
+_cleanup_tasks = set()
 
 class DDRequest(BaseModel):
     company_name: str
@@ -53,8 +66,10 @@ class DDRequest(BaseModel):
     enable_parent_supply_chain: bool = False
     enable_rag: Optional[bool] = None
 
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, BackgroundTasks
+
 @app.post("/api/dd_report", response_model=DDReport)
-async def generate_dd_report(request: DDRequest):
+async def generate_dd_report(request: DDRequest, bg_tasks: BackgroundTasks):
     import uuid
     from core.dependencies import (
         retrieval_engine, ingestion_pipeline,
@@ -130,7 +145,15 @@ async def generate_dd_report(request: DDRequest):
         return report
     except asyncio.CancelledError:
         print(f"Job {request.job_id} was successfully cancelled.")
+        if 'task' in locals() and not task.done():
+            task.cancel()
+        if request.job_id:
+            active_jobs.pop(request.job_id, None)
+            active_tasks.pop(request.job_id, None)
         raise HTTPException(status_code=499, detail="Client Closed Request")
+    except HTTPException:
+        # Re-raise HTTP exceptions so they don't get wrapped in a 500
+        raise
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -151,7 +174,9 @@ async def generate_dd_report(request: DDRequest):
                 except Exception as e:
                     print(f"SYSTEM: Failed to clean up run_documents: {e}")
                     
-            asyncio.create_task(delayed_cleanup())
+            t = asyncio.create_task(delayed_cleanup())
+            _cleanup_tasks.add(t)
+            t.add_done_callback(_cleanup_tasks.discard)
 
 @app.websocket("/api/ws/dd_status/{job_id}")
 async def ws_dd_status(websocket: WebSocket, job_id: str):
@@ -233,6 +258,45 @@ async def get_history_report(job_id: str):
     # Return as JSON response to avoid double serialization since it's already a JSON string
     from fastapi.responses import JSONResponse
     return JSONResponse(content=json.loads(report_json))
+
+@app.get("/api/history/{job_id}/pdf")
+async def get_history_report_pdf(job_id: str):
+    if HTML is None:
+        raise HTTPException(status_code=500, detail="WeasyPrint is not installed or configured correctly.")
+        
+    report_json = history_db.get_report_by_job_id(job_id)
+    if not report_json:
+        raise HTTPException(status_code=404, detail="Report not found")
+        
+    report_dict = json.loads(report_json)
+    
+    # Convert string dates back to datetime objects for the template
+    if "generated_at" in report_dict and isinstance(report_dict["generated_at"], str):
+        try:
+            report_dict["generated_at"] = datetime.fromisoformat(report_dict["generated_at"].replace("Z", "+00:00"))
+        except:
+            pass
+            
+    # Setup Jinja2 environment
+    env = Environment(loader=FileSystemLoader("core/templates"))
+    template = env.get_template("report.html")
+    
+    # Render HTML
+    rendered_html = template.render(report=report_dict)
+    
+    # Convert to PDF
+    pdf_bytes = HTML(string=rendered_html).write_pdf()
+    
+    # Return as a downloadable file
+    vendor_name = report_dict.get("vendor_name", "Vendor").replace(" ", "_")
+    
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{vendor_name}_DD_Report.pdf"'
+        }
+    )
 
 class DeleteHistoryRequest(BaseModel):
     job_ids: list[str]
