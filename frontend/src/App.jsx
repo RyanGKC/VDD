@@ -357,7 +357,7 @@ const ProcessingTerminal = ({ onComplete, onError, onCancel, companyDetails }) =
   useEffect(() => {
     endOfLogsRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [logs]);
-
+  
   useEffect(() => {
     let isMounted = true;
     abortControllerRef.current = new AbortController();
@@ -449,7 +449,7 @@ const ProcessingTerminal = ({ onComplete, onError, onCancel, companyDetails }) =
         if (isMounted) {
           setLogs(prev => [...prev, { text: "SYSTEM: Pipeline Complete. Generating Report.", time: new Date().toLocaleTimeString() }]);
           setTimeout(() => {
-            if (isMounted) onComplete(reportData);
+            if (isMounted) onComplete(reportData, jobIdRef.current);
           }, 1000);
         }
       } catch (err) {
@@ -1005,7 +1005,7 @@ const SupplyChainGraph = ({ report, theme, onNodeSelect }) => {
   );
 };
 
-const Dashboard = ({ report, rootReport, onReset, onResetSupplier, theme, isGraphOpen, onToggleGraph }) => {
+const Dashboard = ({ report, rootReport, onReset, onResetSupplier, theme, isGraphOpen, onToggleGraph, jobId }) => {
   // Data prep for charts
   const severityCounts = report.red_flags.reduce((acc, flag) => {
     acc[flag.severity] = (acc[flag.severity] || 0) + 1;
@@ -1102,6 +1102,12 @@ const Dashboard = ({ report, rootReport, onReset, onResetSupplier, theme, isGrap
                 Audit Log
               </button>
             )}
+            {jobId && (
+              <button onClick={() => window.open(`/api/history/${jobId}/pdf`, '_blank')} className="flex items-center gap-2 px-4 py-2 bg-rose-100 hover:bg-rose-200 dark:bg-rose-900/50 dark:hover:bg-rose-800/50 text-rose-700 dark:text-rose-300 rounded-lg text-sm font-semibold transition border border-rose-200 dark:border-rose-800 shadow-sm">
+                <FileText className="w-4 h-4" />
+                Export PDF
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -1176,7 +1182,13 @@ const Dashboard = ({ report, rootReport, onReset, onResetSupplier, theme, isGrap
           {Object.entries(redFlagsByCategory).length === 0 ? (
             <p className="text-slate-500 dark:text-slate-400 italic">No red flags identified.</p>
           ) : (
-            Object.entries(redFlagsByCategory).map(([category, flags]) => (
+            Object.entries(redFlagsByCategory)
+              .sort(([catA], [catB]) => {
+                const idxA = AGENT_LIST.indexOf(catA.toLowerCase());
+                const idxB = AGENT_LIST.indexOf(catB.toLowerCase());
+                return (idxA === -1 ? 999 : idxA) - (idxB === -1 ? 999 : idxB);
+              })
+              .map(([category, flags]) => (
               <div key={category} className="mb-4">
                 <h4 className="text-md font-bold text-slate-700 dark:text-slate-300 mb-3 ml-1 uppercase tracking-wider">{category}</h4>
                 <div className="space-y-3">
@@ -1230,7 +1242,13 @@ const Dashboard = ({ report, rootReport, onReset, onResetSupplier, theme, isGrap
               {Object.entries(strengthsByCategory).length === 0 ? (
                 <p className="text-slate-500 dark:text-slate-400 italic">No verified strengths identified.</p>
               ) : (
-                Object.entries(strengthsByCategory).map(([category, flags]) => (
+                Object.entries(strengthsByCategory)
+                  .sort(([catA], [catB]) => {
+                    const idxA = AGENT_LIST.indexOf(catA.toLowerCase());
+                    const idxB = AGENT_LIST.indexOf(catB.toLowerCase());
+                    return (idxA === -1 ? 999 : idxA) - (idxB === -1 ? 999 : idxB);
+                  })
+                  .map(([category, flags]) => (
                   <div key={category}>
                     <h4 className="text-md font-bold text-slate-700 dark:text-slate-300 mb-2 ml-1 uppercase tracking-wider">{category}</h4>
                     <div className="space-y-3">
@@ -1298,6 +1316,7 @@ export default function App() {
   const [report, setReport] = useState(null);
   const [globalError, setGlobalError] = useState(null);
   const [isGraphOpen, setIsGraphOpen] = useState(false);
+  const [currentJobId, setCurrentJobId] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [historyList, setHistoryList] = useState([]);
   const [isEditingHistory, setIsEditingHistory] = useState(false);
@@ -1347,8 +1366,9 @@ export default function App() {
     setView('processing');
   };
 
-  const handleProcessingComplete = (actualReport) => {
+  const handleProcessingComplete = (actualReport, jobId) => {
     setReport(actualReport);
+    setCurrentJobId(jobId);
     setView('dashboard');
     setIsGraphOpen(actualReport.supply_chain && actualReport.supply_chain.length > 0);
     fetchHistory(); // Refresh history
@@ -1382,6 +1402,7 @@ export default function App() {
     setGlobalError(null);
     setIsGraphOpen(false);
     setSelectedSupplier(null);
+    setCurrentJobId(null);
     setView('input');
   };
 
@@ -1393,6 +1414,7 @@ export default function App() {
         setCompanyDetails(null);
         setReport(historicalReport);
         setSelectedSupplier(null);
+        setCurrentJobId(jobId);
         setIsGraphOpen(historicalReport.supply_chain && historicalReport.supply_chain.length > 0);
         setView('dashboard');
       }
@@ -1601,6 +1623,7 @@ export default function App() {
                     theme={theme}
                     isGraphOpen={isGraphOpen}
                     onToggleGraph={() => setIsGraphOpen(!isGraphOpen)}
+                    jobId={currentJobId}
                   />
                 </div>
               </div>

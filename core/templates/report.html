@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Due Diligence Report - {{ report.vendor_name }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+            @bottom-right {
+                content: "Page " counter(page) " of " counter(pages);
+                font-family: Arial, sans-serif;
+                font-size: 10pt;
+                color: #666;
+            }
+            @top-left {
+                content: "Due Diligence Report - {{ report.vendor_name }}";
+                font-family: Arial, sans-serif;
+                font-size: 10pt;
+                color: #666;
+            }
+        }
+        
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        h1 {
+            color: #1a365d;
+            border-bottom: 2px solid #1a365d;
+            padding-bottom: 10px;
+        }
+
+        h2 {
+            color: #2b6cb0;
+            margin-top: 30px;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 5px;
+        }
+
+        h3 {
+            color: #4a5568;
+        }
+
+        .summary-box {
+            background-color: #f7fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+
+        .risk-HIGH, .risk-CRITICAL {
+            color: #c53030;
+            font-weight: bold;
+        }
+        
+        .risk-MEDIUM {
+            color: #dd6b20;
+            font-weight: bold;
+        }
+
+        .risk-LOW {
+            color: #319795;
+            font-weight: bold;
+        }
+
+        .finding-card {
+            border-left: 4px solid #cbd5e0;
+            padding-left: 15px;
+            margin: 15px 0;
+            background: #fff;
+        }
+        
+        .finding-card.red-flag {
+            border-left-color: #e53e3e;
+            background: #fff5f5;
+            padding: 15px;
+        }
+
+        .finding-card.strength {
+            border-left-color: #38a169;
+            background: #f0fff4;
+            padding: 15px;
+        }
+
+        .sources {
+            font-size: 0.9em;
+            color: #718096;
+            margin-top: 5px;
+        }
+
+        .recommendations li {
+            margin-bottom: 10px;
+        }
+
+        .page-break {
+            page-break-before: always;
+        }
+    </style>
+</head>
+<body>
+    <h1>Due Diligence Report</h1>
+    <div style="font-size: 1.2em; font-weight: bold; margin-bottom: 5px;">Entity: {{ report.vendor_name }}</div>
+    <div>Date Generated: {{ report.generated_at.strftime('%Y-%m-%d %H:%M:%S UTC') }}</div>
+    <div style="margin-top: 10px;">
+        Overall Risk Level: <span class="risk-{{ report.overall_risk.name }}">{{ report.overall_risk.name }}</span>
+    </div>
+
+    <div class="summary-box">
+        <h2>Executive Summary</h2>
+        <p>{{ report.executive_summary }}</p>
+    </div>
+
+    {% if report.red_flags %}
+    <h2 style="color: #c53030;">Critical Red Flags</h2>
+    {% for flag in report.red_flags %}
+    <div class="finding-card red-flag">
+        <strong>Severity: {{ flag.severity.name }}</strong>
+        <p>{{ flag.summary }}</p>
+        {% if flag.sources %}
+        <div class="sources">
+            <em>Sources:</em>
+            <ul>
+                {% for source in flag.sources %}
+                <li>{{ source.title }} {% if source.url %}({{ source.url }}){% endif %}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    {% if report.strengths %}
+    <h2 style="color: #38a169;">Identified Strengths</h2>
+    {% for strength in report.strengths %}
+    <div class="finding-card strength">
+        <p>{{ strength.summary }}</p>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <div class="page-break"></div>
+    
+    <h2>Recommendations</h2>
+    <ul class="recommendations">
+        {% for rec in report.recommendations %}
+        <li>{{ rec }}</li>
+        {% endfor %}
+    </ul>
+
+    <h2>Component Risk Scores</h2>
+    <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+        <tr style="background-color: #f7fafc; text-align: left; border-bottom: 2px solid #cbd5e0;">
+            <th style="padding: 10px;">Domain</th>
+            <th style="padding: 10px;">Risk Score (0-100)</th>
+        </tr>
+        {% for domain, score in report.step_risk_scores.items() %}
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 10px;">{{ domain|title }}</td>
+            <td style="padding: 10px;">
+                <span class="{% if score > 70 %}risk-HIGH{% elif score > 40 %}risk-MEDIUM{% else %}risk-LOW{% endif %}">
+                    {{ score }}
+                </span>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+
+</body>
+</html>
