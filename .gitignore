@@ -7,3 +7,4 @@ node_modules/
 history.db
 /chroma_db
 CLAUDE.md
+.aider*
