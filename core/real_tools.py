@@ -10,6 +10,7 @@ import logging
 from pydantic import BaseModel, Field
 from core.gemini_client import GeminiClient
 from core.dependencies import http_client
+from custom_tools.yfinance_tool import get_financial_statement
 
 logger = logging.getLogger(__name__)
 
@@ -235,32 +236,58 @@ async def fetch_financials(ctx: DDContext, company_name: str, registration_id: s
     await resolve_company(ctx, company_name, ctx.company_details.country)
     result = {"quality_flag": "partial", "source": "API", "data": {}}
     country = ctx.company_details.country
-    fmp_key = os.getenv("FMP_API_KEY")
     
-    if country and country.upper() in ("US", "USA"):
-        cik = ctx.company_details.cik
-        if cik:
-            url = f"https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json"
-            headers = {"User-Agent": "VDD_Prototype/1.0 (contact@example.com)"}
-            data = await fetch_json(ctx, url, headers=headers)
-            if data:
+    provider = os.getenv("FINANCIAL_DATA_PROVIDER", "fmp").lower()
+    
+    if provider == "yfinance":
+        url = f"https://query2.finance.yahoo.com/v1/finance/search?q={company_name}"
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+        search_data = await fetch_json(ctx, url, headers=headers)
+        
+        ticker = None
+        if search_data and search_data.get("quotes"):
+            ticker = search_data["quotes"][0].get("symbol")
+            
+        if ticker:
+            logger.info(f"Resolved ticker {ticker} for {company_name}")
+            income_statement = await asyncio.to_thread(get_financial_statement, ticker, "income")
+            
+            if "data_markdown" in income_statement:
                 result["quality_flag"] = "high"
-                result["data"]["xbrl_facts"] = "Available (Truncated for brevity)"
-        elif fmp_key:
-            url = f"https://financialmodelingprep.com/api/v3/income-statement/{company_name}?apikey={fmp_key}"
-            data = await fetch_json(ctx, url)
-            if data:
-                result["quality_flag"] = "medium"
-                result["data"]["fmp_income"] = data[:3]
-                
-    elif country and country.upper() in ("UK", "GB", "GBR"):
-        if fmp_key:
-            url = f"https://financialmodelingprep.com/api/v3/income-statement/{company_name}?apikey={fmp_key}"
-            data = await fetch_json(ctx, url)
-            if data:
-                result["quality_flag"] = "high"
-                result["data"]["fmp_income"] = data[:3]
-                
+                result["source"] = "yfinance"
+                result["data"]["yfinance_income"] = income_statement["data_markdown"]
+            else:
+                result["data"]["yfinance_error"] = income_statement.get("error", "Unknown error")
+        else:
+            result["data"]["yfinance_error"] = f"Could not resolve ticker for {company_name}"
+            
+    else:
+        # FMP / SEC fallback logic
+        fmp_key = os.getenv("FMP_API_KEY")
+        if country and country.upper() in ("US", "USA"):
+            cik = ctx.company_details.cik
+            if cik:
+                url = f"https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json"
+                headers = {"User-Agent": "VDD_Prototype/1.0 (contact@example.com)"}
+                data = await fetch_json(ctx, url, headers=headers)
+                if data:
+                    result["quality_flag"] = "high"
+                    result["data"]["xbrl_facts"] = "Available (Truncated for brevity)"
+            elif fmp_key:
+                url = f"https://financialmodelingprep.com/api/v3/income-statement/{company_name}?apikey={fmp_key}"
+                data = await fetch_json(ctx, url)
+                if data:
+                    result["quality_flag"] = "medium"
+                    result["data"]["fmp_income"] = data[:3]
+                    
+        elif country and country.upper() in ("UK", "GB", "GBR"):
+            if fmp_key:
+                url = f"https://financialmodelingprep.com/api/v3/income-statement/{company_name}?apikey={fmp_key}"
+                data = await fetch_json(ctx, url)
+                if data:
+                    result["quality_flag"] = "high"
+                    result["data"]["fmp_income"] = data[:3]
+                    
     return json.dumps(result)
 
 async def scan_adverse_media(ctx: DDContext, entities: list[str]) -> str:
