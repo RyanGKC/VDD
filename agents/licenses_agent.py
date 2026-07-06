@@ -56,16 +56,34 @@ class LicensesAgent(BaseResearchAgent):
             schema=_LicenseAnalysis,
         )
 
-        findings = [
-            Finding(
-                summary=f.summary,
-                severity=parse_severity(f.severity),
-                is_red_flag=f.is_red_flag,
-                is_strength=f.is_strength,
-                sources=[Source(**s.model_dump()) for s in f.sources],
+        # Convert the LLM output into our standard StepResult (EXTRACTION OVER EVALUATION)
+        findings = []
+        for f in analysis.findings:
+            calc_severity = Severity.INFO
+            calc_red_flag = False
+            
+            # Deterministic override based on extracted status
+            if f.license_status:
+                status = f.license_status.lower()
+                if status in ["revoked", "suspended", "expired"] and f.is_critical_to_operations:
+                    calc_severity = Severity.CRITICAL
+                    calc_red_flag = True
+                elif status in ["revoked", "suspended", "expired"]:
+                    calc_severity = Severity.HIGH
+                    calc_red_flag = True
+                elif status in ["pending", "unknown"]:
+                    calc_severity = Severity.MEDIUM
+                    calc_red_flag = True
+            
+            findings.append(
+                Finding(
+                    summary=f.summary,
+                    severity=calc_severity,
+                    is_red_flag=calc_red_flag,
+                    is_strength=f.is_strength,
+                    sources=[Source(**s.model_dump()) for s in f.sources],
+                )
             )
-            for f in analysis.findings
-        ]
 
         result = StepResult(
             step=self.step,
@@ -97,8 +115,8 @@ class _SourceModel(BaseModel):
 
 class _FindingModel(BaseModel):
     summary: str = Field(description="A concise summary of the finding.")
-    severity: SeverityLevel = Field(description="The severity level of the finding (INFO, LOW, MEDIUM, HIGH, CRITICAL).")
-    is_red_flag: bool = Field(description="Set to true ONLY if the finding indicates a revoked, suspended, or missing critical license.")
+    license_status: str | None = Field(default=None, description="Extract ONLY the raw license status (e.g., Active, Revoked, Suspended, Expired).")
+    is_critical_to_operations: bool = Field(default=False, description="Set to true if this specific license is critical to the company's core operations.")
     is_strength: bool = Field(default=False, description="Set to true if the finding indicates valid, active, and well-maintained licenses/certifications.")
     sources: list[_SourceModel] = Field(default_factory=list, description="The sources that support this finding.")
 

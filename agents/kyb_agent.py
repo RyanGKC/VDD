@@ -48,16 +48,31 @@ class KYBAgent(BaseResearchAgent):
             schema=_KYBAnalysis,
         )
 
-        findings = [
-            Finding(
-                summary=f.summary,
-                severity=parse_severity(f.severity),
-                is_red_flag=f.is_red_flag,
-                is_strength=f.is_strength,
-                sources=[Source(**s.model_dump()) for s in f.sources],
+        # Convert the LLM output into our standard StepResult (EXTRACTION OVER EVALUATION)
+        findings = []
+        for f in analysis.findings:
+            calc_severity = Severity.INFO
+            calc_red_flag = False
+            
+            # Deterministic override based on extracted status
+            if f.registration_status:
+                status = f.registration_status.lower()
+                if status in ["dissolved", "suspended", "inactive", "struck off"]:
+                    calc_severity = Severity.CRITICAL
+                    calc_red_flag = True
+                elif status in ["unknown", "pending"]:
+                    calc_severity = Severity.MEDIUM
+                    calc_red_flag = True
+            
+            findings.append(
+                Finding(
+                    summary=f.summary,
+                    severity=calc_severity,
+                    is_red_flag=calc_red_flag,
+                    is_strength=f.is_strength,
+                    sources=[Source(**s.model_dump()) for s in f.sources],
+                )
             )
-            for f in analysis.findings
-        ]
 
         result = StepResult(
             step=self.step,
@@ -90,8 +105,7 @@ class _SourceModel(BaseModel):
 
 class _FindingModel(BaseModel):
     summary: str = Field(description="A concise summary of the finding.")
-    severity: SeverityLevel = Field(description="The severity level of the finding (INFO, LOW, MEDIUM, HIGH, CRITICAL).")
-    is_red_flag: bool = Field(description="Set to true ONLY if the finding indicates the company is not in good standing, suspended, or illegitimate.")
+    registration_status: str | None = Field(default=None, description="Extract ONLY the raw registration status (e.g., Active, Dissolved, Suspended, Inactive, Unknown).")
     is_strength: bool = Field(default=False, description="Set to true if the finding indicates the company is well-established and in excellent standing.")
     sources: list[_SourceModel] = Field(default_factory=list, description="The sources that support this finding.")
 

@@ -72,16 +72,28 @@ class SanctionsAgent(BaseResearchAgent):
             schema=_SanctionsAnalysis,
         )
 
-        # 4. Convert the LLM output into our standard StepResult.
-        findings = [
-            Finding(
-                summary=f.summary,
-                severity=parse_severity(f.severity),
-                is_red_flag=f.is_red_flag,
-                sources=[Source(**s.model_dump()) for s in f.sources],
+        # 4. Convert the LLM output into our standard StepResult (EXTRACTION OVER EVALUATION)
+        findings = []
+        for f in analysis.findings:
+            # Deterministic override
+            calc_severity = Severity.INFO
+            calc_red_flag = False
+            
+            if f.is_on_sanctions_list and f.match_confidence_score > 0.90:
+                calc_severity = Severity.CRITICAL
+                calc_red_flag = True
+            elif f.is_on_sanctions_list and f.match_confidence_score > 0.50:
+                calc_severity = Severity.HIGH
+                calc_red_flag = True
+                
+            findings.append(
+                Finding(
+                    summary=f.summary,
+                    severity=calc_severity,
+                    is_red_flag=calc_red_flag,
+                    sources=[Source(**s.model_dump()) for s in f.sources],
+                )
             )
-            for f in analysis.findings
-        ]
 
         result = StepResult(
             step=self.step,
@@ -125,8 +137,8 @@ class _SourceModel(BaseModel):
 
 class _FindingModel(BaseModel):
     summary: str = Field(description="A concise summary of the finding.")
-    severity: SeverityLevel = Field(description="The severity level of the finding (INFO, LOW, MEDIUM, HIGH, CRITICAL).")
-    is_red_flag: bool = Field(description="Set to true ONLY if the finding indicates a confirmed sanctions hit.")
+    is_on_sanctions_list: bool = Field(description="Extract ONLY: Is the entity explicitly listed on a sanctions list? (true/false)")
+    match_confidence_score: float = Field(description="Extract ONLY: The confidence score of the match from 0.0 to 1.0.")
     sources: list[_SourceModel] = Field(default_factory=list, description="The sources that support this finding.")
 
 

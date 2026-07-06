@@ -93,8 +93,10 @@ class _SourceModel(BaseModel):
 
 class _FindingModel(BaseModel):
     summary: str = Field(description="A concise summary of the finding.")
-    severity: SeverityLevel = Field(description="The severity level of the finding (INFO, LOW, MEDIUM, HIGH, CRITICAL).")
-    is_red_flag: bool = Field(description="Set to true ONLY if the finding indicates critical supply chain vulnerabilities or dependencies on high-risk regions.")
+    spof_analysis: str = Field(description="Explicitly map any Single-Points-of-Failure (SPOFs) related to this finding (e.g., reliance on a single vendor or region).")
+    geopolitical_risk_weighting: str = Field(description="Assess the geopolitical stability (tariffs, conflict zones) of the region associated with this finding.")
+    severity: SeverityLevel = Field(description="Grade severity based on the combination of a mapped SPOF and a high-risk geopolitical climate (INFO, LOW, MEDIUM, HIGH, CRITICAL).")
+    is_red_flag: bool = Field(description="Set to true ONLY if severity is HIGH or CRITICAL.")
     is_strength: bool = Field(default=False, description="Set to true if the finding indicates a highly resilient and diversified supply chain.")
     sources: list[_SourceModel] = Field(default_factory=list, description="The sources that support this finding.")
 

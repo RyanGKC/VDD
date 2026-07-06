@@ -98,8 +98,10 @@ class _SourceModel(BaseModel):
 
 class _FindingModel(BaseModel):
     summary: str = Field(description="A concise summary of the finding.")
-    severity: SeverityLevel = Field(description="The severity level of the finding (INFO, LOW, MEDIUM, HIGH, CRITICAL).")
-    is_red_flag: bool = Field(description="Set to true ONLY if the finding indicates severe adverse media, fraud, or criminal allegations.")
+    materiality_tier: str = Field(description="Categorize the finding into: Minor Dispute, Regulatory Fine, Systemic Fraud, or General News.")
+    timeline_relevance: str = Field(description="Identify if the issue is ongoing, or if it was resolved more than 3 years ago.")
+    severity: SeverityLevel = Field(description="Grade severity. You may ONLY assign HIGH or CRITICAL if materiality_tier is severe (e.g., Systemic Fraud, major Regulatory Fine) AND the issue is ongoing or occurred within the last 3 years.")
+    is_red_flag: bool = Field(description="Set to true ONLY if the severity is HIGH or CRITICAL.")
     is_strength: bool = Field(default=False, description="Set to true if the finding indicates highly positive media coverage.")
     sources: list[_SourceModel] = Field(default_factory=list, description="The sources that support this finding.")
 

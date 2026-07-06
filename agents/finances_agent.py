@@ -95,13 +95,14 @@ class _SourceModel(BaseModel):
 
 class _FindingModel(BaseModel):
     summary: str = Field(description="A concise summary of the finding.")
-    severity: SeverityLevel = Field(description="The severity level of the finding (INFO, LOW, MEDIUM, HIGH, CRITICAL).")
-    is_red_flag: bool = Field(description="Set to true ONLY if the finding indicates severe financial distress, undisclosed debt, or solvency risks.")
+    severity: SeverityLevel = Field(description="Grade the severity based ONLY on how this company compares to the expectations of its specific industry (INFO, LOW, MEDIUM, HIGH, CRITICAL).")
+    is_red_flag: bool = Field(description="Set to true ONLY if the finding indicates severe financial distress, undisclosed debt, or solvency risks relative to industry peers.")
     is_strength: bool = Field(default=False, description="Set to true if the finding indicates strong financial health or stability.")
     sources: list[_SourceModel] = Field(default_factory=list, description="The sources that support this finding.")
 
 class _FinAnalysis(BaseModel):
-    rationale: str = Field(description="Detailed explanation of your reasoning. MUST be generated first.")
+    industry_context: str = Field(description="State the vendor's likely industry based on available data and explicitly explain what typical debt loads, liquidity ratios, and financial baselines are expected in this specific sector. MUST be generated first.")
+    rationale: str = Field(description="Detailed explanation of your reasoning for the company's financial health, evaluated STRICTLY against the industry_context expectations.")
     findings: list[_FindingModel] = Field(description="List of specific findings.")
     undisclosed_related_party: bool = Field(default=False, description="Set to true if you found evidence of undisclosed debt to a related party.")
     related_party_name: str | None = Field(default=None, description="The name of the related party, if undisclosed_related_party is true.")

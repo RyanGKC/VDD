@@ -88,13 +88,15 @@ class _SourceModel(BaseModel):
 
 class _FindingModel(BaseModel):
     summary: str = Field(description="A concise summary of the finding.")
-    severity: SeverityLevel = Field(description="The severity level of the finding (INFO, LOW, MEDIUM, HIGH, CRITICAL).")
-    is_red_flag: bool = Field(description="Set to true ONLY if the finding indicates severe ESG violations, labor abuses, or major environmental fines.")
+    material_impact_assessment: str = Field(description="Determine if this finding represents mere PR/optics (greenwashing) or actual material financial/regulatory impact (e.g., massive EPA fines, confirmed slave labor).")
+    severity: SeverityLevel = Field(description="Grade severity strictly against the industry_benchmark_context. Penalize only findings with actual material impact (INFO, LOW, MEDIUM, HIGH, CRITICAL).")
+    is_red_flag: bool = Field(description="Set to true ONLY if severity is HIGH or CRITICAL.")
     is_strength: bool = Field(default=False, description="Set to true if the finding indicates strong ESG practices, such as carbon neutrality or excellent labor relations.")
     sources: list[_SourceModel] = Field(default_factory=list, description="The sources that support this finding.")
 
 class _ESGAnalysis(BaseModel):
-    rationale: str = Field(description="Detailed explanation of your reasoning. MUST be generated first.")
+    industry_benchmark_context: str = Field(description="Explain the expected ESG baseline for the company's sector. MUST be generated first.")
+    rationale: str = Field(description="Detailed explanation of your reasoning.")
     findings: list[_FindingModel] = Field(description="List of specific findings.")
     severe_esg_violation_found: bool = False
     violation_details: str | None = None
