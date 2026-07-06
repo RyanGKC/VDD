@@ -1,6 +1,6 @@
 import logging
 import asyncio
-import httpx
+from curl_cffi import requests as cffi_requests
 import time
 from bs4 import BeautifulSoup
 from typing import Optional, Dict, Any, List
@@ -22,11 +22,11 @@ import re
 async def fetch_and_clean_html(url: str, timeout: int = 10) -> Optional[str]:
     """Fetches a URL and extracts clean text from HTML."""
     try:
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            # We use a standard browser user-agent to avoid basic bot blocks
-            headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
-            resp = await client.get(url, headers=headers, follow_redirects=True)
-            resp.raise_for_status()
+        # We use curl_cffi to perfectly impersonate Chrome's TLS fingerprint and bypass 403 blocks
+        async with cffi_requests.AsyncSession(impersonate="chrome", timeout=timeout) as client:
+            resp = await client.get(url, allow_redirects=True)
+            if resp.status_code != 200:
+                resp.raise_for_status()
             
             html_content = resp.text
             
@@ -125,43 +125,58 @@ async def search_web(query: str, max_results: int = 3) -> Dict[str, Any]:
         logger.info(f"DDG returned {len(search_snippets)} snippets")
         stats["websites_searched"] = len(search_snippets)
         
-        enriched_results = []
-        
+        reliable_snippets = []
         for res in search_snippets:
-            if len(enriched_results) >= max_results:
-                break
-                
             url = res.get("href")
-            if not url or not is_reliable(url):
+            if url and is_reliable(url):
+                reliable_snippets.append(res)
+            else:
                 if url:
                     logger.info(f"Dropping unreliable source: {url} (domain: {get_domain(url)})")
                     stats["unreliable_sites"] += 1
-                continue
-                
-            stats["reliable_sites"] += 1
-                
-            # Attempt scrape
-            raw_text = await fetch_and_clean_html(url)
-            if raw_text is None:
-                logger.info(f"Skipping {url} due to scrape failure, trying next source.")
-                stats["reliable_sites_dropped_due_to_errors"] += 1
-                continue
-                
-            # 1. Truncation
-            flat_text = flatten_text(raw_text)
-            truncated_content = flat_text[:5000] + ("..." if len(flat_text) > 5000 else "")
+
+        enriched_results = []
+        BATCH_SIZE = 5
+        
+        for i in range(0, len(reliable_snippets), BATCH_SIZE):
+            batch = reliable_snippets[i:i+BATCH_SIZE]
+            stats["reliable_sites"] += len(batch)
             
-            # 2. Summarization
-            summarized_content = await summarize_text(raw_text)
+            async def process_snippet(res):
+                url = res.get("href")
+                raw_text = await fetch_and_clean_html(url)
+                if not raw_text:
+                    return None
+                    
+                flat_text = flatten_text(raw_text)
+                truncated_content = flat_text[:5000] + ("..." if len(flat_text) > 5000 else "")
+                summarized_content = await summarize_text(raw_text)
                 
-            enriched_results.append({
-                "title": res.get("title", ""),
-                "url": url,
-                "snippet": res.get("body", ""),
-                "truncated_content": truncated_content,
-                "summarized_content": summarized_content
-            })
+                return {
+                    "title": res.get("title", ""),
+                    "url": url,
+                    "snippet": res.get("body", ""),
+                    "truncated_content": truncated_content,
+                    "summarized_content": summarized_content
+                }
+                
+            # Execute batch concurrently
+            tasks = [process_snippet(res) for res in batch]
+            results = await asyncio.gather(*tasks)
             
+            # Collect results
+            for r in results:
+                if r is not None:
+                    enriched_results.append(r)
+                else:
+                    stats["reliable_sites_dropped_due_to_errors"] += 1
+                    
+                if len(enriched_results) >= max_results:
+                    break
+                    
+            if len(enriched_results) >= max_results:
+                break
+                
         stats["reliable_sites_in_output"] = len(enriched_results)
         stats["total_runtime_seconds"] = round(time.time() - start_time, 2)
             
