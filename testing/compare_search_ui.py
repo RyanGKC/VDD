@@ -132,7 +132,7 @@ def generate_html(query: str, exa_results: list[dict], custom_results: list[dict
     print(f"Comparison HTML successfully generated at: {output_path}")
 
 async def main():
-    query = "Malayan Banking Berhad regulatory licenses certifications"
+    query = "Malayan Banking Berhad competitors analysis"
     output_html = os.path.join(os.path.dirname(__file__), "search_comparison.html")
     
     print(f"Executing Exa search for: '{query}'...")

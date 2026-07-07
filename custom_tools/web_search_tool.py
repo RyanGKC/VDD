@@ -15,6 +15,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from core.gemini_client import GeminiClient
 from custom_tools.source_reliability import check_tier, get_domain
 from custom_tools.domain_evaluator import evaluate_domain, eval_cache
+from custom_tools.query_expansion import expand_query
+from custom_tools.relevance_scorer import score_relevance
 import json
 
 logger = logging.getLogger(__name__)
@@ -131,6 +133,7 @@ async def search_web(query: str, max_results: int = 3, company_domain: str | Non
     logger.info(f"Running resilient web search for: '{query}'")
     
     stats = {
+        "query_variants_used": 0,
         "websites_searched": 0,
         "allowlist_hits": 0,
         "blocklist_hits": 0,
@@ -149,19 +152,38 @@ async def search_web(query: str, max_results: int = 3, company_domain: str | Non
             try:
                 data = json.loads(val_json)
                 domain = key.split("domain_eval:")[1]
-                if data.get("trust_level") in ("high", "medium"):
+                trust_lvl = str(data.get("trust_level", "")).lower()
+                if trust_lvl in ("high", "medium"):
                     dynamic_allow.add(domain)
-                elif data.get("trust_level") == "low":
+                elif trust_lvl == "low":
                     dynamic_block.add(domain)
             except Exception:
                 pass
 
-        def _do_search() -> List[Dict[str, str]]:
+        query_variants = await expand_query(query)
+        stats["query_variants_used"] = len(query_variants)
+
+        def _do_search(q: str) -> List[Dict[str, str]]:
             with DDGS() as ddgs:
-                return list(ddgs.text(query, max_results=100, backend="auto"))
-                
-        search_snippets = await asyncio.to_thread(_do_search)
-        logger.info(f"DDG returned {len(search_snippets)} snippets")
+                return list(ddgs.text(q, max_results=100, backend="auto"))
+
+        search_tasks = [asyncio.to_thread(_do_search, q) for q in query_variants]
+        results_per_variant = await asyncio.gather(*search_tasks, return_exceptions=True)
+
+        # Merge and dedupe by URL, preserving first-seen order
+        seen_urls = set()
+        search_snippets = []
+        for variant_results in results_per_variant:
+            if isinstance(variant_results, Exception):
+                logger.warning(f"A query variant search failed: {variant_results}")
+                continue
+            for res in variant_results:
+                url = res.get("href")
+                if url and url not in seen_urls:
+                    seen_urls.add(url)
+                    search_snippets.append(res)
+
+        logger.info(f"Merged {len(search_snippets)} unique results across {len(query_variants)} query variants")
         stats["websites_searched"] = len(search_snippets)
         
         allowed_snippets = []
@@ -189,24 +211,38 @@ async def search_web(query: str, max_results: int = 3, company_domain: str | Non
                     snippet=res.get("body", "")
                 )
                 domain = get_domain(url)
-                if evaluation.trust_level in ("high", "medium"):
+                trust_lvl = str(evaluation.trust_level).lower()
+                if trust_lvl in ("high", "medium"):
                     allowed_snippets.append(res)
                     dynamic_allow.add(domain)
                     stats["domain_evaluated_accepted"] += 1
                     logger.info(
                         f"Accepted evaluated domain: {domain} "
-                        f"(trust: {evaluation.trust_level}, category: {evaluation.category})"
+                        f"(trust: {trust_lvl}, category: {evaluation.category})"
                     )
-                    print(f"🤔 [CUSTOM] Evaluated unknown domain '{domain}': ACCEPTED (Trust: {evaluation.trust_level})")
+                    print(f"🤔 [CUSTOM] Evaluated unknown domain '{domain}': ACCEPTED (Trust: {trust_lvl})")
                 else:
                     dynamic_block.add(domain)
                     stats["domain_evaluated_rejected"] += 1
                     logger.info(
                         f"Rejected evaluated domain: {domain} "
-                        f"(trust: {evaluation.trust_level}, rationale: {evaluation.rationale})"
+                        f"(trust: {trust_lvl}, rationale: {evaluation.rationale})"
                     )
-                    print(f"🛑 [CUSTOM] Evaluated unknown domain '{domain}': REJECTED (Trust: {evaluation.trust_level})")
+                    print(f"🛑 [CUSTOM] Evaluated unknown domain '{domain}': REJECTED (Trust: {trust_lvl})")
 
+        # NEW: score relevance for trust-cleared candidates, then sort
+        scored_snippets = []
+        for res in allowed_snippets:
+            relevance = await score_relevance(
+                query=query,  # score against the ORIGINAL query, not the variant that found it
+                title=res.get("title", ""),
+                snippet=res.get("body", "")
+            )
+            scored_snippets.append((res, relevance.score))
+            logger.info(f"Relevance {relevance.score} for {res.get('href')}: {relevance.reason}")
+
+        scored_snippets.sort(key=lambda x: x[1], reverse=True)
+        allowed_snippets = [res for res, _ in scored_snippets]
         enriched_results = []
         BATCH_SIZE = 5
         
