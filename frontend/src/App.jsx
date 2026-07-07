@@ -349,7 +349,7 @@ const ProcessingTerminal = ({ onComplete, onError, onCancel, companyDetails }) =
   const [isConsoleOpen, setIsConsoleOpen] = useState(false);
   const endOfLogsRef = useRef(null);
   const abortControllerRef = useRef(null);
-  const jobIdRef = useRef(null);
+  const jobIdRef = useRef(Math.random().toString(36).substring(2, 15));
   const wsRef = useRef(null);
   const nodeStatesRef = useRef({});
   const entityMetaRef = useRef({}); // tracks { role, parentEntity } per entity
@@ -366,8 +366,7 @@ const ProcessingTerminal = ({ onComplete, onError, onCancel, companyDetails }) =
       setLogs([{ text: `SYSTEM: Initializing DDContext for ${companyDetails.company_name}`, time: new Date().toLocaleTimeString() }]);
       setLogs(prev => [...prev, { text: "SYSTEM: Connecting to backend... (this may take a few minutes as agents process data)", time: new Date().toLocaleTimeString() }]);
       
-      const jobId = Math.random().toString(36).substring(2, 15);
-      jobIdRef.current = jobId;
+      const jobId = jobIdRef.current;
       
       const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const ws = new WebSocket(`${wsProtocol}//${window.location.host}/api/ws/dd_status/${jobId}`);
@@ -416,7 +415,7 @@ const ProcessingTerminal = ({ onComplete, onError, onCancel, companyDetails }) =
       };
       
       try {
-        const response = await fetch('/api/dd_report', {
+        let response = await fetch('/api/dd_report', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -437,7 +436,6 @@ const ProcessingTerminal = ({ onComplete, onError, onCancel, companyDetails }) =
           }),
           signal: abortControllerRef.current.signal
         });
-        
         
         if (!response.ok) {
            const errText = await response.text();

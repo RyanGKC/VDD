@@ -170,5 +170,20 @@
         {% endfor %}
     </table>
 
+    {% if report.raw_sources_by_step %}
+    <div class="page-break"></div>
+    <div style="margin-top: 30px;">
+        <h2>Appendix: Raw Search Sources</h2>
+        <div>
+            {% for step, raw_data in report.raw_sources_by_step.items() %}
+            <div style="margin-bottom: 30px;">
+                <h3 style="text-transform: uppercase; color: #2d3748; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">{{ step }} Agent</h3>
+                <pre style="white-space: pre-wrap; font-size: 10px; background-color: #f8fafc; padding: 15px; border-radius: 4px; border: 1px solid #e2e8f0; overflow-x: auto; color: #4a5568;">{{ raw_data }}</pre>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
 </body>
 </html>
