@@ -70,7 +70,7 @@ class MediaAgent(BaseResearchAgent):
             findings=findings,
             structured_data=analysis.model_dump(),
             sources=[s for f in findings for s in f.sources],
-            raw_data=f"DB: {db_data}\nWEB: {web_data}",
+            raw_data=web_data,
             rationale=analysis.rationale,
         )
 

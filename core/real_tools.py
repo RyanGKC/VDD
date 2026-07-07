@@ -7,7 +7,6 @@ from typing import Any
 import re
 import urllib.parse
 from core.models import DDContext
-from core.cache import PersistentCache
 import logging
 from pydantic import BaseModel, Field
 from core.gemini_client import GeminiClient
@@ -16,34 +15,22 @@ from custom_tools.yfinance_tool import get_financial_statement
 
 logger = logging.getLogger(__name__)
 
-cache_db = PersistentCache()
-
 # Helper to load cached doc or fetch
 async def fetch_json(ctx: DDContext, url: str, headers: dict = None, auth=None) -> dict | None:
-    cached = cache_db.get(url)
-    if cached:
-        return json.loads(cached)
-    
     try:
         resp = await http_client.get(url, headers=headers, auth=auth)
         if resp.status_code == 200:
             data = resp.json()
-            cache_db.set(url, json.dumps(data))
             return data
     except Exception as e:
         print(f"Error fetching {url}: {e}")
     return None
 
 async def fetch_text(ctx: DDContext, url: str, headers: dict = None, auth=None) -> str | None:
-    cached = cache_db.get(url)
-    if cached:
-        return cached
-    
     try:
         resp = await http_client.get(url, headers=headers, auth=auth)
         if resp.status_code == 200:
             text = resp.text
-            cache_db.set(url, text)
             return text
     except Exception as e:
         print(f"Error fetching {url}: {e}")
@@ -178,12 +165,7 @@ async def screen_sanctions(ctx: DDContext, entities: list[str]) -> str:
             }
         }
         
-        # Build composite key and check cache
-        cache_key = f"https://api.opensanctions.org/match/default|{json.dumps(payload, sort_keys=True)}"
-        cached = cache_db.get(cache_key)
-        if cached:
-            return cached
-
+        # Build payload
         try:
             headers = {"Authorization": f"ApiKey {api_key}"}
             resp = await http_client.post("https://api.opensanctions.org/match/default", json=payload, headers=headers)
@@ -198,7 +180,6 @@ async def screen_sanctions(ctx: DDContext, entities: list[str]) -> str:
                             "score": match.get("score")
                         })
                 final_str = json.dumps(result)
-                cache_db.set(cache_key, final_str)
                 return final_str
             else:
                 logger.warning(f"OpenSanctions API returned status code {resp.status_code}. Initiating web search fallback.")
@@ -334,11 +315,6 @@ async def perform_web_search(ctx: DDContext, query: str) -> str:
             "numResults": 5,
             "contents": {"highlights": True}
         }
-        exa_cache_key = f"https://api.exa.ai/search|{json.dumps(exa_payload, sort_keys=True)}"
-        cached = cache_db.get(exa_cache_key)
-        if cached:
-            return cached
-            
         try:
             headers = {"x-api-key": exa_api_key, "Content-Type": "application/json"}
             resp = await http_client.post("https://api.exa.ai/search", json=exa_payload, headers=headers)
@@ -354,7 +330,6 @@ async def perform_web_search(ctx: DDContext, query: str) -> str:
                         "url": res.get("url", "")
                     })
                 final_str = json.dumps(res_obj)
-                cache_db.set(exa_cache_key, final_str)
                 return final_str
             else:
                 logger.warning(f"Exa API failed: {resp.status_code}")
@@ -370,12 +345,6 @@ async def perform_web_search(ctx: DDContext, query: str) -> str:
             "api_key": api_key, "query": query, "search_depth": "basic",
             "include_answer": False, "max_results": 5
         }
-        cache_payload = {k: v for k, v in payload.items() if k != "api_key"}
-        cache_key = f"https://api.tavily.com/search|{json.dumps(cache_payload, sort_keys=True)}"
-        cached = cache_db.get(cache_key)
-        if cached:
-            return cached
-
         try:
             resp = await http_client.post("https://api.tavily.com/search", json=payload)
             if resp.status_code == 200:
@@ -386,7 +355,6 @@ async def perform_web_search(ctx: DDContext, query: str) -> str:
                     for res in data.get("results", [])
                 ]
                 final_str = json.dumps(res_obj)
-                cache_db.set(cache_key, final_str)
                 return final_str
             else:
                 logger.warning(f"Tavily API failed: {resp.status_code}")

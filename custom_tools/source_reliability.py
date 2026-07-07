@@ -15,12 +15,38 @@ ALLOWLIST: set[str] = {
     "bernama.com", "freemalaysiatoday.com",
 }
 
+BLOCKLIST: set[str] = {
+    # Add any inherently bad domains here
+}
+
 # TLDs treated as inherently high-trust regardless of allowlist membership
 HIGH_TRUST_TLDS = (".gov", ".gov.uk", ".edu", ".ac.uk")
 
 def get_domain(url: str) -> str:
     netloc = urlparse(url).netloc.lower()
     return netloc[4:] if netloc.startswith("www.") else netloc
+
+def check_tier(url: str, company_domain: str | None = None, dynamic_allow: set[str] | None = None, dynamic_block: set[str] | None = None) -> str:
+    """Returns 'allow', 'block', or 'unknown'."""
+    domain = get_domain(url)
+    dynamic_allow = dynamic_allow or set()
+    dynamic_block = dynamic_block or set()
+
+    if company_domain and domain == company_domain:
+        return "allow"
+    
+    if domain.endswith(HIGH_TRUST_TLDS):
+        return "allow"
+        
+    parts = domain.split(".")
+    for i in range(max(1, len(parts) - 1)):
+        suffix = ".".join(parts[i:])
+        if suffix in ALLOWLIST or suffix in dynamic_allow:
+            return "allow"
+        if suffix in BLOCKLIST or suffix in dynamic_block:
+            return "block"
+
+    return "unknown"
 
 def is_reliable(url: str, company_domain: str | None = None) -> bool:
     domain = get_domain(url)
