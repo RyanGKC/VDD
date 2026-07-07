@@ -8,7 +8,7 @@ from core.models import (
     AnomalySignal, DDContext, Finding, Severity, SeverityLevel, Source,
     StepName, StepResult, parse_severity,
 )
-from core.tools import scan_adverse_media, perform_web_search
+from core.tools import perform_web_search
 
 SYSTEM_INSTRUCTION = """
 You are an adverse media screening analyst. Scan recent news and public 
@@ -36,13 +36,10 @@ class MediaAgent(BaseResearchAgent):
         # Pull in new entities discovered from previous anomalies
         entities = [company_name] + ctx.enrichment.get("additional_entities", [])
         
-        # Hybrid approach: Query media database AND search online news
-        db_data = await scan_adverse_media(ctx, entities)
         search_query = f"{' OR '.join(entities)} news scandal controversy lawsuit investigation"
         web_data = await perform_web_search(ctx, search_query)
 
         combined_data = {
-            "database_hits": json.loads(db_data),
             "web_search_results": json.loads(web_data)
         }
 

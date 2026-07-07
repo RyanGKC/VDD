@@ -36,12 +36,8 @@ class LicensesAgent(BaseResearchAgent):
 
         # Hybrid approach: Query license DB AND search web for ISO/certification news
         db_data = await verify_licenses(ctx, company_name, country)
-        search_query = f"{company_name} {country} ISO certification trading license permit status"
-        web_data = await perform_web_search(ctx, search_query)
-
         combined_data = {
             "database_records": json.loads(db_data),
-            "web_search_results": json.loads(web_data)
         }
 
         analysis = await self.generate_with_web_search(

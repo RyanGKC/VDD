@@ -32,16 +32,11 @@ class ESGAgent(BaseResearchAgent):
     async def research(self, ctx: DDContext) -> StepResult:
         company_name = ctx.company_details.company_name
         
-        # Search the web for ESG reports, greenwashing controversies, etc.
-        search_query = f"{company_name} ESG sustainability report greenwashing controversy social governance"
-        data = await perform_web_search(ctx, search_query)
-
         analysis = await self.generate_with_web_search(
             ctx=ctx,
             system_instruction=SYSTEM_INSTRUCTION,
             base_prompt=(
                 f"Vendor: {company_name}\n"
-                f"Web Search Results: {data}\n"
                 "Assess the ESG risk."
             ),
             schema=_ESGAnalysis,
@@ -63,7 +58,7 @@ class ESGAgent(BaseResearchAgent):
             findings=findings,
             structured_data=analysis.model_dump(),
             sources=[s for f in findings for s in f.sources],
-            raw_data=data,
+            raw_data=None,
             rationale=analysis.rationale,
         )
 

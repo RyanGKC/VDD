@@ -78,9 +78,10 @@ class FlowEngine:
                 pending.remove(step)
                 
                 # Enforce MAX_STEP_RETRIES here
-                MAX_STEP_RETRIES = 2
-                if step_execution_counts.get(step, 0) > MAX_STEP_RETRIES:
+                MAX_STEP_RETRIES = 3
+                if step_execution_counts.get(step, 0) >= MAX_STEP_RETRIES:
                     ctx.log(f"GUARDRAIL: Dropping {step.value} to prevent infinite loop (max retries).")
+                    ctx.log(f"SYSTEM OVERRIDE: Agent {step.value} has permanently failed after {MAX_STEP_RETRIES} retries. It cannot be fixed. Proceed without it.")
                     completed_this_round.add(step)
                     continue
 

@@ -38,17 +38,12 @@ class ProfileAgent(BaseResearchAgent):
         company_name = ctx.company_details.company_name
         website = ctx.company_details.website
 
-        # Search the web instead of querying a structured database
-        search_query = f"{company_name} core operations business model industry"
-        data = await perform_web_search(ctx, search_query)
-
         analysis = await self.generate_with_web_search(
             ctx=ctx,
             system_instruction=SYSTEM_INSTRUCTION,
             base_prompt=(
                 f"Vendor: {company_name}\n"
                 f"Website: {website}\n"
-                f"Web Search Results: {data}\n"
                 "Assess company profile and operations."
             ),
             schema=_ProfileAnalysis,
@@ -70,7 +65,7 @@ class ProfileAgent(BaseResearchAgent):
             findings=findings,
             structured_data=analysis.model_dump(),
             sources=[s for f in findings for s in f.sources],
-            raw_data=data,
+            raw_data=None,
             rationale=analysis.rationale,
         )
 

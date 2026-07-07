@@ -238,3 +238,4 @@ class DDReport(BaseModel):
     supply_chain: list['DDReport'] = Field(default_factory=list)
     # Parent company report
     parent_company: 'DDReport | None' = None
+    raw_sources_by_step: dict[str, str] = Field(default_factory=dict)

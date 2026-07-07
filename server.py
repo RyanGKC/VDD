@@ -99,10 +99,17 @@ async def generate_dd_report(request: DDRequest, bg_tasks: BackgroundTasks):
     if request.enable_rag is not None:
         ctx.enable_rag = request.enable_rag
     if request.job_id:
+        # If the same job_id is re-submitted (React Strict Mode double-fire), cancel
+        # the prior task for this id before starting a fresh one.
+        if request.job_id in active_tasks:
+            prior_task = active_tasks.pop(request.job_id)
+            if not prior_task.done():
+                prior_task.cancel()
         active_jobs[request.job_id] = ctx
         
     try:
-        # Prevent concurrent duplicate requests from the frontend for the same company
+        # Prevent concurrent duplicate requests from the frontend for the same company.
+        # This guards against genuinely different job_ids for the same company name.
         for existing_job_id, existing_ctx in active_jobs.items():
             if existing_job_id != request.job_id and existing_ctx.company_details.company_name.lower() == request.company_name.lower():
                 raise HTTPException(
@@ -148,8 +155,11 @@ async def generate_dd_report(request: DDRequest, bg_tasks: BackgroundTasks):
         if 'task' in locals() and not task.done():
             task.cancel()
         if request.job_id:
-            active_jobs.pop(request.job_id, None)
-            active_tasks.pop(request.job_id, None)
+            # Only pop if we are still the active task for this job_id.
+            # A new strict-mode mount may have already overwritten it.
+            if active_tasks.get(request.job_id) is task:
+                active_jobs.pop(request.job_id, None)
+                active_tasks.pop(request.job_id, None)
         raise HTTPException(status_code=499, detail="Client Closed Request")
     except HTTPException:
         # Re-raise HTTP exceptions so they don't get wrapped in a 500
@@ -163,17 +173,19 @@ async def generate_dd_report(request: DDRequest, bg_tasks: BackgroundTasks):
             # Delay cleanup so the WebSocket has time to read final logs for extremely fast/cached runs
             async def delayed_cleanup():
                 await asyncio.sleep(5)
-                active_jobs.pop(request.job_id, None)
-                active_tasks.pop(request.job_id, None)
-                
-                # Cleanup ephemeral vector store documents
-                try:
-                    from core.dependencies import vs
-                    vs.get_collection("run_documents").delete(where={"run_id": run_id})
-                    print(f"SYSTEM: Cleaned up run_documents for run_id={run_id}")
-                except Exception as e:
-                    print(f"SYSTEM: Failed to clean up run_documents: {e}")
+                # Only pop if we are still the active task for this job_id
+                if active_tasks.get(request.job_id) is task:
+                    active_jobs.pop(request.job_id, None)
+                    active_tasks.pop(request.job_id, None)
                     
+                    # Cleanup ephemeral vector store documents
+                    try:
+                        from core.dependencies import vs
+                        vs.get_collection("run_documents").delete(where={"run_id": run_id})
+                        print(f"SYSTEM: Cleaned up run_documents for run_id={run_id}")
+                    except Exception as e:
+                        print(f"SYSTEM: Failed to clean up run_documents: {e}")
+                
             t = asyncio.create_task(delayed_cleanup())
             _cleanup_tasks.add(t)
             t.add_done_callback(_cleanup_tasks.discard)
@@ -202,6 +214,13 @@ async def ws_dd_status(websocket: WebSocket, job_id: str):
     idle_counter = 0
     try:
         while True:
+            # Check if the ctx was replaced (e.g. by an idempotent Strict Mode re-submission)
+            current_ctx = active_jobs.get(job_id)
+            if current_ctx and current_ctx is not ctx:
+                print(f"[WS] Detected new ctx object for job {job_id}, resetting log cursor")
+                ctx = current_ctx
+                last_log_index = 0
+                
             current_len = len(ctx.execution_log)
             if current_len > last_log_index:
                 new_logs = []

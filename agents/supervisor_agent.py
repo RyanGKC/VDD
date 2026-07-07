@@ -45,6 +45,7 @@ CRITICAL HEURISTICS FOR HANDLING "NOT FOUND" FAILURES:
 * Conversely, if it contains "LLC", "Inc", or "Corp" but the country is "United Kingdom", update it to "United States".
 * Name Typos: If a name includes strange punctuation or suffixes that might break a search (e.g. "Subway Us Holdings, LLC"), try stripping them (e.g. "Subway") and re-running.
 * LOOP PREVENTION: Review the Execution Log history! If you see that you already tried updating a parameter and the step failed again, DO NOT try adjusting parameters and re-queueing again. Accept the missing data, set 'is_anomaly' to false, and proceed.
+* CRASHED STEPS: If you are informed that some steps have CRASHED (e.g. due to an API timeout), and you believe their data is necessary for the report, you MUST set is_anomaly to true and add them to steps_to_run to force a retry.
 
 If you detect an anomaly or a reason to adjust the plan:
 1. Set 'is_anomaly' to true.
@@ -93,6 +94,10 @@ class SupervisorAgent:
         completed: set[StepName],
     ) -> tuple[list[StepName], bool]:
         
+        # Calculate which steps actually completed successfully vs crashed
+        successful_steps = set(ctx.results.keys())
+        crashed_steps = completed - successful_steps
+        
         prompt = (
             f"Vendor: {ctx.company_details.company_name}\n"
             f"\n--- FINDINGS FROM ALL COMPLETED STEPS ---\n"
@@ -104,8 +109,15 @@ class SupervisorAgent:
             for f in past_result.findings:
                 prompt += f"  - [{f.severity.value}] {f.summary}\n"
             
+        if crashed_steps:
+            prompt += f"\n--- CRASHED STEPS ---\n"
+            prompt += "The following steps crashed due to an unexpected error and produced no findings:\n"
+            for step in crashed_steps:
+                prompt += f"  - {step.value}\n"
+            prompt += "If you believe their data is necessary, you MUST set is_anomaly to true and add them to steps_to_run to force a retry. If the execution log says it has permanently failed, DO NOT retry it.\n"
+            
         prompt += (
-            f"\nSteps already completed: {[s.value for s in completed]}\n"
+            f"\nSteps already completed (including crashed): {[s.value for s in completed]}\n"
             f"Current enrichment context: {ctx.enrichment}\n\n"
             f"Recent Execution Log (for loop prevention):\n"
         )

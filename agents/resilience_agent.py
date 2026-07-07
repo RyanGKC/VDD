@@ -35,17 +35,12 @@ class ResilienceAgent(BaseResearchAgent):
         company_name = ctx.company_details.company_name
         country = ctx.company_details.country
         
-        # Perform web search to find operational resilience and supply chain data
-        search_query = f"{company_name} supply chain dependency manufacturing locations resilience"
-        data = await perform_web_search(ctx, search_query)
-
         analysis = await self.generate_with_web_search(
             ctx=ctx,
             system_instruction=SYSTEM_INSTRUCTION,
             base_prompt=(
                 f"Vendor: {company_name}\n"
                 f"Country: {country}\n"
-                f"Web Search Results: {data}\n"
                 "Extract any explicitly named manufacturing or software suppliers. Focus on critical dependencies. "
                 "CRITICAL INSTRUCTION: You MUST populate the `suppliers` array with the exact names of ALL identified suppliers. Do not leave it empty."
             ),
@@ -68,7 +63,7 @@ class ResilienceAgent(BaseResearchAgent):
             findings=findings,
             structured_data=analysis.model_dump(),
             sources=[s for f in findings for s in f.sources],
-            raw_data=data,
+            raw_data=None,
             rationale=analysis.rationale,
         )
 

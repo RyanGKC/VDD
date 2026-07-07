@@ -143,8 +143,13 @@ class SummaryAgent:
     async def synthesise(self, ctx: DDContext) -> DDReport:
         # Flatten findings across every completed step.
         all_findings: list[Finding] = []
+        raw_sources_by_step: dict[str, str] = {}
         for step_name, r in ctx.results.items():
             category_name = _STEP_LABELS.get(step_name, step_name.value)
+            
+            if r.raw_data:
+                raw_sources_by_step[step_name.value] = r.raw_data
+                
             for f in r.findings:
                 f.category = category_name
                 for s in f.sources:
@@ -232,4 +237,5 @@ class SummaryAgent:
             sources=sources,
             executive_summary=exec_summary,
             step_risk_scores=step_risk_scores,
+            raw_sources_by_step=raw_sources_by_step,
         )
