@@ -41,10 +41,6 @@ async def fetch_financials(ctx: DDContext, company_name: str, registration_id: s
         return await _run_mock(mock_tools.fetch_financials, f"financials|{company_name}|{registration_id}", company_name, registration_id)
     return await real_tools.fetch_financials(ctx, company_name, registration_id)
 
-async def scan_adverse_media(ctx: DDContext, entities: list[str]) -> str:
-    if ctx.use_mock:
-        return await _run_mock(mock_tools.scan_adverse_media, f"media|{json.dumps(entities)}", entities)
-    return await real_tools.scan_adverse_media(ctx, entities)
 
 async def perform_web_search(ctx: DDContext, query: str) -> str:
     if ctx.use_mock:

@@ -11,6 +11,8 @@ ALLOWLIST: set[str] = {
     "nytimes.com", "bbc.com", "theguardian.com", "washingtonpost.com", "npr.org",
     "hbr.org", "mckinsey.com", "investopedia.com", "yahoo.com",
     "businessinsider.com", "techcrunch.com", "wired.com", "fortune.com",
+    "thestar.com.my", "malaymail.com", "nst.com.my", "theedgemalaysia.com",
+    "bernama.com", "freemalaysiatoday.com",
 }
 
 # TLDs treated as inherently high-trust regardless of allowlist membership
@@ -20,9 +22,12 @@ def get_domain(url: str) -> str:
     netloc = urlparse(url).netloc.lower()
     return netloc[4:] if netloc.startswith("www.") else netloc
 
-def is_reliable(url: str) -> bool:
+def is_reliable(url: str, company_domain: str | None = None) -> bool:
     domain = get_domain(url)
     
+    if company_domain and domain.endswith(company_domain):
+        return True
+        
     if domain.endswith(HIGH_TRUST_TLDS):
         return True
         

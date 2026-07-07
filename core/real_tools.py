@@ -311,25 +311,6 @@ async def fetch_financials(ctx: DDContext, company_name: str, registration_id: s
                     
     return json.dumps(result)
 
-async def scan_adverse_media(ctx: DDContext, entities: list[str]) -> str:
-    result = {"quality_flag": "partial", "source": "API", "articles": []}
-    news_key = os.getenv("NEWSAPI_KEY")
-    
-    if news_key and entities:
-        query = " OR ".join([f'"{e}"' for e in entities])
-        url = f"https://newsapi.org/v2/everything?q={query}&apiKey={news_key}"
-        try:
-            data = await fetch_json(ctx, url)
-            if data and data.get("status") == "ok":
-                result["quality_flag"] = "high"
-                result["articles"] = [
-                    {"headline": a["title"], "source": a["source"]["name"], "date": a["publishedAt"]}
-                    for a in data.get("articles", [])[:5]
-                ]
-        except Exception as e:
-            result["error"] = str(e)
-            
-    return json.dumps(result)
 
 class SearchResultSnippet(BaseModel):
     title: str
@@ -416,7 +397,37 @@ async def perform_web_search(ctx: DDContext, query: str) -> str:
     async def _try_custom():
         try:
             from custom_tools.web_search_tool import search_web
-            custom_data = await search_web(query, max_results=5)
+            from custom_tools.source_reliability import get_domain
+            
+            # 1. Dynamically resolve the website if missing.
+            # Only "high" confidence (or an explicit override) is trusted enough to set
+            # ctx.company_details.website — low-confidence resolutions are logged and
+            # discarded so an ambiguous/wrong domain never enters the allowlist.
+            if not ctx.company_details.website:
+                try:
+                    from custom_tools.website_resolver import resolve_company_website_with_overrides
+                    resolution = await resolve_company_website_with_overrides(ctx.company_details.company_name)
+                    if resolution["confidence"] == "high":
+                        ctx.company_details.website = f"https://{resolution['domain']}"
+                        logger.info(
+                            f"Resolved website for {ctx.company_details.company_name}: "
+                            f"{resolution['domain']} (confidence: high, source: {resolution.get('source', 'search')})"
+                        )
+                    elif resolution["confidence"] == "low":
+                        logger.warning(
+                            f"Low-confidence website resolution discarded for {ctx.company_details.company_name} — "
+                            f"top candidate was {resolution['domain']}, candidates: {resolution['candidates']}"
+                        )
+                    else:
+                        logger.warning(f"Could not resolve website for {ctx.company_details.company_name}")
+                except Exception as e:
+                    logger.warning(f"Could not auto-resolve website: {e}")
+
+            company_domain = None
+            if ctx.company_details.website:
+                company_domain = get_domain(ctx.company_details.website)
+                
+            custom_data = await search_web(query, max_results=5, company_domain=company_domain)
             if custom_data and custom_data.get("results"):
                 res_obj = {"source": "Custom Scraper", "quality_flag": "high", "search_results": []}
                 for res in custom_data["results"]:

@@ -135,18 +135,3 @@ async def fetch_financials(company_name: str, registration_id: str | None) -> st
         data["undisclosed_liabilities"] = "$50M owed to Global Shell Holdings LLC"
         
     return json.dumps(data)
-
-async def scan_adverse_media(entities: list[str]) -> str:
-    await asyncio.sleep(1.0) # Media scans usually take longer
-    
-    data = {"articles": []}
-    
-    if _is_high_risk(entities):
-        data["articles"].append({
-            "headline": f"Executives at {entities[0]} indicted for massive wire fraud scheme.",
-            "source": "Global Finance News",
-            "sentiment": "Highly Negative",
-            "date": "2 days ago"
-        })
-        
-    return json.dumps(data)
