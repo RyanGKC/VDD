@@ -315,9 +315,7 @@ async def _orchestrate_search(query: str, max_results: int = 3, company_domain: 
             return res, relevance
 
         # Fire both fan-outs concurrently
-        eval_task = asyncio.create_task(
-            asyncio.gather(*[_eval(res) for res in unknown_snippets])
-        ) if unknown_snippets else None
+        eval_task = asyncio.gather(*[_eval(res) for res in unknown_snippets]) if unknown_snippets else None
         
         pre_scored = await asyncio.gather(*[_score(res) for res in allowed_snippets])
         
