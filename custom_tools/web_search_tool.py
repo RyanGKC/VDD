@@ -120,6 +120,7 @@ class WebSearchResponse(BaseModel):
     query: str
     results: list[SearchResultItem]
     error: Optional[str] = None
+    debug_stats: dict | None = None
 
 MAX_SUMMARY_INPUT_CHARS = 30_000
 
@@ -143,20 +144,20 @@ async def summarize_text(text: str) -> str:
         return f"[Summarization Failed: {e}]"
 
 
-async def search_web(query: str, max_results: int = 3, company_domain: str | None = None) -> str:
+async def search_web(query: str, max_results: int = 3, company_domain: str | None = None, debug: bool = False) -> str:
     """
     A custom tool for AI agents to search the web using DuckDuckGo and scrape the results.
     Returns a strict JSON string matching WebSearchResponse.
     """
     try:
-        results = await _orchestrate_search(query, max_results, company_domain)
-        response = WebSearchResponse(query=query, results=[SearchResultItem(**r) for r in results])
+        results, stats = await _orchestrate_search(query, max_results, company_domain)
+        response = WebSearchResponse(query=query, results=[SearchResultItem(**r) for r in results], debug_stats=stats if debug else None)
         return response.model_dump_json()
     except Exception as e:
         logger.error(f"Search failed for '{query}': {e}")
         return WebSearchResponse(query=query, results=[], error=str(e)).model_dump_json()
 
-async def _orchestrate_search(query: str, max_results: int = 3, company_domain: str | None = None) -> list[dict]:
+async def _orchestrate_search(query: str, max_results: int = 3, company_domain: str | None = None) -> tuple[list[dict], dict]:
     start_time = time.time()
     logger.info(f"Running resilient web search for: '{query}'")
     
@@ -169,10 +170,22 @@ async def _orchestrate_search(query: str, max_results: int = 3, company_domain: 
         "domain_evaluated_rejected": 0,
         "reliable_sites_dropped_due_to_errors": 0,
         "reliable_sites_in_output": 0,
-        "total_runtime_seconds": 0.0
+        "total_runtime_seconds": 0.0,
+        "phase_seconds": {
+            "dynamic_list_load": 0.0,
+            "initial_ddg_search": 0.0,
+            "adaptive_expansion": 0.0,
+            "embedding_batch": 0.0,
+            "llm_fanout": 0.0,
+            "fetch_and_summarize": 0.0,
+        },
+        "adaptive_expansion_triggered": False,
+        "candidates_before_cap": 0,
+        "candidates_after_cap": 0
     }
     
     try:
+        t0_dyn = time.time()
         # Load dynamic lists from cache
         dynamic_allow = set()
         dynamic_block = set()
@@ -194,6 +207,8 @@ async def _orchestrate_search(query: str, max_results: int = 3, company_domain: 
                     dynamic_block.add(domain)
             except Exception:
                 pass
+        
+        stats["phase_seconds"]["dynamic_list_load"] = time.time() - t0_dyn
 
         def _cheap_prerank_score(q: str, title: str, snippet: str) -> int:
             q_words = set(q.lower().split())
@@ -202,18 +217,39 @@ async def _orchestrate_search(query: str, max_results: int = 3, company_domain: 
             
         async def _search_and_merge(variants: list[str]) -> list[dict]:
             search_pool_size = min(100, max(30, max_results * 10))
+
+            # DDG rate-limits concurrent bursts from the same IP. Firing all variants
+            # simultaneously with a long timeout + escalating backoff (the old settings)
+            # doesn't avoid the rate limit — it just waits it out silently, which is why
+            # this phase measured ~85s in production instead of the ~12s a single search takes.
+            # Fix: stagger launch times so most variants never trigger the burst limiter in
+            # the first place, and keep the per-attempt timeout/retry short so that if one
+            # variant does get throttled anyway, we drop it fast instead of waiting ~90s for it.
+            DDG_TIMEOUT_SECONDS = 15       # was 30 — comfortably above the ~11.5s observed baseline for one successful call
+            DDG_MAX_ATTEMPTS = 2           # was 3 — one retry as a safety net, not a patience mechanism
+            DDG_RETRY_DELAY_SECONDS = 2    # was escalating 1s/2s — flat delay, we're not trying to outlast the limiter
+            STAGGER_SECONDS = 1.0          # spacing between concurrent variant launches to avoid a correlated burst
+
             def _do_search(q: str) -> List[Dict[str, str]]:
-                for attempt in range(3):
+                for attempt in range(DDG_MAX_ATTEMPTS):
                     try:
-                        with DDGS(timeout=30) as ddgs:
+                        with DDGS(timeout=DDG_TIMEOUT_SECONDS) as ddgs:
                             return list(ddgs.text(q, max_results=search_pool_size, backend="auto"))
                     except Exception as e:
-                        if attempt == 2:
+                        if attempt == DDG_MAX_ATTEMPTS - 1:
+                            logger.warning(f"DDG search failed for variant '{q}' after {DDG_MAX_ATTEMPTS} attempts: {e}")
                             raise e
-                        import time
-                        time.sleep(1 + attempt)
+                        time.sleep(DDG_RETRY_DELAY_SECONDS)
 
-            search_tasks = [asyncio.to_thread(_do_search, q) for q in variants]
+            async def _staggered_search(q: str, delay: float) -> List[Dict[str, str]]:
+                if delay:
+                    await asyncio.sleep(delay)
+                return await asyncio.to_thread(_do_search, q)
+
+            search_tasks = [
+                asyncio.create_task(_staggered_search(q, i * STAGGER_SECONDS))
+                for i, q in enumerate(variants)
+            ]
             results_per_variant = await asyncio.gather(*search_tasks, return_exceptions=True)
             
             merged = []
@@ -251,13 +287,16 @@ async def _orchestrate_search(query: str, max_results: int = 3, company_domain: 
         
         # Opt 1: Fire query expansion concurrently with the first DDG search
         expansion_task = asyncio.create_task(expand_query(query))
+        t0_ddg = time.time()
         search_snippets = await _search_and_merge([query])
+        stats["phase_seconds"]["initial_ddg_search"] = time.time() - t0_ddg
         stats["query_variants_used"] = 1
         
         allowed_snippets, unknown_snippets = _bucket_by_tier(search_snippets, seen_urls)
         
         # Adaptive expansion: if we don't have enough good candidates, use the pre-fetched expansion
         if len(allowed_snippets) < max_results * 2:
+            t0_adapt = time.time()
             variants = await expansion_task
             stats["query_variants_used"] += len(variants) - 1 # excluding original
             extra_snippets = await _search_and_merge(variants[1:]) # skip original
@@ -265,12 +304,15 @@ async def _orchestrate_search(query: str, max_results: int = 3, company_domain: 
             extra_allow, extra_unknown = _bucket_by_tier(extra_snippets, seen_urls)
             allowed_snippets.extend(extra_allow)
             unknown_snippets.extend(extra_unknown)
+            stats["phase_seconds"]["adaptive_expansion"] = time.time() - t0_adapt
+            stats["adaptive_expansion_triggered"] = True
         else:
             expansion_task.cancel()
             
         stats["websites_searched"] = len(seen_urls)
         
         # Cap candidates before LLM fan-out
+        stats["candidates_before_cap"] = len(allowed_snippets) + len(unknown_snippets)
         CANDIDATE_CAP = max(20, max_results * 4)
         
         allowed_snippets.sort(key=lambda r: _cheap_prerank_score(query, r.get("title", ""), r.get("body", "")), reverse=True)
@@ -278,6 +320,7 @@ async def _orchestrate_search(query: str, max_results: int = 3, company_domain: 
         
         unknown_snippets.sort(key=lambda r: _cheap_prerank_score(query, r.get("title", ""), r.get("body", "")), reverse=True)
         unknown_snippets = unknown_snippets[:CANDIDATE_CAP]
+        stats["candidates_after_cap"] = len(allowed_snippets) + len(unknown_snippets)
 
         # Opt 3: Pre-compute query embedding + all snippet embeddings in batched API calls
         gemini = GeminiClient(model="gemini-2.5-flash-lite")
@@ -287,7 +330,9 @@ async def _orchestrate_search(query: str, max_results: int = 3, company_domain: 
         snippet_texts = [f"{r.get('title', '')} {r.get('body', '')}" for r in all_candidate_snippets]
         
         # Single batched embed call: [query] + all snippet texts
+        t0_emb = time.time()
         all_embeddings = await gemini.embed_content([query] + snippet_texts)
+        stats["phase_seconds"]["embedding_batch"] = time.time() - t0_emb
         query_emb = all_embeddings[0]
         snippet_embedding_map = {}
         for idx, res in enumerate(all_candidate_snippets):
@@ -315,6 +360,7 @@ async def _orchestrate_search(query: str, max_results: int = 3, company_domain: 
             return res, relevance
 
         # Fire both fan-outs concurrently
+        t0_fanout = time.time()
         eval_task = asyncio.gather(*[_eval(res) for res in unknown_snippets]) if unknown_snippets else None
         
         pre_scored = await asyncio.gather(*[_score(res) for res in allowed_snippets])
@@ -350,6 +396,7 @@ async def _orchestrate_search(query: str, max_results: int = 3, company_domain: 
                 extra_scored = await asyncio.gather(*[_score(res) for res in newly_accepted])
                 pre_scored = list(pre_scored) + list(extra_scored)
 
+        stats["phase_seconds"]["llm_fanout"] = time.time() - t0_fanout
         scored_snippets = []
         for res, relevance in pre_scored:
             scored_snippets.append((res, relevance.score))
@@ -363,6 +410,7 @@ async def _orchestrate_search(query: str, max_results: int = 3, company_domain: 
         
         domain_semaphores = defaultdict(lambda: asyncio.Semaphore(2))
         
+        t0_fetch = time.time()
         # Create a single shared session for connection pooling across the search
         async with cffi_requests.AsyncSession(impersonate="chrome") as session:
             for i in range(0, len(allowed_snippets), BATCH_SIZE):
@@ -415,8 +463,10 @@ async def _orchestrate_search(query: str, max_results: int = 3, company_domain: 
                     
             stats["reliable_sites_in_output"] = len(enriched_results)
             stats["total_runtime_seconds"] = round(time.time() - start_time, 2)
+            stats["phase_seconds"]["fetch_and_summarize"] = time.time() - t0_fetch
             
-        return enriched_results
+        logger.info(f"[timing] '{query}' -> {json.dumps(stats)}")
+        return enriched_results, stats
         
     except Exception as e:
         logger.error(f"Orchestration failed for '{query}': {e}")
