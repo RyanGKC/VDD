@@ -98,15 +98,14 @@ def generate_html(query: str, exa_results: list[dict], custom_results: list[dict
     """
     
     for res in custom_results:
-        summary = res.get('summarized_content', '')
-        # Only show the first 800 chars of truncated content to match exa's snippet sizes roughly for ui, 
-        # but keep the LLM summary box
-        snippet = res.get('truncated_content', '')[:800] + "..."
+        summary = res.get('content', '')
+        # Since we removed truncated_content from the schema, we'll just show the summary
+        snippet = summary[:800] + "..." if len(summary) > 800 else summary
         
         html += f"""
                 <div class="result-card">
-                    <a href="{res.get('url', '#')}" target="_blank" class="result-title">{res.get('title', 'Unknown')}</a>
-                    <div class="result-url">{res.get('url', '')}</div>
+                    <a href="{res.get('source_url', '#')}" target="_blank" class="result-title">{res.get('title', 'Unknown')}</a>
+                    <div class="result-url">{res.get('source_url', '')}</div>
                     <div class="result-snippet">{snippet}</div>
         """
         if summary and not summary.startswith("[Summarization Failed"):
@@ -139,8 +138,13 @@ async def main():
     exa_results = await get_exa_results(query, max_results=3)
     
     print(f"Executing Custom search for: '{query}'...")
-    custom_raw = await search_web(query, max_results=3)
-    custom_results = custom_raw.get("results", [])
+    custom_raw_str = await search_web(query, max_results=3)
+    try:
+        custom_raw = json.loads(custom_raw_str)
+        custom_results = custom_raw.get("results", [])
+    except Exception as e:
+        print(f"Failed to parse custom search output: {e}")
+        custom_results = []
     
     generate_html(query, exa_results, custom_results, output_html)
 

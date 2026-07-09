@@ -77,9 +77,16 @@ function App() {
         {/* Exa Column */}
         {(loading || results) && (
           <div className="column exa">
-            <h2 className="column-header exa">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
-              Exa API Results
+            <h2 className="column-header exa" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                Exa API Results
+              </div>
+              {results?.metrics?.exa_time_seconds !== undefined && (
+                <span className="time-badge" style={{ fontSize: '0.75rem', fontWeight: '600', backgroundColor: 'rgba(255,255,255,0.1)', padding: '4px 8px', borderRadius: '6px', color: '#a1a1aa' }}>
+                  {results.metrics.exa_time_seconds.toFixed(2)}s
+                </span>
+              )}
             </h2>
             {loading ? renderSkeleton() : (
               <div className="results-list">
@@ -102,9 +109,16 @@ function App() {
         {/* Custom Column */}
         {(loading || results) && (
           <div className="column custom">
-            <h2 className="column-header custom">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
-              Custom Scraper Results
+            <h2 className="column-header custom" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                Custom Scraper Results
+              </div>
+              {results?.metrics?.custom_time_seconds !== undefined && (
+                <span className="time-badge" style={{ fontSize: '0.75rem', fontWeight: '600', backgroundColor: 'rgba(255,255,255,0.1)', padding: '4px 8px', borderRadius: '6px', color: '#a1a1aa' }}>
+                  {results.metrics.custom_time_seconds.toFixed(2)}s
+                </span>
+              )}
             </h2>
             {loading ? renderSkeleton() : (
               <div className="results-list">

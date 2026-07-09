@@ -303,7 +303,7 @@ class WebSearchResponse(BaseModel):
 
 async def perform_web_search(ctx: DDContext, query: str) -> str:
     result = {"quality_flag": "partial", "source": "Unknown", "search_results": []}
-    provider = os.getenv("SEARCH_PROVIDER", "exa").lower()
+    provider = os.getenv("SEARCH_PROVIDER", "custom").lower()
     
     async def _try_exa():
         exa_api_key = os.getenv("EXA_API_KEY")
@@ -395,16 +395,8 @@ async def perform_web_search(ctx: DDContext, query: str) -> str:
             if ctx.company_details.website:
                 company_domain = get_domain(ctx.company_details.website)
                 
-            custom_data = await search_web(query, max_results=5, company_domain=company_domain)
-            if custom_data and custom_data.get("results"):
-                res_obj = {"source": "Custom Scraper", "quality_flag": "high", "search_results": []}
-                for res in custom_data["results"]:
-                    res_obj["search_results"].append({
-                        "title": res.get("title", ""),
-                        "snippet": res.get("truncated_content", ""),
-                        "url": res.get("url", "")
-                    })
-                return json.dumps(res_obj)
+            custom_data_str = await search_web(query, max_results=5, company_domain=company_domain)
+            return custom_data_str
         except Exception as e:
             logger.error(f"Custom search failed: {e}")
         return None
