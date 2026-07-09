@@ -9,6 +9,7 @@ and re-planning.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 
 from pydantic import BaseModel, Field
@@ -166,14 +167,12 @@ class SupervisorAgent:
         if queries:
             print(f"[SUPERVISOR] Research Plan ({len(queries)} searches):")
             ctx.audit(f"[SUPERVISOR] Planned {len(queries)} verification searches.")
-            search_results = []
             for i, q in enumerate(queries):
                 print(f"  {i+1}. [{q.goal}] → '{q.query}'")
                 ctx.log(f"WEB SEARCH step=supervisor query='{q.query}' goal='{q.goal}'")
-                
+
+            async def _run_supervisor_search(i: int, q):
                 result_str = await perform_web_search(ctx, q.query)
-                
-                # Format raw data for readability in the audit log
                 formatted_data = result_str
                 try:
                     import json
@@ -181,10 +180,10 @@ class SupervisorAgent:
                     formatted_data = json.dumps(parsed, indent=2)
                 except Exception:
                     pass
-
-                search_results.append(f"Search {i+1} — Goal: {q.goal}\nQuery: {q.query}\nResults: {result_str}")
                 ctx.audit(f"[SUPERVISOR] Verification Search {i+1} [{q.query}]:\n{formatted_data}")
-            
+                return f"Search {i+1} — Goal: {q.goal}\nQuery: {q.query}\nResults: {result_str}"
+
+            search_results = await asyncio.gather(*[_run_supervisor_search(i, q) for i, q in enumerate(queries)])
             search_context = "\n\n--- WEB RESEARCH RESULTS ---\n" + "\n\n".join(search_results)
         
         # --- Phase 3: Final decision with all context ---

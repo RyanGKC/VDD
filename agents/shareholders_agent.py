@@ -38,7 +38,7 @@ class ShareholdersAgent(BaseResearchAgent):
 
         data = await fetch_corporate_registry(ctx, company_name, country)
 
-        analysis = await self.generate_with_web_search(
+        analysis, url_map = await self.generate_with_web_search(
             ctx=ctx,
             system_instruction=SYSTEM_INSTRUCTION,
             base_prompt=(
@@ -56,7 +56,7 @@ class ShareholdersAgent(BaseResearchAgent):
                 severity=parse_severity(f.severity),
                 is_red_flag=f.is_red_flag,
                 is_strength=f.is_strength,
-                sources=[Source(**s.model_dump()) for s in f.sources],
+                sources=[Source(title=s.title, url=url_map.get(s.source_id), publisher=s.publisher) for s in f.sources],
             )
             for f in analysis.findings
         ]
@@ -93,7 +93,7 @@ from pydantic import BaseModel, Field
 
 class _SourceModel(BaseModel):
     title: str = Field(description="The title of the source or document.")
-    url: str | None = Field(default=None, description="The URL of the source, if available.")
+    source_id: str | None = Field(default=None, description="The unique source_id from the web search results.")
     publisher: str | None = Field(default=None, description="The publisher or author of the source.")
 
 class _FindingModel(BaseModel):

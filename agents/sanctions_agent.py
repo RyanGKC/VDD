@@ -60,7 +60,7 @@ class SanctionsAgent(BaseResearchAgent):
         raw_hits = await screen_sanctions(ctx, entities)
 
         # 3. Let Gemini reason over the hits and produce structured findings.
-        analysis = await self.generate_with_web_search(
+        analysis, url_map = await self.generate_with_web_search(
             ctx=ctx,
             system_instruction=SYSTEM_INSTRUCTION,
             base_prompt=(
@@ -91,7 +91,7 @@ class SanctionsAgent(BaseResearchAgent):
                     summary=f.summary,
                     severity=calc_severity,
                     is_red_flag=calc_red_flag,
-                    sources=[Source(**s.model_dump()) for s in f.sources],
+                    sources=[Source(title=s.title, url=url_map.get(s.source_id), publisher=s.publisher) for s in f.sources],
                 )
             )
 
@@ -131,7 +131,7 @@ from pydantic import BaseModel, Field
 
 class _SourceModel(BaseModel):
     title: str = Field(description="The title of the source or document.")
-    url: str | None = Field(default=None, description="The URL of the source, if available.")
+    source_id: str | None = Field(default=None, description="The unique source_id from the web search results.")
     publisher: str | None = Field(default=None, description="The publisher or author of the source.")
 
 

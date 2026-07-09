@@ -106,7 +106,8 @@ class BaseResearchAgent(AgentExecutor, abc.ABC):
         # --- Phase 2: Execute all planned searches with async RAG orchestration ---
         print(f"[{step_val.upper()}] Research Plan ({len(queries)} searches):")
         
-        import asyncio
+        url_map = {}
+        
         async def _execute_single_search(i: int, q: Any) -> str:
             query_str = q.query
             goal_str = q.goal
@@ -164,6 +165,24 @@ class BaseResearchAgent(AgentExecutor, abc.ABC):
                     run_id,
                 )
 
+            # ── Step C.5: Map URLs to source_ids ──────────────
+            import json
+            import hashlib
+            try:
+                data = json.loads(result_str)
+                if "results" in data:
+                    for res in data["results"]:
+                        url = res.get("source_url") or res.get("url")
+                        if url:
+                            sid = f"src_{hashlib.md5(url.encode()).hexdigest()[:8]}"
+                            url_map[sid] = url
+                            res["source_id"] = sid
+                            res.pop("source_url", None)
+                            res.pop("url", None)
+                    result_str = json.dumps(data, indent=2)
+            except Exception:
+                pass
+
             # ── Step D: Try retrieval engine for a focused context window ─
             retrieval_engine = getattr(ctx, 'retrieval_engine', None)
             if retrieval_engine and run_id and getattr(ctx, 'enable_rag', True):
@@ -177,8 +196,8 @@ class BaseResearchAgent(AgentExecutor, abc.ABC):
                         retrieval_text = "...\n".join(distilled)
                         result_str = f"Raw Data:\n{result_str}\n\nRetrieved Context:\n{retrieval_text}"
                         ctx.log(f"RAG DISTILLATION step={step_val} returned targeted chunks")
-                except Exception:
-                    pass
+                except Exception as rag_exc:
+                    ctx.log(f"RAG DISTILLATION step={step_val} failed (non-blocking): {rag_exc}")
 
             return f"Search {i+1} — Goal: {goal_str}\nQuery: {query_str}\nResults: {result_str}"
 
@@ -200,7 +219,7 @@ class BaseResearchAgent(AgentExecutor, abc.ABC):
             )
         )
         
-        return analysis
+        return analysis, url_map
 
     # A2A discovery: advertise what this agent can do.
     @property

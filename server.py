@@ -32,7 +32,8 @@ async def lifespan(app: FastAPI):
     from core.dependencies import neo4j
     await neo4j.setup_constraints()
     yield
-    from core.dependencies import http_client
+    from core.dependencies import neo4j, http_client
+    await neo4j.close()
     await http_client.aclose()
 
 app = FastAPI(title="VDD Prototype API", lifespan=lifespan)
