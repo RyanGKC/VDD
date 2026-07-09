@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from typing import List, Dict, Optional
 from pydantic import BaseModel
@@ -22,7 +23,8 @@ class RetrievalEngine:
 
     async def _query_chroma(self, collection_name: str, query: str, where_filter: dict, top_k: int) -> List[str]:
         collection = self.vs.get_collection(collection_name)
-        results = collection.query(
+        results = await asyncio.to_thread(
+            collection.query,
             query_texts=[query],
             n_results=top_k,
             where=where_filter

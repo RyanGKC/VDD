@@ -40,8 +40,13 @@ def _score_candidate(domain: str, company_name: str) -> int:
     normalized_name = _normalize(company_name)
 
     score = 0
-    if normalized_name and (normalized_name in normalized_domain or normalized_domain in normalized_name):
-        score += 50  # domain root contains the company name (or vice versa, for abbreviations)
+    if normalized_name:
+        if normalized_name == normalized_domain:
+            score += 100
+        elif len(normalized_name) > 3 and (normalized_domain.startswith(normalized_name) or normalized_name.startswith(normalized_domain)):
+            score += 50
+        elif len(normalized_name) > 5 and normalized_name in normalized_domain:
+            score += 30
     if domain.endswith((".com", ".com.my", ".co.uk", ".gov")):
         score += 5   # mild preference for common corporate TLDs
     # Penalize domains that look like blogs/subpages about the company rather than the company itself

@@ -79,7 +79,7 @@ class EntityResolver:
                             
                 # Fallback: Fetch all names to do python-side fuzzy match ONLY if full-text failed
                 if not best_match or best_score < threshold:
-                    all_query = f"MATCH (n:{label}) RETURN n.name AS name, n.aliases AS aliases"
+                    all_query = f"MATCH (n:{label}) RETURN n.name AS name, n.aliases AS aliases LIMIT 500"
                     all_result = await session.run(all_query)
                     records = await all_result.data()
                     

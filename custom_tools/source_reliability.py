@@ -16,7 +16,12 @@ ALLOWLIST: set[str] = {
 }
 
 BLOCKLIST: set[str] = {
-    # Add any inherently bad domains here
+    # Paywalled research / spam report sites
+    "statista.com", "ibisworld.com", "researchandmarkets.com",
+    "gartner.com", "forrester.com", "marketsandmarkets.com",
+    "grandviewresearch.com", "mordorintelligence.com",
+    "fortunebusinessinsights.com", "globenewswire.com",
+    "prnewswire.com", "businesswire.com", "reportlinker.com",
 }
 
 # TLDs treated as inherently high-trust regardless of allowlist membership
@@ -48,21 +53,4 @@ def check_tier(url: str, company_domain: str | None = None, dynamic_allow: set[s
 
     return "unknown"
 
-def is_reliable(url: str, company_domain: str | None = None) -> bool:
-    domain = get_domain(url)
-    
-    if company_domain and domain.endswith(company_domain):
-        return True
-        
-    if domain.endswith(HIGH_TRUST_TLDS):
-        return True
-        
-    parts = domain.split(".")
-    # Check full domain, then progressively strip subdomains
-    # e.g., "finance.yahoo.com" -> checks "finance.yahoo.com", then "yahoo.com"
-    for i in range(max(1, len(parts) - 1)):
-        suffix = ".".join(parts[i:])
-        if suffix in ALLOWLIST:
-            return True
-            
-    return False
+

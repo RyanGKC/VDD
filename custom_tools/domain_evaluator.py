@@ -1,4 +1,6 @@
 import logging
+import time
+import json
 from pydantic import BaseModel
 from urllib.parse import urlparse
 from core.gemini_client import GeminiClient
@@ -21,6 +23,8 @@ SYSTEM_INSTRUCTION = (
     "search result title/snippet provided below. You do NOT have access to the "
     "page's full content, and you must not assume anything about its editorial "
     "quality, awards, or citations beyond what these structural signals suggest.\n\n"
+    "CRITICAL RULE: Rate paywalled market research and report-selling sites (e.g. ones that sell industry reports) as LOW trust. "
+    "These are not useful because we cannot scrape their full content.\n\n"
     "Be especially suspicious of domains that closely resemble well-known "
     "institutions but aren't exact matches (e.g. 'bbc-news-uk.com' instead of "
     "'bbc.com', 'reuters-daily.com' instead of 'reuters.com', "
@@ -30,13 +34,23 @@ SYSTEM_INSTRUCTION = (
 )
 
 
+CACHE_TTL_SECONDS = 60 * 60 * 24 * 60  # 60 days
+
 async def evaluate_domain(url: str, title: str, snippet: str) -> DomainEvaluation:
     parsed = urlparse(url)
     domain = parsed.netloc.lower().removeprefix("www.")
 
     cached = eval_cache.get(f"domain_eval:{domain}")
     if cached:
-        return DomainEvaluation.model_validate_json(cached)
+        try:
+            payload = json.loads(cached)
+            if "cached_at" in payload and "evaluation" in payload:
+                if time.time() - payload.get("cached_at", 0) < CACHE_TTL_SECONDS:
+                    return DomainEvaluation.model_validate(payload["evaluation"])
+            else:
+                return DomainEvaluation.model_validate(payload)
+        except Exception:
+            pass
 
     try:
         gemini = GeminiClient(model="gemini-2.5-flash-lite")
@@ -53,9 +67,16 @@ async def evaluate_domain(url: str, title: str, snippet: str) -> DomainEvaluatio
             prompt=prompt,
             schema=DomainEvaluation
         )
-        eval_cache.set(f"domain_eval:{domain}", result.model_dump_json())
-        if result.resembles_known_entity:
-            logger.warning(f"Possible impersonation domain detected: {domain} — {result.rationale}")
+        if result.resembles_known_entity and result.trust_level.lower() != "low":
+            logger.warning(f"Overriding trust_level to low for likely-impersonation domain: {domain}")
+            result = result.model_copy(update={"trust_level": "low"})
+            
+        payload = {
+            "cached_at": time.time(),
+            "evaluation": result.model_dump()
+        }
+        eval_cache.set(f"domain_eval:{domain}", json.dumps(payload))
+        
         return result
     except Exception as e:
         logger.warning(f"Domain evaluation failed for {domain}: {e}")

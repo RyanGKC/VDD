@@ -15,6 +15,7 @@ Freshness windows per source type:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone, timedelta
@@ -108,7 +109,8 @@ class CacheGate:
 
             # 3. Query Chroma — metadata-only, no semantic embedding needed
             collection = self.vs.get_collection(collection_name)
-            results = collection.get(
+            results = await asyncio.to_thread(
+                collection.get,
                 where=where_filter,
                 limit=10,
             )
