@@ -10,6 +10,15 @@ from typing import Type, TypeVar
 
 from pydantic import BaseModel
 from tenacity import retry, stop_after_attempt, wait_exponential
+import asyncio
+
+_GEMINI_SEMAPHORE = None
+
+def _get_semaphore():
+    global _GEMINI_SEMAPHORE
+    if _GEMINI_SEMAPHORE is None:
+        _GEMINI_SEMAPHORE = asyncio.Semaphore(10)
+    return _GEMINI_SEMAPHORE
 
 from google import genai
 from google.genai import types
@@ -79,11 +88,12 @@ class GeminiClient:
             config_kwargs["tools"] = [{"google_search": {}}]
 
         # Call Gemini asynchronously
-        response = await self._client.aio.models.generate_content(
-            model=self._model,
-            contents=prompt,
-            config=types.GenerateContentConfig(**config_kwargs),
-        )
+        async with _get_semaphore():
+            response = await self._client.aio.models.generate_content(
+                model=self._model,
+                contents=prompt,
+                config=types.GenerateContentConfig(**config_kwargs),
+            )
         
         if not response.text:
             finish_reason = getattr(response.candidates[0], 'finish_reason', 'UNKNOWN') if response.candidates else 'NO_CANDIDATES'
@@ -99,3 +109,16 @@ class GeminiClient:
         except Exception as exc:
             logger.error("Gemini returned unparseable output: %s\nText: %s", exc, response.text)
             raise
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=20),
+        reraise=True,
+    )
+    async def embed_content(self, texts: list[str]) -> list[list[float]]:
+        async with _get_semaphore():
+            response = await self._client.aio.models.embed_content(
+                model="text-embedding-004",
+                contents=texts,
+            )
+        return [emb.values for emb in response.embeddings]

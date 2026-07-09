@@ -110,7 +110,6 @@ class FlowEngine:
                 try:
                     result = task.result()
                     completed_this_round.add(step)
-                    print(f"DEBUG _execute_dag: completed {step}, on_step_complete={on_step_complete}")
                     if on_step_complete:
                         await on_step_complete(step, ctx)
                 except Exception as e:
