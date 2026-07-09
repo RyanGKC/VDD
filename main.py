@@ -66,7 +66,6 @@ async def run_dd_with_ctx(ctx: DDContext) -> DDReport:
         await neo4j.save_company_node(ctx.company_details.company_name, "PENDING")
 
         async def handle_step_complete(step: StepName, current_ctx: DDContext):
-            print(f"DEBUG: inside handle_step_complete: step={step}, tiers_to_search={current_ctx.tiers_to_search}")
 
             if step == StepName.SHAREHOLDERS and current_ctx.enable_parent_company:
                 parent_name = current_ctx.results[StepName.SHAREHOLDERS].structured_data.get("parent_company")
@@ -88,8 +87,6 @@ async def run_dd_with_ctx(ctx: DDContext) -> DDReport:
                             use_mock=current_ctx.use_mock,
                             tiers_to_search=current_ctx.tiers_to_search if current_ctx.enable_parent_supply_chain else 1,
                             max_suppliers_per_node=current_ctx.max_suppliers_per_node,
-                            visited_companies=current_ctx.visited_companies,
-                            visited_lock=current_ctx.visited_lock,
                             enable_parent_company=False,
                             enable_parent_supply_chain=current_ctx.enable_parent_supply_chain,
                             entity_role='parent',
@@ -104,6 +101,8 @@ async def run_dd_with_ctx(ctx: DDContext) -> DDReport:
                         # Assign by reference AFTER construction to bypass Pydantic's deep copy
                         parent_ctx.execution_log = current_ctx.execution_log
                         parent_ctx.detailed_audit_log = current_ctx.detailed_audit_log
+                        parent_ctx.visited_companies = current_ctx.visited_companies
+                        parent_ctx.visited_lock = current_ctx.visited_lock
                         current_ctx.log(f"SYSTEM: Spawning sub-pipeline for parent company: {parent_name}")
                         current_ctx.parent_task = asyncio.create_task(run_dd_with_ctx(parent_ctx))
                     else:
@@ -118,7 +117,6 @@ async def run_dd_with_ctx(ctx: DDContext) -> DDReport:
 
             if step == StepName.RESILIENCE and current_ctx.tiers_to_search > 1:
                 suppliers = current_ctx.results[StepName.RESILIENCE].structured_data.get("suppliers", [])
-                print(f"DEBUG handle_step_complete: extracted suppliers: {suppliers}")
                 suppliers = suppliers[:current_ctx.max_suppliers_per_node]
                 
                 for supplier_name in suppliers:
@@ -139,8 +137,6 @@ async def run_dd_with_ctx(ctx: DDContext) -> DDReport:
                             use_mock=current_ctx.use_mock,
                             tiers_to_search=current_ctx.tiers_to_search - 1,
                             max_suppliers_per_node=current_ctx.max_suppliers_per_node,
-                            visited_companies=current_ctx.visited_companies,
-                            visited_lock=current_ctx.visited_lock,
                             entity_role='supplier',
                             parent_entity=current_ctx.company_details.company_name,
                             run_id=current_ctx.run_id,
@@ -153,6 +149,8 @@ async def run_dd_with_ctx(ctx: DDContext) -> DDReport:
                         # Assign by reference AFTER construction to bypass Pydantic's deep copy
                         child_ctx.execution_log = current_ctx.execution_log
                         child_ctx.detailed_audit_log = current_ctx.detailed_audit_log
+                        child_ctx.visited_companies = current_ctx.visited_companies
+                        child_ctx.visited_lock = current_ctx.visited_lock
                         current_ctx.log(f"SYSTEM: Spawning sub-pipeline for supplier: {canonical_supplier}")
                         task = asyncio.create_task(run_dd_with_ctx(child_ctx))
                         current_ctx.child_tasks.append(task)
