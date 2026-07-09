@@ -83,7 +83,7 @@ async def compare_search(query: str = Query(..., description="The search query")
     print(f"🔄 [CUSTOM] Initiating Custom Web Scraper for: '{query}'")
     
     exa_task = measure_time(get_exa_results(query, max_results=5))
-    custom_task = measure_time(search_web(query, max_results=5))
+    custom_task = measure_time(search_web(query, max_results=5, debug=True))
     
     (exa_results, exa_time), (custom_raw, custom_time) = await asyncio.gather(exa_task, custom_task)
     
@@ -113,7 +113,8 @@ async def compare_search(query: str = Query(..., description="The search query")
         "custom": custom_formatted,
         "metrics": {
             "exa_time_seconds": round(exa_time, 2),
-            "custom_time_seconds": round(custom_time, 2)
+            "custom_time_seconds": round(custom_time, 2),
+            "custom_phase_stats": custom_dict.get("debug_stats", {})
         }
     }
 

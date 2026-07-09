@@ -115,9 +115,23 @@ function App() {
                 Custom Scraper Results
               </div>
               {results?.metrics?.custom_time_seconds !== undefined && (
-                <span className="time-badge" style={{ fontSize: '0.75rem', fontWeight: '600', backgroundColor: 'rgba(255,255,255,0.1)', padding: '4px 8px', borderRadius: '6px', color: '#a1a1aa' }}>
-                  {results.metrics.custom_time_seconds.toFixed(2)}s
-                </span>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                  <span className="time-badge" style={{ fontSize: '0.75rem', fontWeight: '600', backgroundColor: 'rgba(255,255,255,0.1)', padding: '4px 8px', borderRadius: '6px', color: '#a1a1aa' }}>
+                    {results.metrics.custom_time_seconds.toFixed(2)}s
+                  </span>
+                  {results.metrics.custom_phase_stats && results.metrics.custom_phase_stats.phase_seconds && (
+                    <div style={{ fontSize: '0.65rem', color: '#71717a', textAlign: 'right', display: 'flex', flexDirection: 'column', backgroundColor: 'rgba(0,0,0,0.2)', padding: '4px', borderRadius: '4px', marginTop: '4px' }}>
+                      <span style={{fontWeight: 'bold', marginBottom: '2px', color: '#a1a1aa'}}>Phase Breakdown</span>
+                      <span>DDG Search: {results.metrics.custom_phase_stats.phase_seconds.initial_ddg_search?.toFixed(2)}s</span>
+                      {results.metrics.custom_phase_stats.adaptive_expansion_triggered && (
+                        <span>Expansion: {results.metrics.custom_phase_stats.phase_seconds.adaptive_expansion?.toFixed(2)}s</span>
+                      )}
+                      <span>Embed: {results.metrics.custom_phase_stats.phase_seconds.embedding_batch?.toFixed(2)}s</span>
+                      <span>LLM Fanout: {results.metrics.custom_phase_stats.phase_seconds.llm_fanout?.toFixed(2)}s</span>
+                      <span>Fetch+Summ: {results.metrics.custom_phase_stats.phase_seconds.fetch_and_summarize?.toFixed(2)}s</span>
+                    </div>
+                  )}
+                </div>
               )}
             </h2>
             {loading ? renderSkeleton() : (
