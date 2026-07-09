@@ -1,0 +1,553 @@
+=== AUDIT LOG FOR Micron Technology, Inc. ===
+Generated: 2026-07-09T11:08:01.509325
+------------------------------------------------------------
+
+2026-07-09T02:52:14.528300+00:00 | SYSTEM: Pre-warming entity resolver cache...
+2026-07-09T02:52:14.562365+00:00 | SYSTEM: Assigned dynamic search budget of 2 per agent.
+2026-07-09T02:52:14.562500+00:00 | SYSTEM: Spawning DAG execution for 9 steps...
+2026-07-09T02:52:14.562885+00:00 | START step=licenses
+2026-07-09T02:52:14.578976+00:00 | START step=profile
+2026-07-09T02:52:14.579298+00:00 | START step=finances
+2026-07-09T02:52:14.583206+00:00 | START step=shareholders
+2026-07-09T02:52:14.631624+00:00 | [PROFILE] Cache MISS: Skipping LLM planning, using 2 default queries (budget: 2).
+2026-07-09T02:52:14.632072+00:00 | [LICENSES] Cache MISS: Skipping LLM planning, using 2 default queries (budget: 2).
+2026-07-09T02:52:14.632235+00:00 | [PROFILE] Executing search 1/2: 'Micron Technology, Inc. business model products services'
+2026-07-09T02:52:14.632332+00:00 | [PROFILE] Executing search 2/2: 'Micron Technology, Inc. major competitors market share'
+2026-07-09T02:52:14.632381+00:00 | [LICENSES] Executing search 1/2: 'Micron Technology, Inc. regulatory licenses certifications'
+2026-07-09T02:52:14.632401+00:00 | [LICENSES] Executing search 2/2: 'Micron Technology, Inc. regulatory fines loss of license'
+2026-07-09T02:52:17.415825+00:00 | [FINANCES] Cache MISS: Skipping LLM planning, using 2 default queries (budget: 2).
+2026-07-09T02:52:17.415889+00:00 | [FINANCES] Executing search 1/2: 'Micron Technology, Inc. financial statements revenue'
+2026-07-09T02:52:17.415923+00:00 | [FINANCES] Executing search 2/2: 'Micron Technology, Inc. bankruptcy insolvency'
+2026-07-09T02:52:18.057433+00:00 | [SHAREHOLDERS] Cache MISS: Skipping LLM planning, using 2 default queries (budget: 2).
+2026-07-09T02:52:18.057528+00:00 | [SHAREHOLDERS] Executing search 1/2: 'Micron Technology, Inc. ultimate beneficial owners UBO'
+2026-07-09T02:52:18.057573+00:00 | [SHAREHOLDERS] Executing search 2/2: 'Micron Technology, Inc. major shareholders parent company'
+2026-07-09T02:54:06.797424+00:00 | RAG DISTILLATION step=licenses returned targeted chunks
+2026-07-09T02:54:35.140294+00:00 | RAG DISTILLATION step=finances returned targeted chunks
+2026-07-09T02:54:36.640571+00:00 | RAG DISTILLATION step=profile returned targeted chunks
+2026-07-09T02:54:42.423118+00:00 | RAG DISTILLATION step=licenses returned targeted chunks
+2026-07-09T02:54:45.166571+00:00 | DONE step=shareholders findings=1
+2026-07-09T02:54:45.166694+00:00 | [SHAREHOLDERS] Rationale:
+Micron Technology, Inc. is a publicly traded corporation (NASDAQ: MU) incorporated in Delaware and headquartered in Boise, Idaho. As a publicly traded entity, its ownership is highly dispersed among institutional and retail investors, with no single individual acting as an Ultimate Beneficial Owner (UBO). According to SEC filings and financial reports from early 2026, institutional investors hold approximately 81% to 82% of the company's outstanding shares. The top institutional shareholders are Vanguard Group (holding approx. 9.45%), BlackRock (holding approx. 8.93%), and Capital World Investors / State Street Corporation. Top individual insider shareholders include Sanjay Mehrotra (President & CEO), Manish Bhatia, and Sumit Sadana, who collectively hold a very small fraction of the company (insiders hold ~0.25% in total). Because it is a publicly traded company with dispersed ownership, the lack of a single UBO is expected and does not constitute a red flag.
+2026-07-09T02:54:45.166819+00:00 | [SHAREHOLDERS] Raw Data:
+{
+  "quality_flag": "high",
+  "source": "API",
+  "data": {
+    "entity_type": "Publicly Traded Corporation",
+    "ubo_expectation": "Dispersed/Institutional",
+    "sec_filings": {
+      "accessionNumber": [
+        "0000723125-25-000038",
+        "0000723125-25-000028",
+        "0000723125-24-000039",
+        "0000723125-24-000027",
+        "0001104659-24-021465"
+      ],
+      "filingDate": [
+        "2025-11-25",
+        "2025-10-03",
+        "2024-11-26",
+        "2024-10-04",
+        "2024-02-13"
+      ],
+      "reportDate": [
+        "2026-01-15",
+        "2025-08-28",
+        "2025-01-16",
+        "2024-08-29",
+        ""
+      ],
+      "acceptanceDateTime": [
+        "2025-11-25T21:16:48.000Z",
+        "2025-10-03T18:42:25.000Z",
+        "2024-11-26T21:36:16.000Z",
+        "2024-10-04T20:12:50.000Z",
+        "2024-02-13T22:09:43.000Z"
+      ],
+      "act": [
+        "34",
+        "34",
+        "34",
+        "34",
+        "34"
+      ],
+      "form": [
+        "DEF 14A",
+        "10-K",
+        "DEF 14A",
+        "10-K",
+        "SC 13G/A"
+      ],
+      "fileNumber": [
+        "001-10658",
+        "001-10658",
+        "001-10658",
+        "001-10658",
+        "005-37198"
+      ],
+      "filmNumber": [
+        "251521472",
+        "251373321",
+        "241504509",
+        "241355056",
+        "24629050"
+      ],
+      "items": [
+        "",
+        "",
+        "",
+        "",
+        ""
+      ],
+      "core_type": [
+        "XBRL",
+        "XBRL",
+        "XBRL",
+        "XBRL",
+        "SC 13G/A"
+      ],
+      "size": [
+        74639439,
+        22993305,
+        45175106,
+        17528532,
+        13057
+      ],
+      "isXBRL": [
+        1,
+        1,
+        1,
+        1,
+        0
+      ],
+      "isInlineXBRL": [
+        1,
+        1,
+        1,
+        1,
+        0
+      ],
+      "isXBRLNumeric": [
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "primaryDocument": [
+        "mu-20251125.htm",
+        "mu-20250828.htm",
+        "mu-20241126.htm",
+        "mu-20240829.htm",
+        "tv01454-microntechnologyinc.htm"
+      ],
+      "primaryDocDescription": [
+        "DEF 14A",
+        "10-K",
+        "DEF 14A",
+        "10-K",
+        "SCHEDULE 13G/A"
+      ]
+    }
+  }
+}
+2026-07-09T02:54:45.167030+00:00 | START step=kyb
+2026-07-09T02:54:48.928274+00:00 | DONE step=finances findings=3
+2026-07-09T02:54:48.928333+00:00 | [FINANCES] Rationale:
+Micron's financial health has rebounded dramatically in fiscal year 2025 (ended August 31, 2025) compared to the severe industry down-cycle of fiscal year 2023. In FY23, Micron suffered a net loss of $5.83 billion and generated an EBITDA of only $2.49 billion. By FY25, driven by the rapid expansion of AI infrastructure and demand for High-Bandwidth Memory (HBM), revenue surged to $37.38 billion, and EBITDA recovered to $18.48 billion. With interest expenses of $477 million, Micron's interest coverage ratio (EBITDA/Interest Expense) stands at an exceptionally strong 38.7x. Operating cash flows and profitability are highly robust, and the company's leverage is extremely low relative to its current earnings capacity, indicating negligible solvency risk.
+2026-07-09T02:54:48.928384+00:00 | [FINANCES] Raw Data:
+DB: {"quality_flag": "high", "source": "yfinance", "data": {"yfinance_income": "| index                                                      |    2025-08-31 |   2024-08-31 |   2023-08-31 |   2022-08-31 |   2021-08-31 |\n|:-----------------------------------------------------------|--------------:|-------------:|-------------:|-------------:|-------------:|\n| Tax Effect Of Unusual Items                                |  -1.972e+07   |  -5.46e+06   |  -6.93e+07   | -5.952e+06   |    nan       |\n| Tax Rate For Calcs                                         |   0.116       |   0.364      |   0.21       |  0.093       |    nan       |\n| Normalized EBITDA                                          |   1.8653e+10  |   9.597e+09  |   2.816e+09  |  1.694e+10   |    nan       |\n| Total Unusual Items                                        |  -1.7e+08     |  -1.5e+07    |  -3.3e+08    | -6.4e+07     |    nan       |\n| Total Unusual Items Excluding Goodwill                     |  -1.7e+08     |  -1.5e+07    |  -3.3e+08    | -6.4e+07     |    nan       |\n| Net Income From Continuing Operation Net Minority Interest |   8.539e+09   |   7.78e+08   |  -5.833e+09  |  8.687e+09   |    nan       |\n| Reconciled Depreciation                                    |   8.352e+09   |   7.78e+09   |   7.756e+09  |  7.116e+09   |    nan       |\n| Reconciled Cost Of Revenue                                 |   2.2505e+10  |   1.9498e+10 |   1.6956e+10 |  1.686e+10   |    nan       |\n| EBITDA                                                     |   1.8483e+10  |   9.582e+09  |   2.486e+09  |  1.6876e+10  |    nan       |\n| EBIT                                                       |   1.0131e+10  |   1.802e+09  |  -5.27e+09   |  9.76e+09    |    nan       |\n| Net Interest Income                                        |   1.9e+07     |  -3.3e+07    |   8e+07      | -9.3e+07     |    nan       |\n| Interest Expense                                           |   4.77e+08    |   5.62e+08   |   3.88e+08   |  1.89e+08    |    nan       |\n| Interest Income                                            |   4.96e+08    |   5.29e+08   |   4.68e+08   |  9.6e+07     |    nan       |\n| Normalized Income                                          |   8.68928e+09 |   7.8754e+08 |  -5.5723e+09 |  8.74505e+09 |    nan       |\n| Net Income From Continuing And Discontinued Operation      |   8.539e+09   |   7.78e+08   |  -5.833e+09  |  8.687e+09   |    nan       |\n| Total Expenses                                             |   2.7569e+10  |   2.3806e+10 |   2.0945e+10 |  2.1049e+10  |    nan       |\n| Total Operating Income As Reported                         |   9.77e+09    |   1.304e+09  |  -5.745e+09  |  9.702e+09   |    nan       |\n| Diluted Average Shares                                     |   1.125e+09   |   1.118e+09  |   1.093e+09  |  1.122e+09   |    nan       |\n| Basic Average Shares                                       |   1.116e+09   |   1.105e+09  |   1.093e+09  |  1.112e+09   |    nan       |\n| Diluted EPS                                                |   7.59        |   0.7        |  -5.34       |  7.75        |    nan       |\n| Basic EPS                                                  |   7.65        |   0.7        |  -5.34       |  7.81        |    nan       |\n| Diluted NI Availto Com Stockholders                        |   8.539e+09   |   7.78e+08   |  -5.833e+09  |  8.687e+09   |    nan       |\n| Average Dilution Earnings                                  | nan           | nan          | nan          |  0           |      0       |\n| Net Income Common Stockholders                             |   8.539e+09   |   7.78e+08   |  -5.833e+09  |  8.687e+09   |    nan       |\n| Net Income                                                 |   8.539e+09   |   7.78e+08   |  -5.833e+09  |  8.687e+09   |    nan       |\n| Minority Interests                                         | nan           | nan          | nan          |  0           |      0       |\n| Net Income Including Noncontrolling Interests              |   8.539e+09   |   7.78e+08   |  -5.833e+09  |  8.687e+09   |    nan       |\n| Net Income Continuous Operations                           |   8.539e+09   |   7.78e+08   |  -5.833e+09  |  8.687e+09   |    nan       |\n| Earnings From Equity Interest Net Of Tax                   |   9e+06       |  -1.1e+07    |   2e+06      |  4e+06       |    nan       |\n| Tax Provision                                              |   1.124e+09   |   4.51e+08   |   1.77e+08   |  8.88e+08    |    nan       |\n| Pretax Income                                              |   9.654e+09   |   1.24e+09   |  -5.658e+09  |  9.571e+09   |    nan       |\n| Other Income Expense                                       |  -1.74e+08    |  -3.2e+07    |  -3.33e+08   | -4.5e+07     |    nan       |\n| Other Non Operating Income Expenses                        |  -4e+06       |  -1.7e+07    |  -3e+06      |  1.9e+07     |    nan       |\n| Special Income Charges                                     |  -9.8e+07     |  -2e+06      |  -3.4e+08    | -9e+07       |    nan       |\n| Gain On Sale Of Ppe                                        | nan           |   5.9e+07    |   5.4e+07    |  4.1e+07     |      2.4e+07 |\n| Other Special Charges                                      |   5.9e+07     | nan          |   6.8e+07    |  8.3e+07     |      1e+06   |\n| Write Off                                                  |   9e+06       |   0          |   1.4e+07    |  6.3e+07     |    nan       |\n| Impairment Of Capital Assets                               |   0           |   0          |   1.01e+08   |  0           |    nan       |\n| Restructuring And Mergern Acquisition                      |   3e+07       |   1e+06      |   1.57e+08   | -1.5e+07     |    nan       |\n| Gain On Sale Of Security                                   |  -7.2e+07     | nan          |   1e+07      |  2.6e+07     |      8.2e+07 |\n| Net Non Operating Interest Income Expense                  |   1.9e+07     |  -3.3e+07    |   8e+07      | -9.3e+07     |    nan       |\n| Interest Expense Non Operating                             |   4.77e+08    |   5.62e+08   |   3.88e+08   |  1.89e+08    |    nan       |\n| Interest Income Non Operating                              |   4.96e+08    |   5.29e+08   |   4.68e+08   |  9.6e+07     |    nan       |\n| Operating Income                                           |   9.809e+09   |   1.305e+09  |  -5.405e+09  |  9.709e+09   |    nan       |\n| Operating Expense                                          |   5.064e+09   |   4.308e+09  |   3.989e+09  |  4.189e+09   |    nan       |\n| Other Operating Expenses                                   |   6.1e+07     |  -2.51e+08   |  -4.5e+07    |  7e+06       |    nan       |\n| Research And Development                                   |   3.798e+09   |   3.43e+09   |   3.114e+09  |  3.116e+09   |    nan       |\n| Selling General And Administration                         |   1.205e+09   |   1.129e+09  |   9.2e+08    |  1.066e+09   |    nan       |\n| Gross Profit                                               |   1.4873e+10  |   5.613e+09  |  -1.416e+09  |  1.3898e+10  |    nan       |\n| Cost Of Revenue                                            |   2.2505e+10  |   1.9498e+10 |   1.6956e+10 |  1.686e+10   |    nan       |\n| Total Revenue                                              |   3.7378e+10  |   2.5111e+10 |   1.554e+10  |  3.0758e+10  |    nan       |\n| Operating Revenue                                          |   3.7378e+10  |   2.5111e+10 |   1.554e+10  |  3.0758e+10  |    nan       |"}}
+WEB: (Ingested via RAG)
+2026-07-09T02:54:49.792900+00:00 | DONE step=licenses findings=3
+2026-07-09T02:54:49.793082+00:00 | [LICENSES] Rationale:
+The compliance verification for Micron Technology, Inc. was conducted using database records and unstructured web search results. The database records from SAM.gov were partial and required further setup, so the primary verification relied on web research. The findings show that Micron Technology, Inc. maintains active, high-level quality management certifications, including ISO 9001:2015 (first certified in 1994) and the automotive-specific IATF 16949:2016. Additionally, they hold an active ANSI/ESD S2020 electrostatic discharge facility certification. For operational communications, Micron holds an active FCC radio license (WPKL735) for its Boise, ID headquarters, which is valid until April 7, 2032. No evidence of revoked, expired, or fraudulent critical operational licenses was found in any of the sources.
+2026-07-09T02:54:49.793284+00:00 | [LICENSES] Raw Data:
+DB: {"quality_flag": "partial", "source": "API", "data": {"sam_gov": "Partial data - SAM API requires setup"}}
+2026-07-09T02:54:50.270414+00:00 | [KYB] Cache MISS: Skipping LLM planning, using 2 default queries (budget: 2).
+2026-07-09T02:54:50.270676+00:00 | [KYB] Executing search 1/2: 'Micron Technology, Inc. corporate registration details'
+2026-07-09T02:54:50.270805+00:00 | [KYB] Executing search 2/2: 'Micron Technology, Inc. headquarters address contact'
+2026-07-09T02:55:25.722257+00:00 | RAG DISTILLATION step=profile returned targeted chunks
+2026-07-09T02:55:32.123304+00:00 | DONE step=profile findings=3
+2026-07-09T02:55:32.123712+00:00 | [PROFILE] Rationale:
+Micron Technology, Inc. is a highly established, publicly traded global leader in the semiconductor industry, specializing in memory and storage solutions (DRAM, NAND, and NOR). Founded in 1978 and headquartered in Boise, Idaho, the company operates a vertically integrated business model controlling design, manufacturing, and sales. It is structured into key business units targeting Cloud Memory, Core Data Center, Mobile & Client, and Automotive & Embedded markets. A major strategic shift occurred recently with Micron's planned exit from the consumer memory market (including its Crucial brand) by early 2026 to focus heavily on high-margin AI data center solutions, specifically High-Bandwidth Memory (HBM). The company maintains robust international quality certifications (ISO 9001:2015, IATF 16949:2016, ANSI/ESD S2020) and is heavily backed by major institutional investors (Vanguard, BlackRock, State Street). There are no operational discrepancies or red flags indicating a shell company or fake operations.
+2026-07-09T02:55:32.124206+00:00 | START step=resilience
+2026-07-09T02:55:32.124580+00:00 | START step=esg
+2026-07-09T02:55:32.124702+00:00 | START step=media
+2026-07-09T02:55:32.131793+00:00 | [ESG] Cache MISS: Skipping LLM planning, using 2 default queries (budget: 2).
+2026-07-09T02:55:32.132069+00:00 | [ESG] Executing search 1/2: 'Micron Technology, Inc. ESG report'
+2026-07-09T02:55:32.132193+00:00 | [ESG] Executing search 2/2: 'Micron Technology, Inc. environmental violations controversy'
+2026-07-09T02:55:32.132287+00:00 | [RESILIENCE] Cache MISS: Skipping LLM planning, using 2 default queries (budget: 2).
+2026-07-09T02:55:32.132757+00:00 | [RESILIENCE] Executing search 1/2: 'Micron Technology, Inc. supply chain disruption cyber attack'
+2026-07-09T02:55:32.132841+00:00 | [RESILIENCE] Executing search 2/2: 'Micron Technology, Inc. operational resilience redundancy'
+2026-07-09T02:56:57.412536+00:00 | RAG DISTILLATION step=kyb returned targeted chunks
+2026-07-09T02:56:58.925924+00:00 | RAG DISTILLATION step=kyb returned targeted chunks
+2026-07-09T02:57:00.568947+00:00 | [MEDIA] Cache MISS: Skipping LLM planning, using 2 default queries (budget: 2).
+2026-07-09T02:57:00.569147+00:00 | [MEDIA] Executing search 1/2: 'Micron Technology, Inc. scandal fraud controversy news'
+2026-07-09T02:57:00.569272+00:00 | [MEDIA] Executing search 2/2: 'Micron Technology, Inc. lawsuit litigation'
+2026-07-09T02:57:02.200245+00:00 | RAG DISTILLATION step=esg returned targeted chunks
+2026-07-09T02:57:03.122635+00:00 | RAG DISTILLATION step=resilience returned targeted chunks
+2026-07-09T02:57:07.844402+00:00 | DONE step=kyb findings=1
+2026-07-09T02:57:07.844530+00:00 | [KYB] Rationale:
+Micron Technology, Inc. is a highly established, publicly traded corporation (NASDAQ: MU) incorporated in Delaware with perpetual existence. It actively files regulatory reports with the SEC (Form 10-K, Form S-8, etc.) and maintains active operations, including major manufacturing facilities and federal funding under the CHIPS Act. According to the critical instructions, its status is considered 'Good Standing' and valid by default.
+2026-07-09T02:57:07.844641+00:00 | [KYB] Raw Data:
+{
+  "quality_flag": "high",
+  "source": "API",
+  "data": {
+    "entity_type": "Publicly Traded Corporation",
+    "company_info": {
+      "name": "MICRON TECHNOLOGY INC",
+      "sic": "Semiconductors & Related Devices",
+      "stateOfIncorporation": "DE"
+    }
+  }
+}
+2026-07-09T02:57:07.845683+00:00 | START step=sanctions
+2026-07-09T02:57:10.865839+00:00 | RAG DISTILLATION step=resilience returned targeted chunks
+2026-07-09T02:57:22.957277+00:00 | DONE step=resilience findings=3
+2026-07-09T02:57:22.957736+00:00 | [RESILIENCE] Rationale:
+The analysis of Micron Technology, Inc. reveals critical dependencies on key technology partners and equipment suppliers. Specifically, Micron relies heavily on Nvidia Corporation, as Micron's high-performance HBM3E memory chips are integrated directly into Nvidia's H200 GPU chips, establishing a tight strategic and commercial dependency. Additionally, Micron's transition to leading-edge nodes (such as 1-gamma DRAM) relies on Extreme Ultraviolet (EUV) lithography systems, which are exclusively manufactured by ASML Holding N.V., representing a critical Single Point of Failure (SPOF) for advanced semiconductor manufacturing. The company also utilizes precision measurement systems from Carl Zeiss AG (ZEISS) and Optical Gaging Products (OGP) in its checking and testing laboratories. Geopolitically, while Micron is diversifying its manufacturing footprint with new fabs in Idaho and New York supported by the US CHIPS Act, its advanced packaging and manufacturing operations remain heavily concentrated in Singapore and other parts of Asia, exposing it to regional geopolitical tensions and supply chain bottlenecks.
+2026-07-09T02:57:26.250435+00:00 | RAG DISTILLATION step=esg returned targeted chunks
+2026-07-09T02:57:34.800462+00:00 | DONE step=esg findings=3
+2026-07-09T02:57:34.800703+00:00 | [ESG] Rationale:
+Micron Technology generally maintains strong operational quality standards, as evidenced by its ISO 9001:2015 and IATF 16949:2016 certifications. However, the company faces notable ESG risks. The most immediate material risk stems from a January 2026 environmental lawsuit challenging the fast-tracked environmental review of its $100 billion semiconductor megafab project in Clay, New York. Local residents and advocacy groups allege inadequate review of toxic chemicals (PFAS), wetland destruction, and greenhouse gas emissions. Historically, Micron has also faced significant regulatory penalties, primarily related to legacy anti-competitive price-fixing offenses, alongside minor environmental and labor-related fines.
+2026-07-09T02:58:33.454699+00:00 | RAG DISTILLATION step=media returned targeted chunks
+2026-07-09T02:58:44.217443+00:00 | RAG DISTILLATION step=media returned targeted chunks
+2026-07-09T02:58:56.442781+00:00 | DONE step=media findings=4
+2026-07-09T02:58:56.443145+00:00 | [MEDIA] Rationale:
+An adverse media screening of Micron Technology, Inc. was conducted using the provided search results. The screening identified several notable legal and regulatory issues. First, an ongoing environmental lawsuit was filed in January 2026 by local residents and advocacy groups (such as Jobs to Move America and Neighbors for a Better Micron) challenging the environmental review process for Micron's planned $100 billion semiconductor manufacturing campus in Clay, New York. This lawsuit alleges that the review was rushed and failed to adequately address risks from toxic chemicals (PFAS), wetlands destruction, and greenhouse gas emissions. Second, an antitrust class action lawsuit was filed in June 2025 in California against Samsung, SK Hynix, and Micron, alleging collusion to artificially restrict the supply of commodity DRAM to inflate prices. Third, historical securities fraud class actions and derivative lawsuits (e.g., Klein v. Micron and Silva v. Micron) were filed in late 2024 and early 2025 regarding alleged misleading statements about product demand and executive insider trading; however, the primary securities class action was dismissed by a federal judge in February 2026 and voluntarily dropped by plaintiffs in April 2026. Fourth, historical regulatory violations include a 2023 Department of Justice settlement of $85,000 for immigration-related hiring discrimination, and older price-fixing penalties from the mid-2000s. None of these findings constitute critical breaking news that fundamentally alters the risk profile of the vendor, and the most severe historical fraud allegations have been dismissed.
+2026-07-09T02:58:56.443368+00:00 | [MEDIA] Raw Data:
+{
+  "query": "Micron Technology, Inc. news scandal controversy lawsuit investigation",
+  "results": [
+    {
+      "title": "Micron Technology, Inc. Insider Selling Lawsuit and Dismissal",
+      "source_url": "https://legalclarity.org/micron-technology-inc-insider-selling-lawsuit-and-dismissal/",
+      "content": "Micron Technology, Inc. faced two shareholder lawsuits in early 2025 following a December 2024 earnings miss that caused its stock to drop. One lawsuit, a securities fraud class action (Klein v. Micron Technology, Inc.), alleged executives overstated demand for products, particularly NAND flash memory, and that CEO Sanjay Mehrotra sold tens of millions of dollars in stock. This case was filed in January 2025, with a class period from March 29, 2023, to December 18, 2024. The plaintiffs claimed 32 specific statements were false or misleading, citing Mehrotra's optimistic forecasts for long-term demand and fiscal year 2025 revenue. The case was dismissed by a federal judge in Idaho in February 2026, who found insufficient evidence of intent to mislead. The plaintiffs voluntarily dropped the case in April 2026, and it was terminated in May 2026. A separate derivative suit (Silva v. Micron Technology Inc. et al.), filed in January 2025, accused executives including CEO Sanjay Mehrotra and CFO Mark Murphy of insider trading and breach of fiduciary duty. The suit alleged Mehrotra sold approximately $70 million worth of stock while possessing material non-public information about weakening demand. It also claimed executives made false statements about demand recovery and that the company spent over $300 million on share buybacks while the stock was artificially inflated. This suit was initially filed in Florida but refiled in Idaho in February 2025. The current status of this refiled case is not reported. CEO Mehrotra sold shares under a Rule 10b5-1 trading plan in June 2025, and CFO Murphy sold shares valued over $32 million in July and October 2025, also under 10b5-1 plans. The article also mentions a 2017 SEC lawsuit against Anand Jayapalan, a former Micron VP, for insider trading at his previous employer, SanDisk, which is unrelated to the 2024-2025 litigation. Despite the allegations, Micron's broader financial results improved, with revenue reaching $8.05 billion and net income $1.58 billion for the quarter ended February 27, 2025.",
+      "relevance_score": 81,
+      "trust_tier": "allow"
+    },
+    {
+      "title": "Micron Lawsuits: Environmental Review and Securities Fraud",
+      "source_url": "https://legalclarity.org/micron-lawsuits-environmental-review-and-securities-fraud/",
+      "content": "Micron Technology is facing two major legal challenges: an environmental review lawsuit concerning its semiconductor manufacturing campus in Clay, New York, and a previously filed securities fraud class action. The New York lawsuit, filed in January 2026 by local residents and an advocacy group, challenges the environmental review process for the \"megafab\" project, alleging it was rushed and inadequately addressed risks from toxic chemicals, wetlands, and emissions. The project, backed by approximately $6.1 billion in federal CHIPS Act funding and over $11 billion in state incentives, involves a total investment of up to $100 billion over 20 years, with the first phase costing around $20 billion. The lawsuit names several agencies and Micron as respondents, seeking to annul the Final Environmental Impact Statement and associated permits. Key concerns include the use and discharge of PFAS \"forever chemicals,\" potential impacts on wetlands and flood protection, and greenhouse gas emissions exceeding state targets. Separately, a federal securities fraud class action filed in Idaho (March 29, 2023 - December 18, 2024) alleged misleading statements about demand recovery for Micron's products; this case was dismissed without prejudice on February 3, 2026, and voluntarily dismissed by plaintiffs on April 3, 2026. Additionally, in April 2023, Micron settled a Department of Justice claim for $85,000 regarding immigration-related hiring discrimination. The New York environmental lawsuit is ongoing, with no court date set, and could further delay the project, which has already experienced a two-to-three-year schedule slip. A coalition of 26 organizations is also advocating for a legally binding community benefits agreement with Micron, seeking commitments on local hiring, transparency of hazardous chemicals, and mitigation of community impacts.",
+      "relevance_score": 79,
+      "trust_tier": "allow"
+    }
+  ],
+  "error": null
+}
+2026-07-09T03:07:16.212063+00:00 | [SANCTIONS] Executing search 1/2: '"Micron Technology" "sanctioned" OR "entity list" OR "China" restrictions'
+2026-07-09T03:07:16.212844+00:00 | [SANCTIONS] Executing search 2/2: '"Sanjay Mehrotra" "PEP" OR "government" OR "advisory board"'
+2026-07-09T03:07:16.231251+00:00 | RAG CACHE HIT step=sanctions — skipped external API call
+2026-07-09T03:07:16.234938+00:00 | RAG CACHE HIT step=sanctions — skipped external API call
+2026-07-09T03:07:32.441669+00:00 | RAG DISTILLATION step=sanctions returned targeted chunks
+2026-07-09T03:07:32.565301+00:00 | RAG DISTILLATION step=sanctions returned targeted chunks
+2026-07-09T03:07:42.778062+00:00 | DONE step=sanctions findings=3
+2026-07-09T03:07:42.778436+00:00 | [SANCTIONS] Rationale:
+A comprehensive sanctions compliance review was conducted on Micron Technology, Inc. and its known shareholders (Vanguard Group, BlackRock, Capital World Investors, State Street Corporation, Sanjay Mehrotra, Manish Bhatia, and Sumit Sadana) using the provided raw screening hits and supplementary web research. No direct sanctions matches or active listings on OFAC's Specially Designated Nationals (SDN) or Consolidated Non-SDN lists were identified for Micron Technology, Inc. or its individual executive shareholders (Sanjay Mehrotra, Manish Bhatia, Sumit Sadana). A potential name match for 'Sanjay Mehrotra' was evaluated against an SDN entry for 'Raj Vaya SANJAY' (Kenyan national, DOB 07 Aug 2000); this was determined to be a false positive due to completely different biographical details (nationality, age, and full name). Regarding institutional shareholders, State Street Corporation and its subsidiary Charles River Systems, Inc. settled a civil liability of $7,452,501 with OFAC in July 2024 for 38 apparent violations of Ukraine-/Russia-Related Sanctions Regulations occurring between 2016 and 2020. This historical enforcement action does not place State Street Corporation on an active sanctions list. Additionally, public reports highlight that BlackRock's offshore funds hold investments in certain Chinese Military-Industrial Complex companies that are subject to US investment restrictions or export controls. However, neither BlackRock nor Micron Technology, Inc. are designated as blocked entities. Because no active sanctions matches exist for any of the parties, the overall sanctions risk is low, and no unmapped sanctioned parties requiring shareholder review were identified.
+2026-07-09T03:07:42.779975+00:00 | [SANCTIONS] Raw Data:
+{
+  "quality_flag": "medium",
+  "source": "web_search_fallback",
+  "hits": [],
+  "web_search_results": {
+    "Micron Technology, Inc.": {
+      "query": "\"Micron Technology, Inc.\" sanctioned OFAC list PEP",
+      "results": [
+        {
+          "title": "Sanctions List Service - Office of Foreign Assets Control",
+          "source_url": "https://ofac.treasury.gov/sanctions-list-service",
+          "content": "The Office of Foreign Assets Control (OFAC) Sanctions List Service (SLS) provides access to updated Sanctions Lists and data for download. Users can choose between the Specially Designated Nationals (SDN) List or the Consolidated (non-SDNs) List. A new feature, the Customize Sanctions Dataset tool, allows users to create custom datasets by selecting specific sanctions lists and/or programs. The SLS also includes the Sanctions List Search application, which uses fuzzy logic to find potential matches on the SDN List and Non-SDN Consolidated Sanctions List. The SDN list includes individuals, entities, groups, maritime vessels, and aircraft blocked by OFAC. Non-SDN sanctions lists are consolidated into separate data files. Archived published delta files are available by year. For technical support regarding SDN List products, contact OFAC via email at O_F_A_C@treasury.gov or by phone at 1-800-540-6322 and select menu option 8.",
+          "relevance_score": 12,
+          "trust_tier": "allow"
+        },
+        {
+          "title": "Compliance & ethics program | Micron Technology Inc.",
+          "source_url": "https://www.micron.com/about/sustainability/compliance-ethics/compliance-ethics-program",
+          "content": "Micron Technology emphasizes ethics and compliance through regular policy updates, training, and a dedicated Compliance Helpline managed by EthicsPoint. Michael Ray, Senior Vice President, General Counsel and Corporate Secretary, serves as the Chief Compliance Officer. The company provides anti-bribery/corruption and antitrust training to relevant employees and maintains comprehensive governance policies aligned with Sarbanes-Oxley and NASDAQ requirements. These include various Board and Company committees, such as the Governance Committee, Compensation Committee, Independent Audit Committee, and Disclosure Committee. Micron's corporate character is built on good governance, legal compliance, transparency, and cooperation, with ongoing reviews and revisions of its compliance policies and practices.",
+          "relevance_score": 13,
+          "trust_tier": "allow"
+        },
+        {
+          "title": "Trade Compliance Manager | Micron Technology",
+          "source_url": "https://careers.micron.com/careers/job/18918885",
+          "content": "Micron Technology utilizes Eightfold AI, a recruiting software, to assist in its hiring process. The software parses resumes, infers skills, and matches candidates to open roles, generating a match score that may influence recruiter attention but does not solely determine hiring outcomes. All decisions are made by human recruiters. The platform also provides job recommendations and may display publicly available professional information. Applicants can opt out of AI processing by submitting their resume directly to TA_EMEA@micron.com for roles in the EU or applying from the EU. Micron provides contact information for inquiries and requests for reasonable accommodation via email (privacy@micron.com), phone (+1-800-336-8915), or mail. The company also highlights its commitment to community, education, and sustainability through the Micron Foundation and sustainable practices. Perks offered to employees include Paid Time Off, Continuous Learning, Wellness Programs, Stock Purchase Program, Health Insurance, and Recognition. Recent blog posts cover topics like Parkinson's law, meeting customer demand, and a new office location in New York. YouTube videos are also available.",
+          "relevance_score": 16,
+          "trust_tier": "allow"
+        },
+        {
+          "title": "OFAC Specially Designated Nationals List - Sanctions List Service",
+          "source_url": "https://sanctionslist.ofac.treas.gov/Home/SdnList",
+          "content": "The sanctions list service application cannot run because JavaScript is not enabled or available in the browser. Users are directed to a static page.",
+          "relevance_score": 17,
+          "trust_tier": "allow"
+        },
+        {
+          "title": "Sanctions List Search",
+          "source_url": "http://sanctionssearch.ofac.treas.gov/",
+          "content": "The OFAC Sanctions List Search tool allows users to search multiple sanctions lists, including the Specially Designated Nationals and Blocked Persons (SDN) List, Foreign Sanctions Evaders List, Non-SDN Iran Sanctions Act List, Sectoral Sanctions Identifications List, List of Foreign Financial Institutions Subject to Correspondent Account or Payable-Through Account Sanctions, and Non-SDN Palestinian Legislative Council List. The tool uses approximate string matching and a confidence rating slider to identify potential matches, and it can detect misspellings. Users are advised to pay close attention to program codes associated with returned records. The tool is a supplementary aid and not a substitute for due diligence, and its use does not limit liability. The SDN List was last updated on 7/1/2026 at 10:08:32 AM, and the Non-SDN List was last updated on 1/8/2026 at 10:05:51 AM. Users can filter searches by type (Aircraft, Entity, Individual, Vessel), name, city, ID/Digital Currency Address, state/province, program, country, and list type (All, Non-SDN, SDN). A comprehensive list of available programs and countries is provided.",
+          "relevance_score": 10,
+          "trust_tier": "allow"
+        }
+      ],
+      "error": null
+    },
+    "Vanguard Group": {
+      "query": "\"Vanguard Group\" sanctioned OFAC list PEP",
+      "results": [
+        {
+          "title": "Effective Politically Exposed Person (PEP) Screening: Step by ...",
+          "source_url": "https://www.finscan.com/post/effective-politically-exposed-person-pep-screening-step-by-step",
+          "content": "Politically Exposed Persons (PEPs) are individuals holding prominent public functions, posing a higher risk for money laundering and corruption due to their potential access to public funds and influence. Scandals like 1MDB, Pandora Papers, and Russian oligarch activities highlight this pervasive issue. Financial institutions must implement robust PEP compliance programs, including Know Your Customer (KYC), risk assessments, and enhanced due diligence (EDD), to identify and monitor PEPs, their relatives, and close associates (RCAs). Regulatory requirements vary by jurisdiction, with recommendations from bodies like FATF, FinCEN, FCA, and EU AML Directives. The duration of PEP status is not fixed and depends on factors like informal influence and position seniority. Effective PEP screening involves determining risks, choosing appropriate software, customizing programs, integrating systems, educating staff, regular screening, staying updated on regulations and lists, and continuous monitoring. Challenges include maintaining up-to-date data, significant investment, navigating diverse global regulations, ensuring data quality to avoid false negatives, managing large data volumes, and dealing with false positives from screening software. Records involving PEPs must be maintained for at least five years, and suspicious transactions must be reported.",
+          "relevance_score": 6,
+          "trust_tier": "allow"
+        },
+        {
+          "title": "us_aml_certification_2024.pdf - The Vanguard Group",
+          "source_url": "https://personal1.vanguard.com/pdf/us_aml_certification_2024.pdf",
+          "content": "The Vanguard Group, Inc. and its subsidiaries certify that the Vanguard U.S. Funds, Vanguard Marketing Corporation (VMC), Vanguard National Trust Company (VNTC), and Vanguard Fiduciary Trust Company (VFTC) have implemented a comprehensive anti-money laundering (AML) program. This program is designed to comply with the Bank Secrecy Act, as amended by the USA PATRIOT Act, and includes written policies for suspicious activity reporting, a designated compliance officer, risk assessments, employee training, independent testing, and customer due diligence procedures, including Politically Exposed Persons (PEP) identification. Vanguard also has Know Your Customer (KYC) procedures with a Customer Identification Program (CIP) to verify customers and identify beneficial ownership. Dealings with shell banks are prohibited. Documentation is retained for at least 5 years after relationship termination. Vanguard screens against sanctions lists from the U.S. Department of the Treasury's Office of Foreign Assets Control (OFAC) and other international bodies, and takes steps to avoid relationships with sanctioned countries, persons, or entities. The document is dated 052324.",
+          "relevance_score": 16,
+          "trust_tier": "high"
+        },
+        {
+          "title": "PEP Screening: The Ultimate Guide",
+          "source_url": "https://regulaforensics.com/blog/pep-screening/",
+          "content": "PEP (Politically Exposed Person) screening is a crucial part of financial crime prevention, aimed at identifying individuals in high-profile public roles to mitigate risks of money laundering and corruption. PEPs, due to their access to resources and decision-making power, can exploit financial systems. The screening process involves identifying PEPs, assessing their risk profiles, and comparing customer information against databases of known PEPs and their associates. There are three main categories of PEPs: domestic, foreign, and international organization PEPs, each with varying risk levels influenced by factors like corruption levels in their home country and international guidelines (e.g., FATF categorizes foreign PEPs as higher risk). Screening also extends to family members and close associates. The PEP screening process typically includes data collection (name, DOB, country of political activity, dates of office), identity verification, screening against databases (regulatory, commercial, media), risk assessment (considering geographic risk, sectoral exposure, transactional behavior), and either onboarding with enhanced due diligence or denial. Ongoing monitoring is essential as PEP status is dynamic. Key challenges include false positives/negatives, limited data availability, fraudulent documents, dynamic PEP data, procedural negligence, and uncovering hidden relationships. Practical advice includes refining algorithms to reduce false positives, updating risk levels, using multiple screening tools, maintaining thorough documentation, and leveraging technology for ID verification and facial recognition. Regulatory requirements vary, with the US relying on FATF guidance and agencies like FinCEN and OFAC, the EU harmonizing through AML Directives, and the UK following its Money Laundering Regulations 2017 and focusing on ongoing monitoring.",
+          "relevance_score": 6,
+          "trust_tier": "allow"
+        },
+        {
+          "title": "PEP Screening for AML Compliance: Full Guide | SEON",
+          "source_url": "https://seon.io/resources/pep-screening-guide/",
+          "content": "PEP (Politically Exposed Person) screening is a crucial Anti-Money Laundering (AML) compliance requirement for financial institutions and increasingly other industries to identify individuals with elevated financial-crime risk due to political exposure. PEPs are individuals holding or having held high-ranking public roles, along with their close associates and family members. Failure to conduct proper PEP screening can lead to severe consequences, including substantial fines, reputational damage, and a decline in stock value. For example, TD Bank paid $3.1 billion in penalties in October 2024 for AML violations, and the Financial Conduct Authority fined Starling Bank \u00a328.96 million (approximately $36 million) in November 2024 for inadequate PEP and sanctions screenings. Research from Fenergo indicates that financial institutions faced an average stock drop of 6.5% in 2024 on the day a fine was announced. The PEP screening process involves data collection, cross-checking against PEP databases, risk assessment, enhanced due diligence (EDD) for high-risk individuals, decision-making, and ongoing monitoring. Methods for PEP screening range from manual checks using public registers and OSINT tools to semi-automated checks with specialist software and fully automated checks integrated with AML software. Global standards are often guided by the Financial Action Task Force (FATF), with specific regulations like the EU's 6th Anti-Money Laundering Directive (6AMLD) and guidance from the U.S. Financial Crimes Enforcement Network (FinCEN).",
+          "relevance_score": 0,
+          "trust_tier": "allow"
+        },
+        {
+          "title": "PEP Screening Tools: A Buyer's Guide | KYC Hub",
+          "source_url": "https://www.kychub.com/blog/pep-screening",
+          "content": "PEP screening tools are software solutions designed to identify Politically Exposed Persons (PEPs) by checking customer data against PEP databases, sanctions lists, and adverse media. PEPs are individuals with prominent public roles, or their close associates and family members, who pose a higher risk of corruption and money laundering due to their influence and access to public funds. Manual screening is insufficient due to the dynamic nature of PEP databases and the potential for severe consequences, including enforcement cases and reputational damage, from missed matches. PEP screening is a critical component of Know Your Customer (KYC) and Anti-Money Laundering (AML) compliance. There are three main types of PEPs: Foreign PEPs, Domestic PEPs, and International Organization PEPs. The screening process typically involves gathering customer details, matching them against relevant databases, analyst review of potential matches, and ongoing monitoring. Key features of effective PEP screening tools include comprehensive data coverage from trusted global sources, high match accuracy that handles aliases and transliterations, and seamless integration with broader AML workflows like risk rating and ongoing monitoring. While often bundled with sanctions screening, PEP screening identifies individuals requiring enhanced due diligence, not necessarily those who are prohibited from transactions. The Financial Action Task Force (FATF) provides guidance on identifying PEPs, though definitions and expectations can vary by jurisdiction. In the US, PEP screening is part of AML/CFT programs overseen by FinCEN, while the UK mandates it for both foreign and domestic PEPs under the FCA, with recent regulatory changes adjusting the risk presumption for domestic PEPs. PEP status is a risk classification, not a permanent accusation, and while individuals may be monitored for a period after leaving office (e.g., up to 18 months), a 'once a PEP, always a PEP' approach is discouraged in favor of a risk-based assessment. Technology plays a crucial role in enhancing PEP screening through automation, adverse media monitoring, integrated data, and electronic identity verification, leading to increased efficiency, accuracy, and better decision-making. PEPs are categorized by risk levels (low, medium, high), and specific red flags such as identity concealment, suspicious behavior, positions of authority, certain industry/transaction patterns, and local corruption risk warrant attention. Best practices include adopting a risk-based approach, conducting due diligence to the level of risk, requiring senior management approvals and periodic reviews, training staff, integrating trusted data sources, and continuous monitoring. Neglecting PEP screening can lead to significant penalties, as illustrated by enforcement cases like AmBank and Capital One. Solutions like KYC Hub offer integrated AML screening and monitoring, leveraging broad data coverage, real-time updates, adverse media intelligence, and network analysis to provide a comprehensive view of risk.",
+          "relevance_score": 6,
+          "trust_tier": "allow"
+        }
+      ],
+      "error": null
+    },
+    "BlackRock": {
+      "query": "\"BlackRock\" sanctioned OFAC list PEP",
+      "results": [
+        {
+          "title": "June 10, 2026 - BlackRock",
+          "source_url": "https://www.blackrock.com/corporate/literature/publication/blk-aml-and-sanctions-program-attestation-letter.pdf",
+          "content": "BlackRock, Inc. (NYSE: BLK), a publicly traded registered investment advisor headquartered in New York, is committed to combating financial crime, including money laundering, terrorist financing, and sanctions adherence. The firm operates under a risk-based framework to ensure compliance with relevant laws and regulations in the countries where it operates. This framework includes appointing Global and Regional Heads of Financial Crime Compliance, conducting entity-level risk assessments, implementing written policies and internal controls, and applying Customer Due Diligence (CDD) procedures. BlackRock performs enhanced due diligence on higher-risk customers, monitors transaction activity, and reports suspicious activities to regulatory authorities. The firm also provides financial crime training, conducts independent audits, prohibits business with shell banks, and maintains records for at least 5 years after a customer relationship terminates. BlackRock complies with sanctions regimes administered by OFAC, HM Treasury's OFSI, the EU, UN, and other local regimes, and takes steps to avoid relationships with sanctioned persons or entities. This information is for informational purposes only and does not create legally binding obligations.",
+          "relevance_score": 20,
+          "trust_tier": "allow"
+        },
+        {
+          "title": "CPA Report Details How BlackRock And MSCI Funnel Billions of ...",
+          "source_url": "https://prosperousamerica.org/cpa-report-details-how-blackrock-and-msci-funnel-billions-of-u-s-investor-capital-to-ccp-and-pla-linked-companies/",
+          "content": "A report by the Coalition for a Prosperous America (CPA) details how U.S. asset managers, specifically BlackRock and MSCI, are investing billions of dollars of U.S. investor capital into Chinese Communist Party (CCP) companies. These include firms sanctioned by the U.S. for human rights abuses and those aiding China's People's Liberation Army (PLA). BlackRock's offshore funds reportedly have about $130 million invested in 14 Chinese Military-Industrial Complex companies listed on Hong Kong, Shanghai, and Shenzhen stock exchanges, investments that would be illegal in the U.S. The report also states BlackRock is investing millions in an estimated 30 Chinese military-linked companies sanctioned by the U.S. and companies involved in China's nuclear weapons buildup. U.S. financial firms are partnering with state-controlled Chinese banks to sell investment products, benefiting both Wall Street through fees and China through capital flows. The U.S. House of Representatives, including the Select Committee on the Chinese Communist Party, is investigating these practices. CPA's report highlights specific findings: BlackRock's offshore funds invest in about 30 subsidiaries of Chinese Military-Industrial Complex companies, including those on the Treasury Department's Military-Industrial Complex List and the Commerce Department's Military-End User List or Entity List. BlackRock holds nearly $200 million in companies integral to China's nuclear weapons program and about $50 million in companies sanctioned for involvement in the Uyghur forced labor. BlackRock also owns stock in Chinese companies represented in military-themed ETFs and has a joint venture with China Construction Bank to access China's $9 trillion asset management market. China Securities Index (CSI) is identified as an index provider steering investor capital toward militarily useful enterprises, with the CCP influencing how U.S. asset managers invest in overseas markets. Advisors to CPA and former officials express concern that these investments undermine U.S. national security and human rights, urging Congress to make such investments illegal.",
+          "relevance_score": 61,
+          "trust_tier": "medium"
+        },
+        {
+          "title": "blackrock | Violation Tracker",
+          "source_url": "https://violationtracker.goodjobsfirst.org/parent/blackrock",
+          "content": "BlackRock, a publicly traded financial services company (ticker symbol BLK) headquartered in New York, has incurred a total of $30,001,093 in penalties since 2000 across 9 records. The majority of these penalties, totaling $20,351,093 across 8 records, are for financial offenses, specifically investor protection violations. Another $9,650,000 from 1 record is attributed to employment-related offenses, specifically benefit plan administrator violations. Notable individual penalties include $12,000,000 in 2015 to BlackRock Advisors LLC by the SEC for an investor protection violation, and $9,650,000 in 2021 to BlackRock Institutional Trust Company, N.A. from a private lawsuit-federal for a benefit plan administrator violation.",
+          "relevance_score": 22,
+          "trust_tier": "allow"
+        },
+        {
+          "title": "Blockchain Analytics Firm Chainalysis Analyzes OFAC\u2019s",
+          "source_url": "https://www.crowdfundinsider.com/2026/07/288998-blockchain-analytics-firm-chainalysis-analyzes-ofacs-expansion-of-isis-k-crypto-sanctions/",
+          "content": "On July 1, 2026, Chainalysis reported that the U.S. Department of the Treasury's OFAC added 134 cryptocurrency wallet addresses linked to ISIS-K to its Specially Designated Nationals list. Of these, 131 are on the TRON blockchain and three use Monero. The USDT issuer froze the TRON wallet balances. Chainalysis data indicates these TRON addresses received over $1.4 million in inflows and had outflows exceeding $880,000 since the start of 2023, reflecting donation activity. ISIS-K's media arm, al-Azaim Media Foundation, has solicited contributions via websites and messaging platforms. Many incoming transactions were small, consistent with individual donations. Funds were often moved through mainstream crypto services before some addresses sent portions to Syrian exchangers for conversion to cash. Historically, ISIS-K has used Bitcoin, TRON, and Monero for donations. Chainalysis highlights that the traceability of public blockchains aids authorities in mapping financing networks. The modest volumes do not negate the importance of vigilance, as small flows can support propaganda or recruitment. Financial institutions and crypto platforms are urged to integrate these designations into their screening processes immediately.",
+          "relevance_score": 15,
+          "trust_tier": "medium"
+        },
+        {
+          "title": "Sanctions List Service - Office of Foreign Assets Control",
+          "source_url": "https://ofac.treasury.gov/sanctions-list-service",
+          "content": "The Office of Foreign Assets Control (OFAC) Sanctions List Service (SLS) provides access to up-to-date sanctions list data for download, including the Specially Designated Nationals (SDN) List and the Consolidated (non-SDNs) List. SLS features a tool to create custom datasets by selecting specific sanctions lists and programs, and includes the Sanctions List Search application. This application uses fuzzy logic to search the SDN List and other Non-SDN lists. OFAC also maintains other sanctions lists accessible via the 'Other OFAC Sanctions Lists' page. The SLS offers access to the SDN List (individuals, entities, groups, maritime vessels, and aircraft blocked by OFAC), the Non-SDN Consolidated Sanctions List, customized datasets, and archived delta files by year. For technical support regarding SDN List products, users can contact OFAC via email at O_F_A_C@treasury.gov or by phone at 1-800-540-6322, selecting menu option 8. Additional information on the Sanctions List Search tool, its scoring, and usage is available in the FAQs, along with FAQs about the Advanced Sanctions Data Model of the SDN list.",
+          "relevance_score": 8,
+          "trust_tier": "allow"
+        }
+      ],
+      "error": null
+    },
+    "Capital World Investors": {
+      "query": "\"Capital World Investors\" sanctioned OFAC list PEP",
+      "results": [
+        {
+          "title": "OpenSanctions: Supreme Data on Supreme Leaders",
+          "source_url": "https://www.opensanctions.org/",
+          "content": "Tranche 2 reforms will extend AML screening and monitoring requirements to various Australian industries. The company has invested in tooling to analyze Australia's political structure and enhance its PEP data.",
+          "relevance_score": 10,
+          "trust_tier": "allow"
+        },
+        {
+          "title": "Sanctions List Search Tool - Office of Foreign Assets Control",
+          "source_url": "https://ofac.treasury.gov/sanctions-list-search-tool",
+          "content": "OFAC's Sanctions List Search tool uses fuzzy logic for name searches against the Specially Designated Nationals (SDN) List and the Non-SDN Consolidated Sanctions List. The consolidated list comprises the Foreign Sanctions Evaders List, Sectoral Sanctions Identifications List, List of Foreign Financial Institutions Subject to Correspondent Account or Payable-Through Account Sanctions, Non-SDN Palestinian Legislative Council List, Non-SDN Menu-Based Sanctions List, and Non-SDN Communist Chinese Military Companies List. Further details on the tool's functionality, scoring, and user eligibility are available in its FAQ.",
+          "relevance_score": 6,
+          "trust_tier": "allow"
+        },
+        {
+          "title": "Sanctions List Service - Office of Foreign Assets Control",
+          "source_url": "https://ofac.treasury.gov/sanctions-list-service",
+          "content": "The Office of Foreign Assets Control (OFAC) Sanctions List Service (SLS) provides access to updated Sanctions Lists and data for download, including the Specially Designated Nationals (SDN) List and the Consolidated (non-SDNs) List. A new feature, the Customize Sanctions Dataset tool, allows users to create custom datasets by selecting specific sanctions lists and/or programs. The SLS also includes the Sanctions List Search application, which uses fuzzy logic to find potential matches on the SDN List and Non-SDN Consolidated Sanctions List. OFAC maintains other sanctions lists in addition to the SDN list, which can be found on the 'Other OFAC Sanctions Lists' page. The SDN list contains names of individuals, entities, and groups designated by OFAC, as well as blocked maritime vessels and aircraft. Non-SDN sanctions lists are consolidated into separate data files that comply with OFAC's existing data standards. Archived published delta files are available by year. Frequently asked questions regarding the Sanctions List Search tool, its scoring, and users are available. Information on the Advanced Sanctions Data Model of the SDN list and advanced/legacy data formats is also provided. For technical support on SDN List products, users can contact OFAC via email at O_F_A_C@treasury.gov or by phone at 1-800-540-6322 and selecting menu option 8.",
+          "relevance_score": 6,
+          "trust_tier": "allow"
+        },
+        {
+          "title": "Free Sanctions Check - Instantly Search OFAC SDN & Global ...",
+          "source_url": "https://www.sanctionscanner.com/sanction-check",
+          "content": "Sanction Scanner offers a free tool to instantly check individuals, companies, and vessels against OFAC SDN, UK Financial Sanctions, and EU Official Sanction List, plus over 3,000 other global sanctions lists. The process involves entering a name, viewing matched records (name, entity type, country, sanctions list), and receiving a detailed PDF report via email within 1-2 minutes. The free tool covers three critical lists: OFAC SDN (US Treasury Specially Designated Nationals), UK Financial Sanctions (OFSI/HMT), and EU Official Sanction List. Their full platform provides access to over 3,000 databases, including PEPs, watchlists, and adverse media, with real-time API and batch screening options. Sanction Scanner ingests updates from official list publishers within minutes, with OFAC typically publishing updates several times per week. The PDF report includes aliases, documents, addresses, and program details. The service is free with no login required for the basic check. Businesses, including financial institutions, fintechs, and law firms, are required to screen customers against sanctions lists for AML and KYC compliance. Sanction Scanner also offers a REST API for integration into workflows, providing access to over 200 global databases.",
+          "relevance_score": 8,
+          "trust_tier": "allow"
+        },
+        {
+          "title": "Search - OpenSanctions",
+          "source_url": "https://www.opensanctions.org/search/",
+          "content": "The OpenSanctions API provides data on entities that are export-controlled, sanctioned, counter-sanctioned, linked to sanctions, disqualified, involved in crime, terrorism, or war crimes, or are Politically Exposed Persons (PEP). The data covers various countries including Russia, Libya, Afghanistan, Iraq, Syria, United States, United Arab Emirates, Iran, Pakistan, India, Yemen, Ukraine, Lebanon, Algeria, Belarus, Soviet Union, Antigua and Barbuda, Australia, Bahamas, Belize, Canada, United Kingdom, Northern Ireland, Wales, Grenada, Isle of Man, Jamaica, Saint Kitts and Nevis, Saint Lucia, New Zealand, Papua New Guinea, Solomon Islands, Tuvalu, Saint Vincent and the Grenadines, and Tanzania. The API is free for non-commercial users, while businesses require a data license.",
+          "relevance_score": 13,
+          "trust_tier": "allow"
+        }
+      ],
+      "error": null
+    },
+    "State Street Corporation": {
+      "query": "\"State Street Corporation\" sanctioned OFAC list PEP",
+      "results": [
+        {
+          "title": "Settlement Agreement between the U.S. Department of the ...",
+          "source_url": "https://ofac.treasury.gov/recent-actions/20240726",
+          "content": "The U.S. Department of the Treasury's Office of Foreign Assets Control (OFAC) has settled with State Street Bank and Trust Company (State Street) and its subsidiary, Charles River Systems, Inc. (Charles River), for $7,452,501. This settlement resolves 38 apparent violations of OFAC's Ukraine-/Russia-Related sanctions. The violations occurred between 2016 and 2020 and involved invoices that were redated or reissued by Charles River for customers subject to Directive 1 of Executive Order 13662, as well as accepting payments outside the applicable debt tenor from these customers. OFAC determined the violations were egregious and not voluntarily self-disclosed.",
+          "relevance_score": 76,
+          "trust_tier": "allow"
+        },
+        {
+          "title": "Enforcement Release: State Street Bank and Trust Company",
+          "source_url": "https://sanctions.org/turbofac/research/OFAC-enforcement-release-state-street-bank-and-trust-company",
+          "content": "State Street Bank and Trust Company and its subsidiary, Charles River Systems, Inc., have agreed to pay $7,452,501 to settle potential civil liability for apparent violations of OFAC's Ukraine-/Russia-Related Sanctions Regulations. The violations, which occurred between 2016 and 2020, involved 38 instances of redated or reissued invoices by Charles River for customers subject to Directive 1 of Executive Order 13662, and payments accepted from these customers. The total value of the invoices involved was approximately $1,270,456.",
+          "relevance_score": 71,
+          "trust_tier": "high"
+        },
+        {
+          "title": "State Street Bank settles $7.45m penalty over OFAC sanctions ...",
+          "source_url": "https://www.grip.globalrelay.com/state-street-bank-settles-7-45m-penalty-over-ofac-sanctions-violations/",
+          "content": "State Street will pay approximately $7.5 million to settle allegations that one of its subsidiaries received payments and redacted invoices from two Russian entities to bypass US sanctions. This settlement addresses 38 alleged violations of the Treasury's Office of Foreign Assets Control (OFAC).",
+          "relevance_score": 73,
+          "trust_tier": "high"
+        },
+        {
+          "title": "State Street\u2019s $7.45MM OFAC Penalty Highlights Importance of ...",
+          "source_url": "https://www.jdsupra.com/legalnews/state-street-s-7-45mm-ofac-penalty-5012475/",
+          "content": "The U.S. Department of the Treasury's Office of Foreign Assets Control (OFAC) has fined State Street Bank and Trust Company and its subsidiary Charles River Systems $7.45 million for 38 apparent violations of the Ukraine/Russia-Related Sanctions Regulations between December 2016 and May 2020. Charles River, acquired by State Street in 2018 for $2.6 billion, engaged in prohibited dealings in new debt by altering invoice dates for Russian entities (SSI entities) to circumvent sanctions imposed by Executive Order 13662. These violations occurred because SSI entities failed to make timely payments for Charles River's investment management software. OFAC highlighted that requests to alter records should raise suspicion, staff interacting with sanctioned entities need proper training, and prompt voluntary disclosure is crucial. The settlement also emphasizes the importance of thorough M&A due diligence for highly regulated entities acquiring businesses in less regulated sectors, as State Street may have uncovered Charles River's compliance gaps beforehand. State Street's voluntary disclosure was deemed not prompt enough by OFAC, leading to a determination that the violations were egregious.",
+          "relevance_score": 69,
+          "trust_tier": "allow"
+        },
+        {
+          "title": "Sanctions List Search",
+          "source_url": "http://sanctionssearch.ofac.treas.gov/Default.aspx",
+          "content": "The Sanctions List Search tool, administered by OFAC, allows users to search multiple sanctions lists including the Specially Designated Nationals and Blocked Persons (SDN) List, Foreign Sanctions Evaders List, Non-SDN Iran Sanctions Act List, Sectoral Sanctions Identifications List, List of Foreign Financial Institutions Subject to Correspondent Account or Payable-Through Account Sanctions, and the Non-SDN Palestinian Legislative Council List. The tool uses approximate string matching and a confidence rating slider to identify potential matches, including those with misspellings. Users are advised to pay close attention to program codes associated with returned records, as these indicate how a match should be treated. The tool is a supplementary aid and not a substitute for due diligence, and its use does not limit civil or criminal liability. The SDN List was last updated on July 1, 2026, at 10:08:32 AM, and the Non-SDN List was last updated on January 8, 2026, at 10:05:51 AM. Users can filter searches by type (Aircraft, Entity, Individual, Vessel), address components (Name, City, State/Province, Country), program, and list type (All, Non-SDN, SDN). A comprehensive list of programs and countries is provided for filtering.",
+          "relevance_score": 13,
+          "trust_tier": "allow"
+        }
+      ],
+      "error": null
+    },
+    "Sanjay Mehrotra": {
+      "query": "\"Sanjay Mehrotra\" sanctioned OFAC list PEP",
+      "results": [
+        {
+          "title": "OpenSanctions: Supreme Data on Supreme Leaders",
+          "source_url": "https://www.opensanctions.org/",
+          "content": "Tranche 2 reforms will extend AML screening and monitoring requirements to various Australian industries. The company has invested in tooling to analyze Australia's political structure and enhance its PEP data.",
+          "relevance_score": 16,
+          "trust_tier": "allow"
+        },
+        {
+          "title": "Search - OpenSanctions",
+          "source_url": "https://www.opensanctions.org/search/",
+          "content": "The OpenSanctions API provides data on entities that are export-controlled, sanctioned, linked to sanctions, counter-sanctioned, involved in terrorism, crime, or disqualified. The data includes companies and persons associated with various countries including Russia, Libya, Afghanistan, Iraq, Syria, United States, United Arab Emirates, Iran, Pakistan, India, Yemen, Ukraine, Lebanon, Algeria, Belarus, and Tanzania. It also lists individuals designated as Politically Exposed Persons (PEP) in Antigua and Barbuda, Australia, Bahamas, Belize, Canada, United Kingdom (including Northern Ireland and Wales), Grenada, Isle of Man, Jamaica, Saint Kitts and Nevis, Saint Lucia, New Zealand, Papua New Guinea, Solomon Islands, Tuvalu, and Saint Vincent and the Grenadines. The API is free for non-commercial users, while businesses require a data license. The data is current as of an unspecified date.",
+          "relevance_score": 14,
+          "trust_tier": "allow"
+        },
+        {
+          "title": "Sanctions List SearchSanctions List Search Tool - Office of Foreign Assets ControlSanctions List Service - Office of Foreign Assets ControlSearch - OpenSanctionsMicron CEO Accused Of Insider Trading In Fla. Investor SuitOpenSanctions: Supreme Data on Supreme Leaders",
+          "source_url": "https://sanctionssearch.ofac.treas.gov/Details.aspx?id=52082",
+          "content": "The OFAC Sanctions List Search tool allows users to search various sanctions lists, including the SDN List, by using approximate string matching and a confidence rating slider. It can detect misspellings and return proximate matches. The tool is not a substitute for due diligence and does not limit liability. A specific entry details Raj Vaya SANJAY, an individual on the SDN List, with a date of birth of 07 Aug 2000, Kenyan nationality, and a passport issued in Kenya with ID CK65152 expiring 08 Sep 2032. He has an alias 'SKORUS, Raj' and an address in Zimbabwe. The SDN List was last updated on 7/1/2026 10:08:32 AM, and the Non-SDN List was last updated on 1/8/2026 10:05:51 AM.",
+          "relevance_score": 48,
+          "trust_tier": "allow"
+        },
+        {
+          "title": "Sanctions List Search",
+          "source_url": "http://sanctionssearch.ofac.treas.gov/",
+          "content": "The OFAC Sanctions List Search tool allows users to search multiple sanctions lists, including the Specially Designated Nationals and Blocked Persons (SDN) List, Foreign Sanctions Evaders List, Non-SDN Iran Sanctions Act List, Sectoral Sanctions Identifications List, List of Foreign Financial Institutions Subject to Correspondent Account or Payable-Through Account Sanctions, and the Non-SDN Palestinian Legislative Council List. The tool uses approximate string matching and a confidence rating slider to identify potential matches, and it can detect misspellings. Users are advised to pay close attention to program codes associated with returned records. The SDN List was last updated on 7/1/2026, and the Non-SDN List was last updated on 1/8/2026. The tool offers search filters for type (Aircraft, Entity, Individual, Vessel), address components (Name, City, State/Province, Country), program, and list type (All, Non-SDN, SDN). A minimum name score can also be set. The use of this tool is not a substitute for due diligence and does not limit civil or criminal liability.",
+          "relevance_score": 12,
+          "trust_tier": "allow"
+        },
+        {
+          "title": "Sanctions List Service - Office of Foreign Assets Control",
+          "source_url": "https://ofac.treasury.gov/sanctions-list-service",
+          "content": "The Office of Foreign Assets Control (OFAC) Sanctions List Service (SLS) provides access to up-to-date sanctions list data for download, including the Specially Designated Nationals (SDN) List and the Consolidated (non-SDNs) List. A new feature, the Customize Sanctions Dataset tool, allows users to create custom datasets by selecting specific sanctions lists and/or programs. The SLS also includes the Sanctions List Search application, which uses fuzzy logic to find potential matches on the SDN List and Non-SDN Consolidated Sanctions List. OFAC also maintains other sanctions lists accessible via the 'Other OFAC Sanctions Lists' page. Technical support for SDN List products is available via email at O_F_A_C@treasury.gov or by phone at 1-800-540-6322 (select menu option 8). Frequently asked questions regarding the Sanctions List Search tool and the Advanced Sanctions Data Model of the SDN list are also available.",
+          "relevance_score": 17,
+          "trust_tier": "allow"
+        }
+      ],
+      "error": null
+    },
+    "Manish Bhatia": {
+      "query": "\"Manish Bhatia\" sanctioned OFAC list PEP",
+      "results": [
+        {
+          "title": "Entity List Search \u2014 OFAC SDN & BIS Sanctions Database | DataInfo",
+          "source_url": "https://entity.datainfo.ai/source/ofac",
+          "content": "The Specially Designated Nationals (SDN) List, maintained by the U.S. Department of the Treasury's Office of Foreign Assets Control (OFAC), identifies individuals, entities, and organizations deemed a threat to national security. U.S. persons are prohibited from transacting with those on the SDN List, facing potential civil and criminal penalties, including fines up to millions of dollars and imprisonment for violations.",
+          "relevance_score": 22,
+          "trust_tier": "medium"
+        },
+        {
+          "title": "Sanctions List Search Tool - Office of Foreign Assets Control",
+          "source_url": "https://ofac.treasury.gov/sanctions-list-search-tool",
+          "content": "OFAC's Sanctions List Search tool uses fuzzy logic for name searches against the Specially Designated Nationals (SDN) List and the Non-SDN Consolidated Sanctions List. The consolidated list comprises the Foreign Sanctions Evaders List, Sectoral Sanctions Identifications List, List of Foreign Financial Institutions Subject to Correspondent Account or Payable-Through Account Sanctions, Non-SDN Palestinian Legislative Council List, Non-SDN Menu-Based Sanctions List, and Non-SDN Communist Chinese Military Companies List. Further details on the tool's functionality, scoring, and user eligibility are available in its FAQ.",
+          "relevance_score": 51,
+          "trust_tier": "allow"
+        },
+        {
+          "title": "Search - OpenSanctions",
+          "source_url": "https://www.opensanctions.org/search/",
+          "content": "The OpenSanctions API provides data on entities that are export-controlled, sanctioned, linked to sanctions, counter-sanctioned, involved in terrorism, crime, or disqualified. The data includes companies and persons associated with various countries including Russia, Libya, Afghanistan, Iraq, Syria, United States, United Arab Emirates, Iran, Pakistan, India, Yemen, Ukraine, Lebanon, Algeria, Belarus, and Tanzania. It also lists individuals designated as Politically Exposed Persons (PEP) in Antigua and Barbuda, Australia, Bahamas, Belize, Canada, United Kingdom (including Northern Ireland and Wales), Grenada, Isle of Man, Jamaica, Saint Kitts and Nevis, Saint Lucia, New Zealand, Papua New Guinea, Solomon Islands, Tuvalu, and Saint Vincent and the Grenadines. The API is free for non-commercial users, while businesses require a data license. The data is current as of an unspecified date.",
+          "relevance_score": 15,
+          "trust_tier": "allow"
+        },
+        {
+          "title": "Sanctions List Search",
+          "source_url": "https://sanctionssearch.ofac.treas.gov/Details.aspx",
+          "content": "The Specially Designated Nationals and Blocked Persons list (SDN List) and other OFAC sanctions lists, including the Foreign Sanctions Evaders List, the Non-SDN Iran Sanctions Act List, the Sectoral Sanctions Identifications List, the List of Foreign Financial Institutions Subject to Correspondent Account or Payable-Through Account Sanctions, and the Non-SDN Palestinian Legislative Council List, are accessible through the Sanctions List Search tool. Users are advised to pay attention to program codes associated with returned records, which indicate how to treat a match. The tool employs approximate string matching and can detect misspellings, returning near matches based on a user-adjustable confidence rating via a slider-bar. OFAC does not recommend specific confidence ratings. The Sanctions List Search tool is an aid for using the SDN List and other sanctions lists, not a substitute for due diligence. Its use does not exempt users from criminal or civil liability.",
+          "relevance_score": 10,
+          "trust_tier": "allow"
+        },
+        {
+          "title": "Sanctions List Search",
+          "source_url": "http://sanctionssearch.ofac.treas.gov/",
+          "content": "The OFAC Sanctions List Search tool allows users to search multiple sanctions lists, including the Specially Designated Nationals and Blocked Persons (SDN) List, Foreign Sanctions Evaders List, Non-SDN Iran Sanctions Act List, Sectoral Sanctions Identifications List, List of Foreign Financial Institutions Subject to Correspondent Account or Payable-Through Account Sanctions, and the Non-SDN Palestinian Legislative Council List. The tool uses approximate string matching and a confidence rating slider to identify potential matches, and it can detect misspellings. Users are advised to pay close attention to program codes associated with returned records. The SDN List was last updated on 7/1/2026 at 10:08:32 AM, and the Non-SDN List was last updated on 1/8/2026 at 10:05:51 AM. The tool offers search filters for Type (Aircraft, Entity, Individual, Vessel), Address, Name, City, ID # / Digital Currency Address, State/Province, Program (a comprehensive list of sanctions programs is provided), Country, List (All, Non-SDN, SDN), and Region. It is important to note that using the Sanctions List Search tool is not a substitute for due diligence and does not limit criminal or civil liability.",
+          "relevance_score": 10,
+          "trust_tier": "allow"
+        }
+      ],
+      "error": null
+    },
+    "Sumit Sadana": {
+      "query": "\"Sumit Sadana\" sanctioned OFAC list PEP",
+      "results": [],
+      "error": null
+    }
+  }
+}
+2026-07-09T03:07:42.780498+00:00 | SUPERVISOR batch reviewing all completed results...
+2026-07-09T03:07:46.623090+00:00 | SUPERVISOR rationale: All steps have completed successfully. The findings across KYB, shareholders, finances, licenses, profile, resilience, ESG, media, and sanctions are consistent, detailed, and free of contradictions. The false positive on the sanctions list for Sanjay Mehrotra was correctly identified and resolved, and the litigation details are well-documented across multiple steps.
+2026-07-09T03:07:46.623128+00:00 | [SUPERVISOR] Decision Rationale:
+All steps have completed successfully. The findings across KYB, shareholders, finances, licenses, profile, resilience, ESG, media, and sanctions are consistent, detailed, and free of contradictions. The false positive on the sanctions list for Sanjay Mehrotra was correctly identified and resolved, and the litigation details are well-documented across multiple steps.
+2026-07-09T03:07:46.623815+00:00 | SUMMARY: Using speculative contradiction detection results from FlowEngine
