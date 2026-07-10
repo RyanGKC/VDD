@@ -83,6 +83,10 @@ const generateMockReport = (companyDetails) => {
     step_risk_scores: isHighRisk
       ? { Ownership: 90, KYB: 50, Sanctions: 100, Profile: 25, Licenses: 0, Financials: 75, Resilience: 25, ESG: 75, Media: 50 }
       : { Ownership: 0, KYB: 0, Sanctions: 0, Profile: 0, Licenses: 0, Financials: 50, Resilience: 0, ESG: 0, Media: 25 },
+    supply_items: [
+      { supplier_name: "Global Materials Ltd", category: "Raw Materials", description: "Primary supplier of industrial-grade aluminium and copper alloys." },
+      { supplier_name: "Logistics Pro", category: "Freight & Logistics", description: "Sole-source logistics partner for transpacific ocean freight." }
+    ],
     supply_chain: [
       {
         vendor_name: "Global Materials Ltd",
@@ -91,6 +95,9 @@ const generateMockReport = (companyDetails) => {
         red_flags: [],
         strengths: [],
         recommendations: [],
+        supply_items: [
+          { supplier_name: "Raw Metals Inc", category: "Mining & Metals", description: "Provides raw iron and copper inputs for materials manufacturing." }
+        ],
         supply_chain: [
           {
             vendor_name: "Raw Metals Inc",
@@ -110,6 +117,9 @@ const generateMockReport = (companyDetails) => {
         red_flags: [],
         strengths: [],
         recommendations: [],
+        supply_items: [
+          { supplier_name: "Oceanic Shipping Shell", category: "Shipping", description: "Charter services for cargo routing." }
+        ],
         supply_chain: [
           {
             vendor_name: "Oceanic Shipping Shell",
@@ -1003,6 +1013,47 @@ const SupplyChainGraph = ({ report, theme, onNodeSelect }) => {
   );
 };
 
+const SupplyInputsSection = ({ supplyItems }) => {
+  if (!supplyItems || supplyItems.length === 0) return null;
+
+  return (
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm p-6 transition-all duration-300">
+      <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 border-b border-slate-200 dark:border-slate-800 pb-2 flex items-center gap-2 mb-4">
+        <Building2 className="w-5 h-5 text-blue-600 dark:text-blue-500" />
+        Supply Inputs (Tier-1 Suppliers)
+      </h3>
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-800">
+          <thead>
+            <tr>
+              <th scope="col" className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Supplier Name</th>
+              <th scope="col" className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Category</th>
+              <th scope="col" className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Description</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-200 dark:divide-slate-800 bg-transparent">
+            {supplyItems.map((item, index) => (
+              <tr key={index} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors duration-150">
+                <td className="px-4 py-3.5 whitespace-nowrap text-sm font-semibold text-slate-900 dark:text-slate-100">
+                  {item.supplier_name}
+                </td>
+                <td className="px-4 py-3.5 whitespace-nowrap">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-100 dark:border-blue-900/50">
+                    {item.category}
+                  </span>
+                </td>
+                <td className="px-4 py-3.5 text-sm text-slate-600 dark:text-slate-300 max-w-md break-words">
+                  {item.description}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
 const Dashboard = ({ report, rootReport, onReset, onResetSupplier, theme, isGraphOpen, onToggleGraph, jobId }) => {
   // Data prep for charts
   const severityCounts = report.red_flags.reduce((acc, flag) => {
@@ -1115,6 +1166,9 @@ const Dashboard = ({ report, rootReport, onReset, onResetSupplier, theme, isGrap
         <h2 className="text-lg font-semibold text-slate-300 dark:text-slate-400 uppercase tracking-wider mb-3">Executive Summary</h2>
         <p className="text-lg leading-relaxed text-slate-100">{report.executive_summary}</p>
       </div>
+
+      {/* Supply Inputs */}
+      <SupplyInputsSection supplyItems={report.supply_items} />
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1626,6 +1680,7 @@ export default function App() {
                 </div>
               </div>
             )}
+
           </div>
         </main>
       </div>
