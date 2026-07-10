@@ -17,7 +17,7 @@ from typing import Any
 from core.openai_client import OpenAIClient
 from core.models import (
     DDContext, DDReport, Finding, Severity, SeverityLevel,
-    Source, StepName, parse_severity,
+    Source, StepName, parse_severity, SupplierItem
 )
 
 logger = logging.getLogger(__name__)
@@ -228,6 +228,21 @@ class SummaryAgent:
             exec_summary = f"Synthesis failed: {e}. See audit log for raw findings."
             recs = []
 
+        # Extract supply items from resilience structured data if available
+        supply_items_data = []
+        resilience_res = ctx.results.get(StepName.RESILIENCE)
+        if resilience_res and resilience_res.structured_data:
+            raw_items = resilience_res.structured_data.get("supply_items", [])
+            for item in raw_items:
+                if isinstance(item, dict):
+                    supply_items_data.append(
+                        SupplierItem(
+                            supplier_name=item.get("supplier_name", ""),
+                            category=item.get("category", ""),
+                            description=item.get("description", "")
+                        )
+                    )
+
         return DDReport(
             vendor_name=ctx.company_details.company_name,
             overall_risk=computed_risk,
@@ -238,4 +253,5 @@ class SummaryAgent:
             executive_summary=exec_summary,
             step_risk_scores=step_risk_scores,
             raw_sources_by_step=raw_sources_by_step,
+            supply_items=supply_items_data,
         )

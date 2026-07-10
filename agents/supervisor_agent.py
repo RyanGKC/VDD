@@ -235,4 +235,9 @@ class SupervisorAgent:
             if s in IDEAL_FLOW and s not in plan:
                 plan.append(s)
 
+        if not hasattr(ctx, '_replan_rationale'):
+            ctx._replan_rationale = {}
+        for s in plan:
+            ctx._replan_rationale[s] = decision.rationale
+
         return plan, True

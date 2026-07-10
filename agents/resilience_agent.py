@@ -14,7 +14,7 @@ You are a supply chain risk analyst. Evaluate the vendor's operational resilienc
 supply chain dependencies, and geographic exposure using the provided web search data.
 
 Identify explicit supplier companies (Tier 1 or Tier 2 dependencies, manufacturing partners, logistics partners, etc.) mentioned in the text. 
-CRITICAL: You must prioritize identifying the top, most critical suppliers (e.g. highest volume, strategic importance, or largest contracts). Output their exact registered company names in the 'suppliers' list, ordered by importance.
+CRITICAL: You must prioritize identifying the top, most critical suppliers (e.g. highest volume, strategic importance, or largest contracts). Output their details in the 'supply_items' list, ordered by importance.
 
 If you discover a critical dependency on a high-risk or potentially sanctioned 
 jurisdiction/entity that was not previously disclosed, set 'high_risk_dependency_found' 
@@ -42,7 +42,7 @@ class ResilienceAgent(BaseResearchAgent):
                 f"Vendor: {company_name}\n"
                 f"Country: {country}\n"
                 "Extract any explicitly named manufacturing or software suppliers. Focus on critical dependencies. "
-                "CRITICAL INSTRUCTION: You MUST populate the `suppliers` array with the exact names of ALL identified suppliers. Do not leave it empty."
+                "CRITICAL INSTRUCTION: You MUST populate the `supply_items` array with details of ALL identified suppliers. Do not leave it empty."
             ),
             schema=_ResilienceAnalysis,
         )
@@ -58,10 +58,14 @@ class ResilienceAgent(BaseResearchAgent):
             for f in analysis.findings
         ]
 
+        # Derive suppliers from supply_items and inject into structured_data for compatibility
+        structured_data = analysis.model_dump()
+        structured_data["suppliers"] = [item.supplier_name for item in analysis.supply_items]
+
         result = StepResult(
             step=self.step,
             findings=findings,
-            structured_data=analysis.model_dump(),
+            structured_data=structured_data,
             sources=[s for f in findings for s in f.sources],
             raw_data=None,
             rationale=analysis.rationale,
@@ -95,9 +99,14 @@ class _FindingModel(BaseModel):
     is_strength: bool = Field(default=False, description="Set to true if the finding indicates a highly resilient and diversified supply chain.")
     sources: list[_SourceModel] = Field(default_factory=list, description="The sources that support this finding.")
 
+class _SupplierItem(BaseModel):
+    supplier_name: str = Field(description="Exact registered name of the supplier company.")
+    category: str = Field(description="Short category label, e.g. 'Semiconductors', 'Cloud Services', 'Logistics'.")
+    description: str = Field(description="One sentence describing the specific product or service supplied and its strategic importance.")
+
 class _ResilienceAnalysis(BaseModel):
     rationale: str = Field(description="Detailed explanation of your reasoning. MUST be generated first.")
     findings: list[_FindingModel] = Field(description="List of specific findings.")
-    suppliers: list[str] = Field(default_factory=list, description="List of exact names of supplier companies discovered in the search.")
+    supply_items: list[_SupplierItem] = Field(default_factory=list, description="Structured list of suppliers and what they supply.")
     high_risk_dependency_found: bool = False
     dependency_details: str | None = None

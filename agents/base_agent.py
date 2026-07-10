@@ -5,6 +5,7 @@ from __future__ import annotations
 import abc
 import logging
 import json
+import asyncio
 
 from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.events import EventQueue, Event
@@ -114,9 +115,13 @@ class BaseResearchAgent(AgentExecutor, abc.ABC):
             ctx.log(f"[{step_val.upper()}] Executing search {i+1}/{len(queries)}: '{query_str}'")
             result_str: str | None = None
 
+            replan_rationale = getattr(ctx, '_replan_rationale', {}).get(step_val)
+            if replan_rationale:
+                goal_str += f"\n\nSUPERVISOR FEEDBACK FROM PREVIOUS FAILED ATTEMPT:\n{replan_rationale}\nAvoid the mistakes mentioned above."
+                
             # ── Step A: Cache Gate pre-check ──────────────────────────────
             cache_gate = getattr(ctx, 'cache_gate', None)
-            if cache_gate and getattr(ctx, 'enable_rag', True):
+            if cache_gate and getattr(ctx, 'enable_rag', True) and not replan_rationale:
                 cache_res = await cache_gate.check(
                     entity_name=ctx.company_details.company_name,
                     entity_type="company",
@@ -146,7 +151,7 @@ class BaseResearchAgent(AgentExecutor, abc.ABC):
                         try:
                             result_str = await perform_web_search(ctx, query_str)
                             sf.resolve(fp_key, run_id, result_str)
-                        except Exception as fetch_exc:
+                        except BaseException as fetch_exc:
                             sf.fail(fp_key, run_id, fetch_exc)
                             raise
                 else:
