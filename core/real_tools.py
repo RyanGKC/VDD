@@ -13,7 +13,10 @@ from core.gemini_client import GeminiClient
 from core.dependencies import http_client
 from custom_tools.yfinance_tool import get_financial_statement
 
+from core.cache import PersistentCache
+
 logger = logging.getLogger(__name__)
+cache_db = PersistentCache()
 
 # Helper to load cached doc or fetch
 async def fetch_json(ctx: DDContext, url: str, headers: dict = None, auth=None) -> dict | None:
@@ -157,43 +160,81 @@ async def screen_sanctions(ctx: DDContext, entities: list[str]) -> str:
     result = {"quality_flag": "partial", "source": "API", "hits": []}
     api_key = os.getenv("OPENSANCTIONS_API_KEY")
     
-    if api_key and entities:
+    # 1. Check cache for all entities (7-day TTL)
+    ttl_7_days = 7 * 24 * 3600
+    uncached_entities = []
+    
+    for entity in entities:
+        cache_key = f"sanctions_api|{entity}"
+        cached_hits_str = cache_db.get(cache_key, use_mock=False, ttl_seconds=ttl_7_days)
+        if cached_hits_str:
+            try:
+                cached_hits = json.loads(cached_hits_str)
+                result["hits"].extend(cached_hits)
+            except Exception:
+                uncached_entities.append(entity)
+        else:
+            uncached_entities.append(entity)
+            
+    # 2. Call OpenSanctions only for uncached entities
+    if api_key and uncached_entities:
         payload = {
             "queries": {
                 f"q_{i}": {"schema": "LegalEntity", "properties": {"name": [name]}} 
-                for i, name in enumerate(entities)
+                for i, name in enumerate(uncached_entities)
             }
         }
         
-        # Build payload
         try:
             headers = {"Authorization": f"ApiKey {api_key}"}
             resp = await http_client.post("https://api.opensanctions.org/match/default", json=payload, headers=headers)
             if resp.status_code == 200:
                 data = resp.json()
                 result["quality_flag"] = "high"
+                
+                # Parse hits per query and cache individually
                 for qid, qres in data.get("responses", {}).items():
-                    for match in qres.get("results", []):
-                        result["hits"].append({
-                            "entity": match.get("id"),
-                            "caption": match.get("caption"),
-                            "score": match.get("score")
-                        })
-                final_str = json.dumps(result)
-                return final_str
+                    # qid is like "q_0", "q_1", etc.
+                    idx_str = qid.split("_")[1]
+                    try:
+                        idx = int(idx_str)
+                        entity_name = uncached_entities[idx]
+                        
+                        entity_hits = []
+                        for match in qres.get("results", []):
+                            hit = {
+                                "entity": match.get("id"),
+                                "caption": match.get("caption"),
+                                "score": match.get("score")
+                            }
+                            entity_hits.append(hit)
+                            result["hits"].append(hit)
+                            
+                        # Save back to cache
+                        cache_key = f"sanctions_api|{entity_name}"
+                        cache_db.set(cache_key, json.dumps(entity_hits), use_mock=False)
+                    except (IndexError, ValueError) as e:
+                        logger.warning(f"Error caching OpenSanctions response: {e}")
+                        
+                return json.dumps(result)
             else:
                 logger.warning(f"OpenSanctions API returned status code {resp.status_code}. Initiating web search fallback.")
         except Exception as e:
             logger.warning(f"OpenSanctions API error: {e}. Initiating web search fallback.")
             
     # Web search fallback for real mode
-    if entities:
+    if uncached_entities:
         logger.info("OpenSanctions API unavailable or failed. Executing fallback web search sanctions screening.")
         result["source"] = "web_search_fallback"
         result["quality_flag"] = "medium"
         result["web_search_results"] = {}
         
-        for entity in entities:
+        # Limit to 5 entities max to prevent severe rate limiting / thread deadlocks from DuckDuckGo
+        fallback_entities = uncached_entities[:5]
+        if len(uncached_entities) > 5:
+            logger.warning(f"Capping web search fallback to 5 entities (skipped {len(uncached_entities) - 5} entities) to prevent DDGS deadlock.")
+            
+        for entity in fallback_entities:
             query = f'"{entity}" sanctioned OFAC list PEP'
             try:
                 search_res = await perform_web_search(ctx, query)
@@ -203,8 +244,10 @@ async def screen_sanctions(ctx: DDContext, entities: list[str]) -> str:
                 
         return json.dumps(result)
 
-    # Mock local cache fallback if no entities
-    result["local_cache_status"] = "OFAC, UN, HMT checked (simulated cached)"
+    if entities and not uncached_entities:
+        result["source"] = "Database Cache"
+        result["quality_flag"] = "high"
+        
     return json.dumps(result)
 
 async def verify_licenses(ctx: DDContext, company_name: str, country: str | None) -> str:

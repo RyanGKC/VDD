@@ -98,11 +98,12 @@ class BaseResearchAgent(AgentExecutor, abc.ABC):
         # If no searches needed, extract the final analysis directly
         if not queries:
             print(f"[{step_val.upper()}] No web searches needed — data sufficient.")
-            return await self.gemini.generate_structured(
+            analysis = await self.gemini.generate_structured(
                 system_instruction=system_instruction,
                 prompt=base_prompt,
                 schema=schema
             )
+            return analysis, {}
         
         # --- Phase 2: Execute all planned searches with async RAG orchestration ---
         print(f"[{step_val.upper()}] Research Plan ({len(queries)} searches):")

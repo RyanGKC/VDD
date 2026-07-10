@@ -56,6 +56,9 @@ class SanctionsAgent(BaseResearchAgent):
         # Include anything an earlier anomaly injected (e.g. a new UBO).
         entities.extend(ctx.enrichment.get("additional_entities", []))
 
+        # Filter out any None or empty values from upstream parsing
+        entities = [e for e in entities if e]
+
         # 2. Call the real screening tool (OpenSanctions, Dow Jones, etc.).
         raw_hits = await screen_sanctions(ctx, entities)
 

@@ -31,14 +31,22 @@ class PersistentCache:
         except sqlite3.OperationalError as e:
             print(f"WARNING: Failed to initialize cache db at {self.db_path}: {e}")
 
-    def get(self, key: str, use_mock: bool = False) -> str | None:
+    def get(self, key: str, use_mock: bool = False, ttl_seconds: int | None = None) -> str | None:
         table = "mock_cache" if use_mock else "api_cache"
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
-            cursor.execute(f"SELECT value FROM {table} WHERE key = ?", (key,))
+            cursor.execute(f"SELECT value, timestamp FROM {table} WHERE key = ?", (key,))
             row = cursor.fetchone()
             if row:
-                return row[0]
+                value, timestamp_str = row
+                if ttl_seconds is not None and timestamp_str:
+                    try:
+                        cached_time = datetime.fromisoformat(timestamp_str)
+                        if (datetime.now() - cached_time).total_seconds() > ttl_seconds:
+                            return None
+                    except ValueError:
+                        pass
+                return value
         return None
 
     def set(self, key: str, value: str, use_mock: bool = False):
