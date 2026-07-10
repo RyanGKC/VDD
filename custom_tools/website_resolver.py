@@ -62,7 +62,7 @@ async def resolve_company_website(company_name: str, num_candidates: int = 5) ->
     instead of blindly trusting the first search result.
     """
     def _search():
-        with DDGS() as ddgs:
+        with DDGS(timeout=15) as ddgs:
             return list(ddgs.text(f"{company_name} official website", max_results=num_candidates, backend="auto"))
 
     try:
