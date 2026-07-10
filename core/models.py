@@ -221,6 +221,13 @@ class CompanyDetails(BaseModel):
     company_number: str | None = Field(None, description="Companies House number for UK companies.")
 
 
+class SupplierItem(BaseModel):
+    # A direct supplier of this company and what it provides.
+    supplier_name: str
+    category: str
+    description: str
+
+
 class DDReport(BaseModel):
     # The final deliverable.
     vendor_name: str
@@ -239,3 +246,6 @@ class DDReport(BaseModel):
     # Parent company report
     parent_company: 'DDReport | None' = None
     raw_sources_by_step: dict[str, str] = Field(default_factory=dict)
+    # New: direct (Tier-1) supplier items, populated from ResilienceAgent
+    supply_items: list[SupplierItem] = Field(default_factory=list)
+
