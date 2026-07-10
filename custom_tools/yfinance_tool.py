@@ -65,11 +65,23 @@ def get_financial_statement(ticker: str, statement_type: str, annual: bool = Tru
             return {"error": f"No financial data found for ticker {ticker} ({statement_type}). Please verify the ticker symbol."}
             
         markdown_table = _df_to_markdown(df)
+        
+        # Create records for frontend rendering
+        df_reset = df.reset_index()
+        # Ensure column names are strings
+        df_reset.columns = [str(col).split(" ")[0] for col in df_reset.columns]
+        # Replace NaN/NaT with None for JSON serialization
+        # Convert to object dtype first to allow None without it coercing back to NaN
+        df_reset = df_reset.astype(object)
+        df_reset = df_reset.where(pd.notnull(df_reset), None)
+        records = df_reset.to_dict(orient="records")
+        
         return {
             "ticker": ticker,
             "statement_type": statement_type,
             "annual": annual,
-            "data_markdown": markdown_table
+            "data_markdown": markdown_table,
+            "data_records": records
         }
         
     except Exception as e:
