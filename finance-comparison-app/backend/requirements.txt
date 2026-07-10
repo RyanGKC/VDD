@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+httpx
+python-dotenv
+curl_cffi
+yfinance
+pandas
+tabulate
