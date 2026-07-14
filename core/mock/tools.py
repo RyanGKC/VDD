@@ -19,8 +19,7 @@ def _is_high_risk(name: str | list[str]) -> bool:
         text = str(name).lower()
     return "risk" in text or "bad" in text
 
-import random
-
+import hashlib
 async def perform_web_search(query: str) -> str:
     """Simulates querying a web search API (e.g., Google Custom Search/Serper)."""
     await asyncio.sleep(0.6)
@@ -28,11 +27,12 @@ async def perform_web_search(query: str) -> str:
     
     results = []
     
-    # Random supply chain generator
+    # Deterministic supply chain generator based on query
     if "supply chain" in query_lower or "resilience" in query_lower or "supplier" in query_lower:
-        s1 = f"Supplier {random.randint(100, 999)} LLC"
-        s2 = f"Global {random.randint(10, 99)} Corp"
-        s3 = f"Manufacturing Partner {random.randint(1, 9)} Ltd"
+        h = int(hashlib.md5(query.encode()).hexdigest(), 16)
+        s1 = f"Supplier {(h % 900) + 100} LLC"
+        s2 = f"Global {(h % 90) + 10} Corp"
+        s3 = f"Manufacturing Partner {(h % 9) + 1} Ltd"
         results.append({
             "title": "Supply Chain Disclosure and Logistics",
             "snippet": f"Audit reveals the primary direct suppliers are {s1}, {s2}, and {s3}."

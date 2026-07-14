@@ -61,6 +61,14 @@ async def run_dd_with_ctx(ctx: DDContext) -> DDReport:
     else:
         client = OpenAIClient(use_cache=ctx.use_mock)
         
+    if getattr(ctx, 'checkpoint_db', None) and ctx.run_id:
+        await ctx.checkpoint_db.mark_in_progress(ctx.run_id, ctx.company_details.company_name)
+        # Hydrate completed steps
+        completed_steps = await ctx.checkpoint_db.get_completed_steps(ctx.run_id, ctx.company_details.company_name)
+        from core.models import StepResult
+        for step_name, result_json in completed_steps.items():
+            ctx.results[StepName(step_name)] = StepResult.model_validate_json(result_json)
+
     try:
         engine, summary_agent = build_engine(client)
         await neo4j.save_company_node(ctx.company_details.company_name, "PENDING")
@@ -82,6 +90,14 @@ async def run_dd_with_ctx(ctx: DDContext) -> DDReport:
                     await neo4j.save_ownership_edge(canonical_parent, current_ctx.company_details.company_name)
                     
                     if not is_duplicate:
+                        if getattr(current_ctx, 'checkpoint_db', None) and current_ctx.run_id:
+                            await current_ctx.checkpoint_db.enqueue_entity(
+                                run_id=current_ctx.run_id,
+                                entity_name=canonical_parent,
+                                depth=1,
+                                parent=current_ctx.company_details.company_name,
+                                role='parent'
+                            )
                         parent_ctx = DDContext(
                             company_details=CompanyDetails(company_name=canonical_parent),
                             use_mock=current_ctx.use_mock,
@@ -103,6 +119,8 @@ async def run_dd_with_ctx(ctx: DDContext) -> DDReport:
                         parent_ctx.detailed_audit_log = current_ctx.detailed_audit_log
                         parent_ctx.visited_companies = current_ctx.visited_companies
                         parent_ctx.visited_lock = current_ctx.visited_lock
+                        parent_ctx.screened_entities = current_ctx.screened_entities
+                        parent_ctx.screened_entities_lock = current_ctx.screened_entities_lock
                         current_ctx.log(f"SYSTEM: Spawning sub-pipeline for parent company: {parent_name}")
                         current_ctx.parent_task = asyncio.create_task(run_dd_with_ctx(parent_ctx))
                     else:
@@ -132,6 +150,14 @@ async def run_dd_with_ctx(ctx: DDContext) -> DDReport:
                     await neo4j.save_supply_edge(canonical_supplier, current_ctx.company_details.company_name)
                     
                     if not is_duplicate:
+                        if getattr(current_ctx, 'checkpoint_db', None) and current_ctx.run_id:
+                            await current_ctx.checkpoint_db.enqueue_entity(
+                                run_id=current_ctx.run_id,
+                                entity_name=canonical_supplier,
+                                depth=current_ctx.tiers_to_search,
+                                parent=current_ctx.company_details.company_name,
+                                role='supplier'
+                            )
                         child_ctx = DDContext(
                             company_details=CompanyDetails(company_name=canonical_supplier),
                             use_mock=current_ctx.use_mock,
@@ -151,6 +177,8 @@ async def run_dd_with_ctx(ctx: DDContext) -> DDReport:
                         child_ctx.detailed_audit_log = current_ctx.detailed_audit_log
                         child_ctx.visited_companies = current_ctx.visited_companies
                         child_ctx.visited_lock = current_ctx.visited_lock
+                        child_ctx.screened_entities = current_ctx.screened_entities
+                        child_ctx.screened_entities_lock = current_ctx.screened_entities_lock
                         current_ctx.log(f"SYSTEM: Spawning sub-pipeline for supplier: {canonical_supplier}")
                         task = asyncio.create_task(run_dd_with_ctx(child_ctx))
                         current_ctx.child_tasks.append(task)
@@ -226,14 +254,23 @@ async def run_dd_with_ctx(ctx: DDContext) -> DDReport:
             
         report.audit_log = "\n".join(audit_lines)
         
+        if getattr(ctx, 'checkpoint_db', None) and ctx.run_id:
+            await ctx.checkpoint_db.mark_processed(ctx.run_id, ctx.company_details.company_name, "completed")
+            
         return report
     except asyncio.CancelledError:
         ctx.log("SYSTEM: Cancellation received, aborting sub-pipelines...")
+        if getattr(ctx, 'checkpoint_db', None) and ctx.run_id:
+            await ctx.checkpoint_db.mark_processed(ctx.run_id, ctx.company_details.company_name, "cancelled")
         for task in getattr(ctx, "child_tasks", []):
             if not task.done():
                 task.cancel()
         if getattr(ctx, "parent_task", None) and not ctx.parent_task.done():
             ctx.parent_task.cancel()
+        raise
+    except Exception:
+        if getattr(ctx, 'checkpoint_db', None) and ctx.run_id:
+            await ctx.checkpoint_db.mark_processed(ctx.run_id, ctx.company_details.company_name, "failed")
         raise
     finally:
         await client.close()

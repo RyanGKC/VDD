@@ -5,6 +5,7 @@ from google import genai
 import logging
 from pathlib import Path
 from dotenv import load_dotenv
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,11 @@ class GeminiEmbeddingFunction(EmbeddingFunction):
             self.client = genai.Client()
         self.model = "text-embedding-004"
         
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=20),
+        reraise=True,
+    )
     def __call__(self, input: Documents) -> Embeddings:
         response = self.client.models.embed_content(
             model=self.model,

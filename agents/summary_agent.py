@@ -230,8 +230,10 @@ class SummaryAgent:
 
         # Extract supply items from resilience structured data if available
         supply_items_data = []
+        has_suppliers = True
         resilience_res = ctx.results.get(StepName.RESILIENCE)
         if resilience_res and resilience_res.structured_data:
+            has_suppliers = resilience_res.structured_data.get("has_identifiable_third_party_suppliers", True)
             raw_items = resilience_res.structured_data.get("supply_items", [])
             for item in raw_items:
                 if isinstance(item, dict):
@@ -254,4 +256,5 @@ class SummaryAgent:
             step_risk_scores=step_risk_scores,
             raw_sources_by_step=raw_sources_by_step,
             supply_items=supply_items_data,
+            has_identifiable_third_party_suppliers=has_suppliers,
         )

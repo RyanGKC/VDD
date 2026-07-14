@@ -282,6 +282,17 @@ class BaseResearchAgent(AgentExecutor, abc.ABC):
         # Mutate the context memory locally
         ctx.results[self.step] = result
         
+        # --- CHECKPOINT WRITE ---
+        # Persist the completed StepResult to the checkpoint DB immediately.
+        # This is the cheapest write in the pipeline and happens exactly once per LLM call.
+        if getattr(ctx, 'checkpoint_db', None) and ctx.run_id:
+            await ctx.checkpoint_db.save_step_result(
+                run_id=ctx.run_id,
+                entity_name=ctx.company_details.company_name,
+                step_name=self.step.value,
+                result_json=result.model_dump_json()
+            )
+        
         if result.anomaly:
             ctx.log(
                 f"ANOMALY step={self.step.value} "

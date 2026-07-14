@@ -165,6 +165,12 @@ class DDContext(BaseModel):
     visited_companies: set[str] = Field(default_factory=set)
     # Lock for thread/coroutine-safe mutations to visited_companies
     visited_lock: asyncio.Lock = Field(default_factory=asyncio.Lock, exclude=True)
+    # Shared in-run sanctions result cache: entity_name_lower -> StepResult or raw hits
+    screened_entities: dict[str, Any] = Field(default_factory=dict, exclude=True)
+    # Lock for screened_entities
+    screened_entities_lock: asyncio.Lock = Field(default_factory=asyncio.Lock, exclude=True)
+    # Checkpoint DB reference — injected at run startup
+    checkpoint_db: Any = Field(default=None, exclude=True)
     # Keep track of child pipelines spawned asynchronously mid-DAG
     child_tasks: list[asyncio.Task] = Field(default_factory=list, exclude=True)
     # Parent company options
@@ -248,4 +254,5 @@ class DDReport(BaseModel):
     raw_sources_by_step: dict[str, str] = Field(default_factory=dict)
     # New: direct (Tier-1) supplier items, populated from ResilienceAgent
     supply_items: list[SupplierItem] = Field(default_factory=list)
+    has_identifiable_third_party_suppliers: bool = Field(default=True)
 

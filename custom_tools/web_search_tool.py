@@ -16,9 +16,9 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from core.gemini_client import GeminiClient
 from custom_tools.source_reliability import check_tier, get_domain
-from custom_tools.domain_evaluator import evaluate_domain, eval_cache
+from custom_tools.domain_evaluator import batch_evaluate_domains, eval_cache
 from custom_tools.query_expansion import expand_query
-from custom_tools.relevance_scorer import score_relevance
+from custom_tools.relevance_scorer import batch_score_all_relevance
 from core.retry import retry_async
 import json
 
@@ -30,6 +30,10 @@ import re
 
 def _parse_html(html_content: str) -> Optional[str]:
     """Synchronous CPU-bound parsing of HTML."""
+    # 0. Prevent `<noscript>` pollution (even in successfully rendered SPAs)
+    import re
+    html_content = re.sub(r'<noscript.*?</noscript>', '', html_content, flags=re.DOTALL | re.IGNORECASE)
+
     # 1. Try trafilatura first
     extracted_text = trafilatura.extract(
         html_content,
@@ -41,7 +45,7 @@ def _parse_html(html_content: str) -> Optional[str]:
     # 2. Fallback to BeautifulSoup if trafilatura fails
     if not extracted_text:
         soup = BeautifulSoup(html_content, "html.parser")
-        for tag in soup(["script", "style", "nav", "footer", "header", "aside"]):
+        for tag in soup(["script", "style", "nav", "footer", "header", "aside", "noscript"]):
             tag.decompose()
         text = soup.get_text(separator="\n")
         lines = (line.strip() for line in text.splitlines())
@@ -67,21 +71,108 @@ def _parse_html(html_content: str) -> Optional[str]:
         return clean_text.strip()
     return ""
 
-async def fetch_and_clean_html(url: str, session: cffi_requests.AsyncSession, timeout: int = 10) -> Optional[str]:
-    """Fetches a URL and extracts clean text from HTML or PDF."""
+import os
+from playwright.async_api import async_playwright, Browser, Playwright, TimeoutError as PlaywrightTimeoutError
+
+PLAYWRIGHT_ESCALATION_ENABLED = os.getenv("PLAYWRIGHT_ESCALATION_ENABLED", "false").lower() == "true"
+MAX_CONCURRENT_CONTEXTS = int(os.getenv("PLAYWRIGHT_MAX_CONTEXTS", "4"))
+
+_playwright: Playwright | None = None
+_browser: Browser | None = None
+_browser_lock = asyncio.Lock()
+_browser_context_sem = asyncio.Semaphore(MAX_CONCURRENT_CONTEXTS)
+
+async def get_browser() -> Browser:
+    global _playwright, _browser
+    async with _browser_lock:
+        if not _browser or not _browser.is_connected():
+            if _browser:
+                await _browser.close()
+            _playwright = await async_playwright().start()
+            _browser = await _playwright.chromium.launch(headless=True)
+    return _browser
+
+async def shutdown_browser():
+    global _browser, _playwright
+    if _browser:
+        await _browser.close()
+        _browser = None
+    if _playwright:
+        await _playwright.stop()
+        _playwright = None
+
+BOT_WALL_MARKERS = (
+    "enable javascript", 
+    "javascript must be enabled", 
+    "javascript is disabled",
+    "checking your browser", 
+    "attention required",
+    "just a moment", 
+    "captcha", 
+    "access denied",
+)
+MIN_VIABLE_BODY_LENGTH = 500
+
+def _should_escalate_to_playwright(status_code: int | None, body_text: str | None, exc: Exception | None, is_pdf: bool) -> bool:
+    if is_pdf:
+        return False
+    if exc is not None:
+        return True
+    if status_code in (403, 429, 503):
+        return True
+    if body_text is not None and len(body_text) < MIN_VIABLE_BODY_LENGTH:
+        return True
+    if body_text is not None and any(m in body_text.lower() for m in BOT_WALL_MARKERS):
+        return True
+    return False
+
+async def _fetch_via_playwright(url: str, timeout: int = 15) -> str | None:
+    try:
+        browser = await get_browser()
+    except Exception as e:
+        logger.warning(f"Failed to get browser: {e}")
+        return None
+
+    async with _browser_context_sem:
+        try:
+            context = await browser.new_context(
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            )
+        except Exception as e:
+            logger.warning(f"Playwright context creation failed for {url}: {e}")
+            return None
+            
+        try:
+            page = await context.new_page()
+            await page.goto(url, wait_until="domcontentloaded", timeout=timeout * 1000)
+            try:
+                await page.wait_for_load_state("networkidle", timeout=3000)
+            except PlaywrightTimeoutError:
+                pass
+            html_content = await page.content()
+            return await asyncio.to_thread(_parse_html, html_content)
+        except Exception as e:
+            logger.warning(f"Playwright escalation failed for {url}: {e}")
+            return None
+        finally:
+            await context.close()
+
+async def _fetch_via_curl_cffi(url: str, session: cffi_requests.AsyncSession, timeout: int):
+    status_code, body_text, is_pdf = None, None, False
     try:
         resp = await retry_async(session.get, url, allow_redirects=True, timeout=timeout)
-        if resp.status_code != 200:
+        status_code = resp.status_code
+        if status_code != 200:
             resp.raise_for_status()
             
         content_length = resp.headers.get("Content-Length")
         if content_length and int(content_length) > 10 * 1024 * 1024:
             logger.warning(f"File too large, skipped: {url} ({content_length} bytes)")
-            return "__PDF_ERROR__: File exceeded 10MB limit"
+            return status_code, "__PDF_ERROR__: File exceeded 10MB limit", None, True
         
         content_type = resp.headers.get("Content-Type", "").lower()
-        
         if "application/pdf" in content_type or url.lower().endswith(".pdf"):
+            is_pdf = True
             def _parse_pdf(pdf_bytes: bytes) -> str:
                 try:
                     reader = PdfReader(io.BytesIO(pdf_bytes))
@@ -94,17 +185,48 @@ async def fetch_and_clean_html(url: str, session: cffi_requests.AsyncSession, ti
                     return f"__PDF_ERROR__: PDF format error - {e}"
             
             extracted_text = await asyncio.to_thread(_parse_pdf, resp.content)
-            return extracted_text.strip()
+            return status_code, extracted_text.strip(), None, True
         else:
-            html_content = resp.text
-            
-            # Offload the CPU-bound HTML parsing to a background thread
-            extracted_text = await asyncio.to_thread(_parse_html, html_content)
-            return extracted_text
+            body_text = resp.text
+            return status_code, body_text, None, False
             
     except Exception as e:
-        logger.warning(f"Failed to fetch {url}: {e}")
-        return None
+        return status_code, body_text, e, is_pdf
+
+async def fetch_and_clean_html(url: str, session: cffi_requests.AsyncSession, timeout: int = 15) -> Optional[str]:
+    """Fetches a URL and extracts clean text from HTML or PDF."""
+    status_code, body_text, exc, is_pdf = await _fetch_via_curl_cffi(url, session, timeout)
+
+    if not _should_escalate_to_playwright(status_code, body_text, exc, is_pdf):
+        if exc or not body_text:
+            if exc:
+                logger.warning(f"Failed to fetch {url}: {exc}")
+            return body_text if is_pdf else None
+        
+        # If it's a PDF, body_text already contains the extracted text. If it's HTML, we need to parse it.
+        if is_pdf:
+            return body_text
+            
+        return await asyncio.to_thread(_parse_html, body_text)
+
+    if not PLAYWRIGHT_ESCALATION_ENABLED:
+        logger.info(f"Would escalate {url} to Playwright (disabled by flag)")
+        if exc or not body_text:
+            if exc:
+                logger.warning(f"Failed to fetch {url}: {exc}")
+            return body_text if is_pdf else None
+        return await asyncio.to_thread(_parse_html, body_text)
+
+    logger.info(f"Escalating {url} to Playwright — status={status_code}, exc={exc}")
+    result = await _fetch_via_playwright(url, timeout)
+    if result is not None:
+        return result
+        
+    # Playwright also failed, fallback to whatever curl_cffi got
+    if exc or not body_text:
+        return body_text if is_pdf else None
+    return await asyncio.to_thread(_parse_html, body_text)
+
 
 class SummaryResult(BaseModel):
     summary: str
@@ -339,38 +461,22 @@ async def _orchestrate_search(query: str, max_results: int = 3, company_domain: 
             url = res.get("href", "")
             snippet_embedding_map[url] = all_embeddings[1 + idx]
 
-        # Opt 4: Overlap domain evaluation with relevance scoring of already-allowed snippets
-        async def _eval(res):
-            evaluation = await evaluate_domain(
-                url=res.get("href"),
-                title=res.get("title", ""),
-                snippet=res.get("body", "")
-            )
-            return res, evaluation
-        
-        async def _score(res):
-            relevance = await score_relevance(
-                query=query,
-                title=res.get("title", ""),
-                snippet=res.get("body", ""),
-                query_embedding=query_emb,
-                snippet_embedding=snippet_embedding_map.get(res.get("href"))
-            )
-            res["relevance_score"] = relevance.score
-            return res, relevance
-
         # Fire both fan-outs concurrently
         t0_fanout = time.time()
-        eval_task = asyncio.gather(*[_eval(res) for res in unknown_snippets]) if unknown_snippets else None
         
-        pre_scored = await asyncio.gather(*[_score(res) for res in allowed_snippets])
+        eval_task = asyncio.create_task(batch_evaluate_domains(unknown_snippets)) if unknown_snippets else None
         
-        # Collect newly-accepted from domain evaluation
         if eval_task:
             eval_results = await eval_task
             newly_accepted = []
-            for res, evaluation in eval_results:
-                domain = get_domain(res.get("href"))
+            for res in unknown_snippets:
+                url = res.get("href", "")
+                from urllib.parse import urlparse
+                domain = urlparse(url).netloc.lower().removeprefix("www.")
+                evaluation = eval_results.get(domain)
+                if not evaluation:
+                    continue
+                
                 trust_lvl = str(evaluation.trust_level).lower()
                 res["trust_tier"] = trust_lvl
                 if trust_lvl in ("high", "medium"):
@@ -391,10 +497,20 @@ async def _orchestrate_search(query: str, max_results: int = 3, company_domain: 
                     )
                     print(f"🛑 [CUSTOM] Evaluated unknown domain '{domain}': REJECTED (Trust: {trust_lvl})")
             
-            # Score the newly accepted snippets (embeddings already pre-computed)
-            if newly_accepted:
-                extra_scored = await asyncio.gather(*[_score(res) for res in newly_accepted])
-                pre_scored = list(pre_scored) + list(extra_scored)
+            allowed_snippets.extend(newly_accepted)
+
+        # Now score all allowed snippets at once
+        pre_scored = []
+        if allowed_snippets:
+            relevance_scores = await batch_score_all_relevance(
+                query, 
+                allowed_snippets, 
+                query_emb, 
+                snippet_embedding_map
+            )
+            for res, relevance in zip(allowed_snippets, relevance_scores):
+                res["relevance_score"] = relevance.score
+                pre_scored.append((res, relevance))
 
         stats["phase_seconds"]["llm_fanout"] = time.time() - t0_fanout
         scored_snippets = []

@@ -2,8 +2,10 @@ import asyncio
 from unittest.mock import AsyncMock
 from core.models import DDContext, CompanyDetails
 from agents.resilience_agent import ResilienceAgent, _ResilienceAnalysis, _SupplierItem, _FindingModel, _SourceModel
+import pytest
 from core.gemini_client import GeminiClient
 
+@pytest.mark.asyncio
 async def test_supply_items():
     # Set up mock context
     ctx = DDContext(
@@ -47,6 +49,7 @@ async def test_supply_items():
     )
     
     agent.generate_with_web_search = AsyncMock(return_value=(mock_analysis, {"src1": "https://example.com/audit"}))
+    agent._run_reverse_disclosure_loop = AsyncMock(return_value=[])
     
     # Run research
     res = await agent.research(ctx)

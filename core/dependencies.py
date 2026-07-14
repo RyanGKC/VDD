@@ -1,4 +1,6 @@
 from rag.vector_store import VectorStore
+from core.history_db import HistoryDB
+from core.checkpoint_db import CheckpointDB
 from core.neo4j_client import Neo4jClient
 from core.gemini_client import GeminiClient
 from rag.entity_resolver import EntityResolver
@@ -15,6 +17,12 @@ import os
 vs = VectorStore()
 neo4j = Neo4jClient()
 gemini = GeminiClient()
+
+from core.history_db import HistoryDB
+history_db = HistoryDB()
+
+from core.checkpoint_db import CheckpointDB
+checkpoint_db = CheckpointDB()
 
 # Opt 5: Faster/cheaper model for simple entity extraction/tagging
 tagging_gemini = GeminiClient(model=os.getenv("GEMINI_TAGGING_MODEL", "gemini-2.5-flash-lite"))

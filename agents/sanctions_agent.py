@@ -59,8 +59,39 @@ class SanctionsAgent(BaseResearchAgent):
         # Filter out any None or empty values from upstream parsing
         entities = [e for e in entities if e]
 
+        # --- IN-RUN SANCTIONS CACHE ---
+        # Split entities into cached (already screened this run) and new ones.
+        screened_entities = getattr(ctx, 'screened_entities', {})
+        screened_lock = getattr(ctx, 'screened_entities_lock', None)
+        
+        cached_hits: list[dict] = []
+        new_entities: list[str] = []
+        for e in entities:
+            key = e.strip().lower()
+            if key in screened_entities:
+                ctx.log(f"[SANCTIONS] Cache HIT for '{e}' — reusing previous result.")
+                cached_hits.extend(screened_entities[key])
+            else:
+                new_entities.append(e)
+        
+        # If all entities are cached, we can skip the API + LLM entirely.
+        if not new_entities and entities:
+            ctx.log("[SANCTIONS] All entities already screened. Returning cached result.")
+            # Reconstruct a minimal StepResult from the cached raw hits.
+            return StepResult(
+                step=self.step,
+                findings=[],
+                structured_data={"skipped": True, "reason": "All entities already screened this run."},
+                raw_data=str(cached_hits),
+                rationale="All entities in scope were screened in a prior step of this run.",
+            )
+        
+        # Only call the API for new (uncached) entities.
+        entities_to_screen = new_entities
+        # --- END CACHE LOGIC ---
+
         # 2. Call the real screening tool (OpenSanctions, Dow Jones, etc.).
-        raw_hits = await screen_sanctions(ctx, entities)
+        raw_hits = await screen_sanctions(ctx, entities_to_screen)
 
         # 3. Let Gemini reason over the hits and produce structured findings.
         analysis, url_map = await self.generate_with_web_search(
@@ -124,6 +155,21 @@ class SanctionsAgent(BaseResearchAgent):
                 ],
                 new_context={"additional_entities": [analysis.new_party]},
             )
+
+        # Write each new entity back into the shared in-run cache.
+        import json
+        try:
+            api_hits = json.loads(raw_hits) if raw_hits else {}
+            hits_list = api_hits.get("hits", [])
+        except Exception:
+            hits_list = []
+
+        if screened_lock:
+            async with screened_lock:
+                for e in new_entities:
+                    key = e.strip().lower()
+                    entity_hits = [h for h in hits_list if h.get("entity", "").lower() == key]
+                    screened_entities[key] = entity_hits
 
         return result
 

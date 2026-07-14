@@ -1,7 +1,9 @@
 import asyncio
 import os
+import pytest
 from main import run_dd
 
+@pytest.mark.asyncio
 async def test():
     os.environ["ENABLE_RAG"] = "false"
     

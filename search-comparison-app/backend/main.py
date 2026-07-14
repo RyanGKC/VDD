@@ -65,8 +65,15 @@ async def get_exa_results(query: str, max_results: int = 5) -> list[dict]:
                 print(f"❌ [EXA] Exa API returned error {resp.status_code}: {resp.text}")
                 return [{"title": f"Exa Error {resp.status_code}", "snippet": resp.text, "url": ""}]
     except Exception as e:
-        print(f"❌ [EXA] Exception during Exa search: {e}")
-        return [{"title": "Exception", "snippet": str(e), "url": ""}]
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"❌ [EXA] Exception during Exa search:\n{error_details}")
+        
+        return [{
+            "title": f"Exception: {type(e).__name__}", 
+            "snippet": f"{repr(e)}", 
+            "url": ""
+        }]
 
 async def measure_time(coroutine):
     start_time = time.time()

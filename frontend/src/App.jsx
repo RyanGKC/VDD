@@ -353,13 +353,13 @@ const LoadingGraphNode = ({ data }) => {
 
 const loadingNodeTypes = { custom: LoadingGraphNode };
 
-const ProcessingTerminal = ({ onComplete, onError, onCancel, companyDetails }) => {
+const ProcessingTerminal = ({ onComplete, onError, onCancel, companyDetails, resumeRunId }) => {
   const [logs, setLogs] = useState([]);
   const [nodeStates, setNodeStates] = useState({});
   const [isConsoleOpen, setIsConsoleOpen] = useState(false);
   const endOfLogsRef = useRef(null);
   const abortControllerRef = useRef(null);
-  const jobIdRef = useRef(Math.random().toString(36).substring(2, 15));
+  const jobIdRef = useRef(resumeRunId || Math.random().toString(36).substring(2, 15));
   const wsRef = useRef(null);
   const nodeStatesRef = useRef({});
   const entityMetaRef = useRef({}); // tracks { role, parentEntity } per entity
@@ -373,7 +373,7 @@ const ProcessingTerminal = ({ onComplete, onError, onCancel, companyDetails }) =
     abortControllerRef.current = new AbortController();
     
     const runBackend = async () => {
-      setLogs([{ text: `SYSTEM: Initializing DDContext for ${companyDetails.company_name}`, time: new Date().toLocaleTimeString() }]);
+      setLogs([{ text: `SYSTEM: ${resumeRunId ? 'Resuming' : 'Initializing'} DDContext for ${companyDetails.company_name}`, time: new Date().toLocaleTimeString() }]);
       setLogs(prev => [...prev, { text: "SYSTEM: Connecting to backend... (this may take a few minutes as agents process data)", time: new Date().toLocaleTimeString() }]);
       
       const jobId = jobIdRef.current;
@@ -425,27 +425,35 @@ const ProcessingTerminal = ({ onComplete, onError, onCancel, companyDetails }) =
       };
       
       try {
-        let response = await fetch('/api/dd_report', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            company_name: companyDetails.company_name,
-            registration_number: companyDetails.registration_number,
-            country: companyDetails.country,
-            address: companyDetails.address,
-            website: companyDetails.website,
-            tax_id: companyDetails.tax_id,
-            use_mock: companyDetails.use_mock,
-            tiers_to_search: companyDetails.enable_supply_chain ? (parseInt(companyDetails.tiers_to_search, 10) || 1) : 1,
-            max_suppliers_per_node: companyDetails.enable_supply_chain ? (parseInt(companyDetails.max_suppliers_per_node, 10) || 3) : 3,
-            enable_parent_company: companyDetails.enable_parent_company,
-            enable_parent_supply_chain: companyDetails.enable_parent_supply_chain,
-            job_id: jobId
-          }),
-          signal: abortControllerRef.current.signal
-        });
+        let response;
+        if (resumeRunId) {
+          response = await fetch(`/api/dd_report/resume/${resumeRunId}`, {
+            method: 'POST',
+            signal: abortControllerRef.current.signal
+          });
+        } else {
+          response = await fetch('/api/dd_report', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              company_name: companyDetails.company_name,
+              registration_number: companyDetails.registration_number,
+              country: companyDetails.country,
+              address: companyDetails.address,
+              website: companyDetails.website,
+              tax_id: companyDetails.tax_id,
+              use_mock: companyDetails.use_mock,
+              tiers_to_search: companyDetails.enable_supply_chain ? (parseInt(companyDetails.tiers_to_search, 10) || 1) : 1,
+              max_suppliers_per_node: companyDetails.enable_supply_chain ? (parseInt(companyDetails.max_suppliers_per_node, 10) || 3) : 3,
+              enable_parent_company: companyDetails.enable_parent_company,
+              enable_parent_supply_chain: companyDetails.enable_parent_supply_chain,
+              job_id: jobId
+            }),
+            signal: abortControllerRef.current.signal
+          });
+        }
         
         if (!response.ok) {
            const errText = await response.text();
@@ -486,14 +494,18 @@ const ProcessingTerminal = ({ onComplete, onError, onCancel, companyDetails }) =
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Run exactly once per mount
 
-  const handleCancelClick = () => {
-    if (window.confirm("Are you sure you want to interrupt the research flow? All current progress will be lost.")) {
+  const handleCancelClick = (discard = false) => {
+    const msg = discard 
+      ? "Are you sure you want to cancel and discard? All progress will be permanently lost."
+      : "Are you sure you want to pause? You can resume this research run later from the sidebar.";
+      
+    if (window.confirm(msg)) {
       if (wsRef.current) wsRef.current.close();
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
       if (jobIdRef.current) {
-        fetch(`/api/dd_cancel/${jobIdRef.current}`, { method: 'POST' }).catch(() => {});
+        fetch(`/api/dd_cancel/${jobIdRef.current}?discard=${discard}`, { method: 'POST' }).catch(() => {});
       }
       onCancel();
     }
@@ -599,10 +611,16 @@ const ProcessingTerminal = ({ onComplete, onError, onCancel, companyDetails }) =
             {isConsoleOpen ? 'Hide Debug' : 'Show Debug'}
           </button>
           <button 
-            onClick={handleCancelClick}
-            className="text-sm bg-slate-700 hover:bg-slate-600 text-red-400 px-3 py-1 rounded-md font-semibold transition"
+            onClick={() => handleCancelClick(true)}
+            className="text-sm bg-red-900/40 hover:bg-red-800/60 border border-red-800/50 text-red-400 px-3 py-1 rounded-md font-semibold transition"
           >
-            Cancel Flow
+            Cancel & Discard
+          </button>
+          <button 
+            onClick={() => handleCancelClick(false)}
+            className="text-sm bg-amber-900/40 hover:bg-amber-800/60 border border-amber-800/50 text-amber-400 px-3 py-1 rounded-md font-semibold transition"
+          >
+            Pause & Save
           </button>
         </div>
       </div>
@@ -708,7 +726,8 @@ const getLayoutedElements = (nodes, edges, direction = 'LR') => {
     }
   });
 
-  const finalNodes = [];
+  const childNodes = [];
+  const parentNodes = [];
   const groupMetas = {};
 
   const groupIds = Object.keys(groups).filter(id => id !== TARGET_GROUP);
@@ -758,7 +777,7 @@ const getLayoutedElements = (nodes, edges, direction = 'LR') => {
       node.parentNode = gid;
       node.extent = 'parent';
       node.origin = [0.5, 0.5]; // Centers the node on the coordinate
-      finalNodes.push(node);
+      // We do not push to childNodes here because we'll do it later from groups
     });
 
     groupMetas[gid] = {
@@ -772,7 +791,7 @@ const getLayoutedElements = (nodes, edges, direction = 'LR') => {
   };
   
   if (groupMetas[TARGET_GROUP]) {
-    finalNodes.push({
+    parentNodes.push({
       id: TARGET_GROUP,
       type: 'group',
       position: { x: 0, y: 0 },
@@ -797,8 +816,11 @@ const getLayoutedElements = (nodes, edges, direction = 'LR') => {
     const gid = `group-${parentId}`;
     
     if (groupMetas[gid]) {
-      const parentNode = finalNodes.find(n => n.id === parentId);
-      const subsidNode = finalNodes.find(n => n.id === subsidId);
+      // Find nodes from the dagre layout directly
+      const subsidGroupNodes = groups[groupAssignments.get(subsidId)]?.nodes || [];
+      const subsidNode = subsidGroupNodes.find(n => n.id === subsidId);
+      const parentGroupNodes = groups[gid]?.nodes || [];
+      const parentNode = parentGroupNodes.find(n => n.id === parentId);
       
       if (parentNode && subsidNode) {
         const subsidGroupGid = subsidNode.parentNode;
@@ -817,7 +839,7 @@ const getLayoutedElements = (nodes, edges, direction = 'LR') => {
         
         placedGroups[gid] = { x: parentGroupX, y: parentGroupY };
         
-        finalNodes.push({
+        parentNodes.push({
           id: gid,
           type: 'group',
           position: { x: parentGroupX, y: parentGroupY },
@@ -835,6 +857,18 @@ const getLayoutedElements = (nodes, edges, direction = 'LR') => {
       }
     }
   });
+
+  // Now populate childNodes
+  groupIds.forEach((gid) => {
+    const group = groups[gid];
+    if (group.nodes.length === 0) return;
+    
+    group.nodes.forEach(node => {
+      childNodes.push(node);
+    });
+  });
+
+  const finalNodes = [...parentNodes, ...childNodes];
 
   return { nodes: finalNodes, edges };
 };
@@ -1168,7 +1202,9 @@ const Dashboard = ({ report, rootReport, onReset, onResetSupplier, theme, isGrap
       </div>
 
       {/* Supply Inputs */}
-      <SupplyInputsSection supplyItems={report.supply_items} />
+      {report.has_identifiable_third_party_suppliers !== false && report.supply_items && report.supply_items.length > 0 && (
+        <SupplyInputsSection supplyItems={report.supply_items} />
+      )}
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1371,8 +1407,13 @@ export default function App() {
   const [currentJobId, setCurrentJobId] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [historyList, setHistoryList] = useState([]);
+  const [interruptedRuns, setInterruptedRuns] = useState([]);
+  const [resumeRunId, setResumeRunId] = useState(null);
+  const [activeSidebarTab, setActiveSidebarTab] = useState('history');
   const [isEditingHistory, setIsEditingHistory] = useState(false);
   const [selectedHistoryItems, setSelectedHistoryItems] = useState(new Set());
+  const [isEditingInterrupted, setIsEditingInterrupted] = useState(false);
+  const [selectedInterruptedItems, setSelectedInterruptedItems] = useState(new Set());
   const [selectedSupplier, setSelectedSupplier] = useState(null);
   const [theme, setTheme] = useState(() => {
     // Default is dark mode as per requirements
@@ -1401,8 +1442,21 @@ export default function App() {
     }
   };
 
+  const fetchInterrupted = async () => {
+    try {
+      const res = await fetch('/api/dd_report/interrupted');
+      if (res.ok) {
+        const data = await res.json();
+        setInterruptedRuns(data);
+      }
+    } catch (e) {
+      console.error("Failed to fetch interrupted runs", e);
+    }
+  };
+
   useEffect(() => {
     fetchHistory();
+    fetchInterrupted();
   }, []);
 
   const toggleTheme = () => {
@@ -1415,6 +1469,17 @@ export default function App() {
     }
     setGlobalError(null);
     setCompanyDetails(data);
+    setResumeRunId(null);
+    setView('processing');
+  };
+
+  const handleResumePipeline = (run) => {
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+    setGlobalError(null);
+    setCompanyDetails({ company_name: run.vendor_name });
+    setResumeRunId(run.run_id);
     setView('processing');
   };
 
@@ -1438,7 +1503,9 @@ export default function App() {
 
   const handleProcessingCancel = () => {
     setCompanyDetails(null);
+    setResumeRunId(null);
     setView('input');
+    fetchInterrupted();
   };
 
   const handleInstantMock = (data) => {
@@ -1455,6 +1522,7 @@ export default function App() {
     setIsGraphOpen(false);
     setSelectedSupplier(null);
     setCurrentJobId(null);
+    setResumeRunId(null);
     setView('input');
   };
 
@@ -1511,103 +1579,223 @@ export default function App() {
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
         <aside className={`${isSidebarOpen ? 'w-72' : 'w-0'} shrink-0 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300 overflow-y-auto flex flex-col`}>
-          <div className="p-4 border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-white dark:bg-slate-900 z-10 flex items-center justify-between">
-            <h3 className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-              <Clock className="w-4 h-4" /> Recent Searches
-            </h3>
-            {historyList.length > 0 && (
-              <button 
-                onClick={() => {
-                  setIsEditingHistory(!isEditingHistory);
-                  setSelectedHistoryItems(new Set());
-                }}
-                className={`p-1.5 rounded-md transition-colors ${isEditingHistory ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
-                title="Edit History"
-              >
-                <Edit2 className="w-4 h-4" />
-              </button>
-            )}
+          <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 sticky top-0 z-10">
+            <button
+              onClick={() => setActiveSidebarTab('history')}
+              className={`flex-1 py-3 text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${
+                activeSidebarTab === 'history' 
+                  ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-white dark:bg-slate-800' 
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+              }`}
+            >
+              <Clock className="w-4 h-4" /> History
+            </button>
+            <button
+              onClick={() => setActiveSidebarTab('interrupted')}
+              className={`flex-1 py-3 text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${
+                activeSidebarTab === 'interrupted' 
+                  ? 'text-amber-600 dark:text-amber-400 border-b-2 border-amber-600 dark:border-amber-400 bg-white dark:bg-slate-800' 
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+              }`}
+            >
+              <PlaySquare className="w-4 h-4" /> Interrupted
+              {interruptedRuns.length > 0 && (
+                <span className="bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 text-[10px] py-0.5 px-2 rounded-full font-bold">
+                  {interruptedRuns.length}
+                </span>
+              )}
+            </button>
           </div>
-          
-          {isEditingHistory && selectedHistoryItems.size > 0 && (
-            <div className="p-2 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-              <button
-                onClick={async () => {
-                  if (window.confirm(`Are you sure you want to delete ${selectedHistoryItems.size} report(s)?`)) {
-                    try {
-                      await fetch('/api/history', {
-                        method: 'DELETE',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ job_ids: Array.from(selectedHistoryItems) })
-                      });
-                      setIsEditingHistory(false);
-                      setSelectedHistoryItems(new Set());
-                      fetchHistory();
-                    } catch (e) {
-                      console.error("Failed to delete history", e);
-                    }
-                  }
-                }}
-                className="w-full flex items-center justify-center gap-2 py-2 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 font-semibold text-sm rounded-lg transition-colors border border-red-200 dark:border-red-800/50"
-              >
-                <Trash2 className="w-4 h-4" /> Delete Selected ({selectedHistoryItems.size})
-              </button>
-            </div>
-          )}
 
-          <div className="p-2 space-y-1">
-            {historyList.length === 0 ? (
-              <p className="text-sm text-slate-500 dark:text-slate-400 p-2 text-center italic">No history found</p>
-            ) : (
-              historyList.map((item) => (
-                <div
-                  key={item.job_id}
-                  onClick={() => {
-                    if (isEditingHistory) {
-                      const newSet = new Set(selectedHistoryItems);
-                      if (newSet.has(item.job_id)) {
-                        newSet.delete(item.job_id);
-                      } else {
-                        newSet.add(item.job_id);
+          {activeSidebarTab === 'interrupted' ? (
+            <>
+              {interruptedRuns.length > 0 && (
+                <div className="p-2 flex justify-end border-b border-slate-200 dark:border-slate-800">
+                  <button 
+                    onClick={() => {
+                      setIsEditingInterrupted(!isEditingInterrupted);
+                      setSelectedInterruptedItems(new Set());
+                    }}
+                    className={`p-1.5 rounded-md text-sm transition-colors flex items-center gap-1 ${isEditingInterrupted ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                  >
+                    <Edit2 className="w-3.5 h-3.5" /> Edit
+                  </button>
+                </div>
+              )}
+
+              {isEditingInterrupted && selectedInterruptedItems.size > 0 && (
+                <div className="p-2 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+                  <button
+                    onClick={async () => {
+                      if (window.confirm(`Are you sure you want to delete ${selectedInterruptedItems.size} interrupted run(s)?`)) {
+                        try {
+                          await fetch('/api/dd_report/interrupted', {
+                            method: 'DELETE',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ job_ids: Array.from(selectedInterruptedItems) })
+                          });
+                          setIsEditingInterrupted(false);
+                          setSelectedInterruptedItems(new Set());
+                          fetchInterrupted();
+                        } catch (e) {
+                          console.error("Failed to delete interrupted runs", e);
+                        }
                       }
-                      setSelectedHistoryItems(newSet);
-                    } else {
-                      handleLoadHistory(item.job_id);
-                    }
-                  }}
-                  className={`w-full text-left p-3 rounded-lg transition-colors border group flex items-start gap-3 cursor-pointer ${
-                    isEditingHistory && selectedHistoryItems.has(item.job_id) 
-                      ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800' 
-                      : 'border-transparent hover:bg-slate-100 dark:hover:bg-slate-800 hover:border-slate-200 dark:hover:border-slate-700'
-                  }`}
-                >
-                  {isEditingHistory && (
-                    <div className="pt-0.5 shrink-0">
-                      <input 
-                        type="checkbox" 
-                        checked={selectedHistoryItems.has(item.job_id)}
-                        readOnly
-                        className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
-                      />
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0 flex flex-col gap-1">
-                    <div className="flex justify-between items-center w-full">
-                      <span className="font-semibold text-sm truncate text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400">{item.company_name}</span>
-                      <div className="flex items-center" title={item.overall_risk}>
-                        {item.overall_risk === Severity.CRITICAL && <div className="w-2.5 h-2.5 rounded-full bg-red-900 animate-pulse"></div>}
-                        {item.overall_risk === Severity.HIGH && <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>}
-                        {item.overall_risk === Severity.MEDIUM && <div className="w-2.5 h-2.5 rounded-full bg-amber-500"></div>}
-                        {item.overall_risk === Severity.LOW && <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>}
-                        {item.overall_risk === Severity.INFO && <div className="w-2.5 h-2.5 rounded-full bg-blue-500"></div>}
+                    }}
+                    className="w-full flex items-center justify-center gap-2 py-2 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 font-semibold text-sm rounded-lg transition-colors border border-red-200 dark:border-red-800/50"
+                  >
+                    <Trash2 className="w-4 h-4" /> Delete ({selectedInterruptedItems.size})
+                  </button>
+                </div>
+              )}
+
+              <div className="p-2 space-y-1">
+                {interruptedRuns.length === 0 ? (
+                  <p className="text-sm text-slate-500 dark:text-slate-400 p-2 text-center italic">No interrupted runs</p>
+                ) : (
+                  interruptedRuns.map((run) => (
+                    <div
+                      key={run.run_id}
+                      onClick={() => {
+                        if (isEditingInterrupted) {
+                          const newSet = new Set(selectedInterruptedItems);
+                          if (newSet.has(run.run_id)) {
+                            newSet.delete(run.run_id);
+                          } else {
+                            newSet.add(run.run_id);
+                          }
+                          setSelectedInterruptedItems(newSet);
+                        } else {
+                          handleResumePipeline(run);
+                        }
+                      }}
+                      className={`w-full text-left p-3 rounded-lg transition-colors border group flex items-start gap-3 cursor-pointer ${
+                        isEditingInterrupted && selectedInterruptedItems.has(run.run_id)
+                          ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+                          : 'border-transparent hover:bg-slate-100 dark:hover:bg-slate-800 hover:border-slate-200 dark:hover:border-slate-700'
+                      }`}
+                    >
+                      {isEditingInterrupted && (
+                        <div className="pt-0.5 shrink-0">
+                          <input 
+                            type="checkbox" 
+                            checked={selectedInterruptedItems.has(run.run_id)}
+                            readOnly
+                            className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
+                          />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0 flex flex-col gap-1">
+                        <div className="flex justify-between items-center w-full">
+                          <span className="font-semibold text-sm truncate text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400">{run.vendor_name}</span>
+                          {!isEditingInterrupted && (
+                            <ArrowRight className="w-4 h-4 text-amber-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          )}
+                        </div>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">{new Date(run.started_at).toLocaleString()}</span>
                       </div>
                     </div>
-                    <span className="text-xs text-slate-500 dark:text-slate-400">{new Date(item.timestamp).toLocaleString()}</span>
-                  </div>
+                  ))
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              {historyList.length > 0 && (
+                <div className="p-2 flex justify-end border-b border-slate-200 dark:border-slate-800">
+                  <button 
+                    onClick={() => {
+                      setIsEditingHistory(!isEditingHistory);
+                      setSelectedHistoryItems(new Set());
+                    }}
+                    className={`p-1.5 rounded-md text-sm transition-colors flex items-center gap-1 ${isEditingHistory ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                  >
+                    <Edit2 className="w-3.5 h-3.5" /> Edit
+                  </button>
                 </div>
-              ))
-            )}
-          </div>
+              )}
+              
+              {isEditingHistory && selectedHistoryItems.size > 0 && (
+                <div className="p-2 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+                  <button
+                    onClick={async () => {
+                      if (window.confirm(`Are you sure you want to delete ${selectedHistoryItems.size} report(s)?`)) {
+                        try {
+                          await fetch('/api/history', {
+                            method: 'DELETE',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ job_ids: Array.from(selectedHistoryItems) })
+                          });
+                          setIsEditingHistory(false);
+                          setSelectedHistoryItems(new Set());
+                          fetchHistory();
+                        } catch (e) {
+                          console.error("Failed to delete history", e);
+                        }
+                      }
+                    }}
+                    className="w-full flex items-center justify-center gap-2 py-2 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 font-semibold text-sm rounded-lg transition-colors border border-red-200 dark:border-red-800/50"
+                  >
+                    <Trash2 className="w-4 h-4" /> Delete ({selectedHistoryItems.size})
+                  </button>
+                </div>
+              )}
+
+              <div className="p-2 space-y-1">
+                {historyList.length === 0 ? (
+                  <p className="text-sm text-slate-500 dark:text-slate-400 p-2 text-center italic">No history found</p>
+                ) : (
+                  historyList.map((item) => (
+                    <div
+                      key={item.job_id}
+                      onClick={() => {
+                        if (isEditingHistory) {
+                          const newSet = new Set(selectedHistoryItems);
+                          if (newSet.has(item.job_id)) {
+                            newSet.delete(item.job_id);
+                          } else {
+                            newSet.add(item.job_id);
+                          }
+                          setSelectedHistoryItems(newSet);
+                        } else {
+                          handleLoadHistory(item.job_id);
+                        }
+                      }}
+                      className={`w-full text-left p-3 rounded-lg transition-colors border group flex items-start gap-3 cursor-pointer ${
+                        isEditingHistory && selectedHistoryItems.has(item.job_id) 
+                          ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800' 
+                          : 'border-transparent hover:bg-slate-100 dark:hover:bg-slate-800 hover:border-slate-200 dark:hover:border-slate-700'
+                      }`}
+                    >
+                      {isEditingHistory && (
+                        <div className="pt-0.5 shrink-0">
+                          <input 
+                            type="checkbox" 
+                            checked={selectedHistoryItems.has(item.job_id)}
+                            readOnly
+                            className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
+                          />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0 flex flex-col gap-1">
+                        <div className="flex justify-between items-center w-full">
+                          <span className="font-semibold text-sm truncate text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400">{item.company_name}</span>
+                          <div className="flex items-center" title={item.overall_risk}>
+                            {item.overall_risk === Severity.CRITICAL && <div className="w-2.5 h-2.5 rounded-full bg-red-900 animate-pulse"></div>}
+                            {item.overall_risk === Severity.HIGH && <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>}
+                            {item.overall_risk === Severity.MEDIUM && <div className="w-2.5 h-2.5 rounded-full bg-amber-500"></div>}
+                            {item.overall_risk === Severity.LOW && <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>}
+                            {item.overall_risk === Severity.INFO && <div className="w-2.5 h-2.5 rounded-full bg-blue-500"></div>}
+                          </div>
+                        </div>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">{new Date(item.timestamp).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </>
+          )}
         </aside>
 
         {/* Main Content Area */}
@@ -1647,6 +1835,7 @@ export default function App() {
                   onComplete={handleProcessingComplete} 
                   onError={handleProcessingError}
                   onCancel={handleProcessingCancel}
+                  resumeRunId={resumeRunId}
                 />
               </div>
             )}

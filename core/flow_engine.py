@@ -114,7 +114,27 @@ class FlowEngine:
                         await on_step_complete(step, ctx)
                 except Exception as e:
                     ctx.log(f"DAG ERROR: {step.value} failed with {e}")
-                    completed_this_round.add(step)
+                    
+                    # --- NEW LOGIC: Immediate Localized Retry ---
+                    # Check if we have retries left for this specific step
+                    MAX_STEP_RETRIES = 3
+                    if step_execution_counts.get(step, 0) < MAX_STEP_RETRIES:
+                        ctx.log(f"SYSTEM: Immediately retrying {step.value} (Attempt {step_execution_counts.get(step, 0)}/{MAX_STEP_RETRIES})")
+                        # Re-add to pending so it gets scheduled in the next loop iteration
+                        pending.add(step)
+                    else:
+                        ctx.log(f"SYSTEM: {step.value} exhausted all retries and has permanently failed.")
+                        # Inject a dummy failed StepResult so the supervisor knows it crashed,
+                        # rather than silently omitting it.
+                        from core.models import StepResult
+                        ctx.results[step] = StepResult(
+                            step=step,
+                            findings=[],
+                            structured_data={"error": str(e), "failed": True},
+                            raw_data=f"AGENT CRASH: {e}",
+                            rationale="The agent encountered a fatal error and could not complete its research."
+                        )
+                        completed_this_round.add(step)
 
         return completed_this_round
 

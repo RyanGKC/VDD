@@ -33,6 +33,8 @@ async def lifespan(app: FastAPI):
     await neo4j.setup_constraints()
     yield
     from core.dependencies import neo4j, http_client
+    from custom_tools.web_search_tool import shutdown_browser
+    await shutdown_browser()
     await neo4j.close()
     await http_client.aclose()
 
@@ -74,7 +76,7 @@ async def generate_dd_report(request: DDRequest, bg_tasks: BackgroundTasks):
     import uuid
     from core.dependencies import (
         retrieval_engine, ingestion_pipeline,
-        cache_gate, singleflight, background_tasks, vs
+        cache_gate, singleflight, background_tasks, vs, checkpoint_db
     )
 
     run_id = request.job_id if request.job_id else str(uuid.uuid4())
@@ -97,6 +99,21 @@ async def generate_dd_report(request: DDRequest, bg_tasks: BackgroundTasks):
         singleflight=singleflight,
         background_tasks=background_tasks,
     )
+    if checkpoint_db:
+        ctx.checkpoint_db = checkpoint_db
+        await checkpoint_db.start_run(
+            run_id=run_id,
+            vendor_name=request.company_name,
+            company_details_json=ctx.company_details.model_dump_json()
+        )
+        await checkpoint_db.enqueue_entity(
+            run_id=run_id,
+            entity_name=request.company_name,
+            depth=request.tiers_to_search,
+            parent=None,
+            role='target'
+        )
+
     if request.enable_rag is not None:
         ctx.enable_rag = request.enable_rag
     if request.job_id:
@@ -150,6 +167,16 @@ async def generate_dd_report(request: DDRequest, bg_tasks: BackgroundTasks):
                 ids=[hist_id]
             )
             
+        if checkpoint_db:
+            await checkpoint_db.complete_run(run_id)
+            
+        try:
+            from core.dependencies import vs
+            vs.get_collection("run_documents").delete(where={"run_id": run_id})
+            print(f"SYSTEM: Cleaned up run_documents for run_id={run_id}")
+        except Exception as e:
+            print(f"SYSTEM: Failed to clean up run_documents: {e}")
+            
         return report
     except asyncio.CancelledError:
         print(f"Job {request.job_id} was successfully cancelled.")
@@ -158,9 +185,10 @@ async def generate_dd_report(request: DDRequest, bg_tasks: BackgroundTasks):
         if request.job_id:
             # Only pop if we are still the active task for this job_id.
             # A new strict-mode mount may have already overwritten it.
-            if active_tasks.get(request.job_id) is task:
-                active_jobs.pop(request.job_id, None)
-                active_tasks.pop(request.job_id, None)
+            if request.job_id in active_tasks and active_tasks[request.job_id] == task:
+                active_tasks.pop(request.job_id)
+            if request.job_id in active_jobs and active_jobs[request.job_id] == ctx:
+                active_jobs.pop(request.job_id)
         raise HTTPException(status_code=499, detail="Client Closed Request")
     except HTTPException:
         # Re-raise HTTP exceptions so they don't get wrapped in a 500
@@ -178,14 +206,6 @@ async def generate_dd_report(request: DDRequest, bg_tasks: BackgroundTasks):
                 if active_tasks.get(request.job_id) is task:
                     active_jobs.pop(request.job_id, None)
                     active_tasks.pop(request.job_id, None)
-                    
-                    # Cleanup ephemeral vector store documents
-                    try:
-                        from core.dependencies import vs
-                        vs.get_collection("run_documents").delete(where={"run_id": run_id})
-                        print(f"SYSTEM: Cleaned up run_documents for run_id={run_id}")
-                    except Exception as e:
-                        print(f"SYSTEM: Failed to clean up run_documents: {e}")
                 
             t = asyncio.create_task(delayed_cleanup())
             _cleanup_tasks.add(t)
@@ -259,10 +279,23 @@ async def ws_dd_status(websocket: WebSocket, job_id: str):
         print(f"WebSocket error for job {job_id}: {e}")
 
 @app.post("/api/dd_cancel/{job_id}")
-async def cancel_dd_job(job_id: str):
+async def cancel_dd_job(job_id: str, discard: bool = False):
     task = active_tasks.get(job_id)
     if task and not task.done():
         task.cancel()
+        
+    if discard:
+        from core.dependencies import checkpoint_db, vs
+        if checkpoint_db:
+            await checkpoint_db.delete_runs([job_id])
+        if vs:
+            try:
+                vs.get_collection("run_documents").delete(where={"run_id": job_id})
+            except Exception:
+                pass
+        return {"status": "cancelled_and_discarded", "job_id": job_id}
+
+    if task:
         return {"status": "cancelled", "job_id": job_id}
     return {"status": "not_found_or_finished", "job_id": job_id}
 
@@ -328,6 +361,132 @@ async def delete_history(request: DeleteHistoryRequest):
         return {"status": "success", "deleted": len(request.job_ids)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/dd_report/interrupted")
+async def delete_interrupted_runs(request: DeleteHistoryRequest):
+    try:
+        from core.dependencies import checkpoint_db, vs
+        if checkpoint_db:
+            await checkpoint_db.delete_runs(request.job_ids)
+        if vs:
+            try:
+                vs.get_collection("run_documents").delete(where={"run_id": {"$in": request.job_ids}})
+            except Exception:
+                pass
+        return {"status": "success", "deleted": len(request.job_ids)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/dd_report/interrupted")
+async def get_interrupted_runs():
+    from core.dependencies import checkpoint_db
+    if not checkpoint_db:
+        return []
+    runs = await checkpoint_db.get_interrupted_runs()
+    return [run for run in runs if run["run_id"] not in active_jobs]
+
+@app.post("/api/dd_report/resume/{run_id}", response_model=DDReport)
+async def resume_dd_report(run_id: str):
+    from core.dependencies import checkpoint_db
+    
+    run = await checkpoint_db.get_run(run_id)
+    if not run:
+        raise HTTPException(404, detail=f"Run '{run_id}' not found in checkpoint store.")
+    if run["status"] == "completed":
+        raise HTTPException(409, detail=f"Run '{run_id}' already completed.")
+    
+    # --- Rebuild DDContext from checkpoint ---
+    company_details = CompanyDetails.model_validate_json(run["company_details_json"])
+    from core.dependencies import (
+        retrieval_engine, ingestion_pipeline,
+        cache_gate, singleflight, background_tasks
+    )
+    ctx = DDContext(
+        company_details=company_details, 
+        run_id=run_id,
+        retrieval_engine=retrieval_engine,
+        ingestion_pipeline=ingestion_pipeline,
+        cache_gate=cache_gate,
+        singleflight=singleflight,
+        background_tasks=background_tasks
+    )
+    ctx.checkpoint_db = checkpoint_db
+    
+    # --- Reset any in-flight entities ---
+    await checkpoint_db.reset_in_progress(run_id)
+    
+    # Hydration of completed steps happens automatically inside run_dd_with_ctx for both the target company and any child sub-pipelines
+    if run_id in active_tasks:
+        prior_task = active_tasks.pop(run_id)
+        if not prior_task.done():
+            prior_task.cancel()
+    
+    active_jobs[run_id] = ctx
+    
+    try:
+        task = asyncio.create_task(run_dd_with_ctx(ctx))
+        active_tasks[run_id] = task
+        report = await task
+        
+        # Save to history database
+        if not ctx.saved_to_history:
+            ctx.saved_to_history = True
+            history_db.save_report(
+                job_id=run_id,
+                company_name=run["vendor_name"],
+                overall_risk=report.overall_risk.value,
+                report_json=report.model_dump_json()
+            )
+            
+            import hashlib
+            hist_id = hashlib.sha256(f"{run['vendor_name']}|{run_id}".encode()).hexdigest()
+            metadata = {
+                "primary_entity_id": run["vendor_name"],
+                "report_id": run_id,
+                "risk_rating": report.overall_risk.value,
+                "date_generated": datetime.now(timezone.utc).isoformat()
+            }
+            vs.get_collection("historical_reports").upsert(
+                documents=[f"Summary: {report.executive_summary}\n\nStrengths: {report.strengths}\n\nRed Flags: {report.red_flags}"],
+                metadatas=[metadata],
+                ids=[hist_id]
+            )
+            
+        await checkpoint_db.complete_run(run_id)
+        
+        try:
+            from core.dependencies import vs
+            vs.get_collection("run_documents").delete(where={"run_id": run_id})
+            print(f"SYSTEM: Cleaned up run_documents for run_id={run_id}")
+        except Exception as e:
+            print(f"SYSTEM: Failed to clean up run_documents: {e}")
+            
+        return report
+    except asyncio.CancelledError:
+        print(f"Job {run_id} was successfully cancelled during resume.")
+        if 'task' in locals() and not task.done():
+            task.cancel()
+        if run_id in active_tasks and active_tasks[run_id] == task:
+            active_tasks.pop(run_id)
+        if run_id in active_jobs and active_jobs[run_id] == ctx:
+            active_jobs.pop(run_id)
+        raise HTTPException(status_code=499, detail="Client Closed Request")
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        async def delayed_cleanup():
+            await asyncio.sleep(5)
+            if active_tasks.get(run_id) is task:
+                active_jobs.pop(run_id, None)
+                active_tasks.pop(run_id, None)
+            
+        t = asyncio.create_task(delayed_cleanup())
+        _cleanup_tasks.add(t)
+        t.add_done_callback(_cleanup_tasks.discard)
 
 if __name__ == "__main__":
     import uvicorn

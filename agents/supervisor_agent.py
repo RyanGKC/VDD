@@ -240,4 +240,15 @@ class SupervisorAgent:
         for s in plan:
             ctx._replan_rationale[s] = decision.rationale
 
+        if getattr(ctx, 'checkpoint_db', None) and ctx.run_id:
+            import json
+            await ctx.checkpoint_db.save_intervention(
+                run_id=ctx.run_id,
+                replan_json=json.dumps([s.value for s in plan]),
+                context_json=json.dumps({
+                    "updated_country": decision.updated_country,
+                    "updated_registration_number": decision.updated_registration_number,
+                })
+            )
+
         return plan, True

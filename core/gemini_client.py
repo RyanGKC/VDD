@@ -57,7 +57,7 @@ class GeminiClient:
 
     @retry(
         stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=20),
+        wait=wait_exponential(multiplier=2, min=4, max=30),
         reraise=True,
     )
     async def generate_structured(
@@ -112,7 +112,7 @@ class GeminiClient:
 
     @retry(
         stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=20),
+        wait=wait_exponential(multiplier=2, min=4, max=30),
         reraise=True,
     )
     async def embed_content(self, texts: list[str]) -> list[list[float]]:
