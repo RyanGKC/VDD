@@ -22,6 +22,7 @@ class CheckpointDB:
                     run_id      TEXT PRIMARY KEY,
                     vendor_name TEXT NOT NULL,
                     company_details_json TEXT NOT NULL,
+                    run_config_json TEXT,
                     status      TEXT NOT NULL DEFAULT 'running',
                     started_at  TEXT NOT NULL,
                     updated_at  TEXT NOT NULL
@@ -64,21 +65,27 @@ class CheckpointDB:
             if "entity_name" not in existing_cols:
                 conn.execute("ALTER TABLE step_results ADD COLUMN entity_name TEXT NOT NULL DEFAULT ''")
                 conn.commit()
+                
+            # Migration: add run_config_json column if missing (for existing DBs from old schema)
+            existing_runs_cols = {row[1] for row in conn.execute("PRAGMA table_info(pipeline_runs)")}
+            if "run_config_json" not in existing_runs_cols:
+                conn.execute("ALTER TABLE pipeline_runs ADD COLUMN run_config_json TEXT")
+                conn.commit()
             
     async def _run_in_executor(self, func, *args):
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(self._executor, func, *args)
 
     # --- pipeline_runs ---
-    def _start_run_sync(self, run_id, vendor_name, company_details_json):
+    def _start_run_sync(self, run_id, vendor_name, company_details_json, run_config_json=None):
         with sqlite3.connect(self.db_path) as conn:
             conn.execute(
-                "INSERT OR REPLACE INTO pipeline_runs (run_id, vendor_name, company_details_json, status, started_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-                (run_id, vendor_name, company_details_json, 'running', datetime.now().isoformat(), datetime.now().isoformat())
+                "INSERT OR REPLACE INTO pipeline_runs (run_id, vendor_name, company_details_json, run_config_json, status, started_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (run_id, vendor_name, company_details_json, run_config_json, 'running', datetime.now().isoformat(), datetime.now().isoformat())
             )
             
-    async def start_run(self, run_id, vendor_name, company_details_json):
-        await self._run_in_executor(self._start_run_sync, run_id, vendor_name, company_details_json)
+    async def start_run(self, run_id, vendor_name, company_details_json, run_config_json=None):
+        await self._run_in_executor(self._start_run_sync, run_id, vendor_name, company_details_json, run_config_json)
         
     def _update_run_status_sync(self, run_id, status):
         with sqlite3.connect(self.db_path) as conn:
@@ -105,15 +112,16 @@ class CheckpointDB:
     def _get_run_sync(self, run_id):
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT run_id, vendor_name, company_details_json, status, started_at FROM pipeline_runs WHERE run_id = ?", (run_id,))
+            cursor.execute("SELECT run_id, vendor_name, company_details_json, run_config_json, status, started_at FROM pipeline_runs WHERE run_id = ?", (run_id,))
             row = cursor.fetchone()
             if row:
                 return {
                     "run_id": row[0],
                     "vendor_name": row[1],
                     "company_details_json": row[2],
-                    "status": row[3],
-                    "started_at": row[4]
+                    "run_config_json": row[3],
+                    "status": row[4],
+                    "started_at": row[5]
                 }
             return None
 
@@ -134,10 +142,10 @@ class CheckpointDB:
     def _get_completed_steps_sync(self, run_id, entity_name):
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT step_name, step_result_json FROM step_results WHERE run_id = ? AND entity_name = ?", (run_id, entity_name))
-            return {row[0]: row[1] for row in cursor.fetchall()}
+            cursor.execute("SELECT step_name, step_result_json, completed_at FROM step_results WHERE run_id = ? AND entity_name = ?", (run_id, entity_name))
+            return {row[0]: {"result_json": row[1], "completed_at": row[2]} for row in cursor.fetchall()}
 
-    async def get_completed_steps(self, run_id, entity_name) -> dict[str, str]:
+    async def get_completed_steps(self, run_id, entity_name) -> dict[str, dict]:
         return await self._run_in_executor(self._get_completed_steps_sync, run_id, entity_name)
 
     # --- supervisor_interventions ---
@@ -213,3 +221,21 @@ class CheckpointDB:
 
     async def delete_runs(self, run_ids: list[str]):
         await self._run_in_executor(self._delete_runs_sync, run_ids)
+
+    def _get_interventions_sync(self, run_id):
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT replan_json, context_updates_json, applied_at FROM supervisor_interventions WHERE run_id = ? ORDER BY id ASC", (run_id,))
+            return [{"replan_json": row[0], "context_updates_json": row[1], "applied_at": row[2]} for row in cursor.fetchall()]
+
+    async def get_interventions(self, run_id) -> list[dict]:
+        return await self._run_in_executor(self._get_interventions_sync, run_id)
+
+    def _get_all_entities_sync(self, run_id):
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT DISTINCT entity_name FROM traversal_queue WHERE run_id = ?", (run_id,))
+            return [row[0] for row in cursor.fetchall()]
+
+    async def get_all_entities(self, run_id) -> list[str]:
+        return await self._run_in_executor(self._get_all_entities_sync, run_id)

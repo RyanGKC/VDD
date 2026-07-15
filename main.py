@@ -54,6 +54,131 @@ def build_engine(client: Any) -> tuple[FlowEngine, SummaryAgent]:
     return engine, summary
 
 
+async def spawn_sub_pipelines_for_step(step: StepName, current_ctx: DDContext, enqueue: bool = True):
+    from core.models import Severity, DDReport, CompanyDetails, DDContext
+    from core.dependencies import neo4j
+    import asyncio
+    
+    if step == StepName.SHAREHOLDERS and current_ctx.enable_parent_company:
+        parent_name = current_ctx.results[StepName.SHAREHOLDERS].structured_data.get("parent_company")
+        if parent_name:
+            async with current_ctx.visited_lock:
+                # Semantic Graph Deduplication
+                similar_entity = await neo4j.find_similar_company(parent_name)
+                canonical_parent = similar_entity if similar_entity else parent_name
+                
+                is_duplicate = canonical_parent.lower() in current_ctx.visited_companies
+                if not is_duplicate:
+                    current_ctx.visited_companies.add(canonical_parent.lower())
+                    
+            await neo4j.save_ownership_edge(canonical_parent, current_ctx.company_details.company_name)
+            
+            if not is_duplicate:
+                if enqueue and getattr(current_ctx, 'checkpoint_db', None) and current_ctx.run_id:
+                    await current_ctx.checkpoint_db.enqueue_entity(
+                        run_id=current_ctx.run_id,
+                        entity_name=canonical_parent,
+                        depth=1,
+                        parent=current_ctx.company_details.company_name,
+                        role='parent'
+                    )
+                parent_ctx = DDContext(
+                    company_details=CompanyDetails(company_name=canonical_parent),
+                    use_mock=current_ctx.use_mock,
+                    tiers_to_search=current_ctx.tiers_to_search if current_ctx.enable_parent_supply_chain else 1,
+                    max_suppliers_per_node=current_ctx.max_suppliers_per_node,
+                    enable_parent_company=False,
+                    enable_parent_supply_chain=current_ctx.enable_parent_supply_chain,
+                    entity_role='parent',
+                    parent_entity=current_ctx.company_details.company_name,
+                    run_id=current_ctx.run_id,
+                    retrieval_engine=current_ctx.retrieval_engine,
+                    ingestion_pipeline=current_ctx.ingestion_pipeline,
+                    cache_gate=current_ctx.cache_gate,
+                    singleflight=current_ctx.singleflight,
+                    background_tasks=current_ctx.background_tasks,
+                )
+                # Assign by reference AFTER construction to bypass Pydantic's deep copy
+                parent_ctx.execution_log = current_ctx.execution_log
+                parent_ctx.detailed_audit_log = current_ctx.detailed_audit_log
+                parent_ctx.visited_companies = current_ctx.visited_companies
+                parent_ctx.visited_lock = current_ctx.visited_lock
+                parent_ctx.screened_entities = current_ctx.screened_entities
+                parent_ctx.screened_entities_lock = current_ctx.screened_entities_lock
+                parent_ctx.checkpoint_db = getattr(current_ctx, 'checkpoint_db', None)
+                current_ctx.log(f"SYSTEM: Spawning sub-pipeline for parent company: {parent_name}")
+                current_ctx.parent_task = asyncio.create_task(run_dd_with_ctx(parent_ctx))
+            else:
+                current_ctx.log(f"SYSTEM: Parent {canonical_parent} already visited. Linking edge only.")
+                stub = DDReport(
+                    vendor_name=canonical_parent, overall_risk=Severity.INFO,
+                    strengths=[], red_flags=[], recommendations=[], sources=[],
+                    executive_summary="Duplicate node (already researched elsewhere in graph)."
+                )
+                async def return_stub_parent(s=stub): return s
+                current_ctx.parent_task = asyncio.create_task(return_stub_parent())
+
+    if step == StepName.RESILIENCE and current_ctx.tiers_to_search > 1:
+        suppliers = current_ctx.results[StepName.RESILIENCE].structured_data.get("suppliers", [])
+        suppliers = suppliers[:current_ctx.max_suppliers_per_node]
+        
+        for supplier_name in suppliers:
+            async with current_ctx.visited_lock:
+                # Semantic Graph Deduplication
+                similar_entity = await neo4j.find_similar_company(supplier_name)
+                canonical_supplier = similar_entity if similar_entity else supplier_name
+                
+                is_duplicate = canonical_supplier.lower() in current_ctx.visited_companies
+                if not is_duplicate:
+                    current_ctx.visited_companies.add(canonical_supplier.lower())
+            
+            await neo4j.save_supply_edge(canonical_supplier, current_ctx.company_details.company_name)
+            
+            if not is_duplicate:
+                if enqueue and getattr(current_ctx, 'checkpoint_db', None) and current_ctx.run_id:
+                    await current_ctx.checkpoint_db.enqueue_entity(
+                        run_id=current_ctx.run_id,
+                        entity_name=canonical_supplier,
+                        depth=current_ctx.tiers_to_search,
+                        parent=current_ctx.company_details.company_name,
+                        role='supplier'
+                    )
+                child_ctx = DDContext(
+                    company_details=CompanyDetails(company_name=canonical_supplier),
+                    use_mock=current_ctx.use_mock,
+                    tiers_to_search=current_ctx.tiers_to_search - 1,
+                    max_suppliers_per_node=current_ctx.max_suppliers_per_node,
+                    entity_role='supplier',
+                    parent_entity=current_ctx.company_details.company_name,
+                    run_id=current_ctx.run_id,
+                    retrieval_engine=current_ctx.retrieval_engine,
+                    ingestion_pipeline=current_ctx.ingestion_pipeline,
+                    cache_gate=current_ctx.cache_gate,
+                    singleflight=current_ctx.singleflight,
+                    background_tasks=current_ctx.background_tasks,
+                )
+                # Assign by reference AFTER construction to bypass Pydantic's deep copy
+                child_ctx.execution_log = current_ctx.execution_log
+                child_ctx.detailed_audit_log = current_ctx.detailed_audit_log
+                child_ctx.visited_companies = current_ctx.visited_companies
+                child_ctx.visited_lock = current_ctx.visited_lock
+                child_ctx.screened_entities = current_ctx.screened_entities
+                child_ctx.screened_entities_lock = current_ctx.screened_entities_lock
+                child_ctx.checkpoint_db = getattr(current_ctx, 'checkpoint_db', None)
+                current_ctx.log(f"SYSTEM: Spawning sub-pipeline for supplier: {canonical_supplier}")
+                task = asyncio.create_task(run_dd_with_ctx(child_ctx))
+                current_ctx.child_tasks.append(task)
+            else:
+                current_ctx.log(f"SYSTEM: Supplier {canonical_supplier} already visited. Linking edge only.")
+                stub = DDReport(
+                    vendor_name=canonical_supplier, overall_risk=Severity.INFO,
+                    strengths=[], red_flags=[], recommendations=[], sources=[],
+                    executive_summary="Duplicate node (already researched elsewhere in graph)."
+                )
+                async def return_stub_child(s=stub): return s
+                current_ctx.child_tasks.append(asyncio.create_task(return_stub_child()))
+
+
 async def run_dd_with_ctx(ctx: DDContext) -> DDReport:
     provider = os.getenv("LLM_PROVIDER", "openai").lower()
     if provider == "gemini":
@@ -61,136 +186,62 @@ async def run_dd_with_ctx(ctx: DDContext) -> DDReport:
     else:
         client = OpenAIClient(use_cache=ctx.use_mock)
         
+    async with ctx.visited_lock:
+        ctx.visited_companies.add(ctx.company_details.company_name.lower())
+        
     if getattr(ctx, 'checkpoint_db', None) and ctx.run_id:
         await ctx.checkpoint_db.mark_in_progress(ctx.run_id, ctx.company_details.company_name)
         # Hydrate completed steps
         completed_steps = await ctx.checkpoint_db.get_completed_steps(ctx.run_id, ctx.company_details.company_name)
+        
+        # Load interventions to see if any steps were replanned
+        interventions = await ctx.checkpoint_db.get_interventions(ctx.run_id)
+        latest_replan_steps = set()
+        intervention_applied_at = None
+        if interventions:
+            import json
+            latest = interventions[-1]
+            try:
+                latest_replan_steps = set(json.loads(latest["replan_json"]))
+                intervention_applied_at = latest["applied_at"]
+            except Exception:
+                pass
+                
         from core.models import StepResult
-        for step_name, result_json in completed_steps.items():
-            ctx.results[StepName(step_name)] = StepResult.model_validate_json(result_json)
+        hydrated_steps = []
+        for step_name, step_data in completed_steps.items():
+            step = StepName(step_name)
+            result_json = step_data["result_json"]
+            completed_at = step_data["completed_at"]
+            
+            # Check if this step is obsolete (part of latest replan, and completed before replan was applied)
+            is_obsolete = False
+            if step in latest_replan_steps and intervention_applied_at:
+                if completed_at < intervention_applied_at:
+                    is_obsolete = True
+                    
+            if not is_obsolete:
+                ctx.results[step] = StepResult.model_validate_json(result_json)
+                hydrated_steps.append(step)
+                import json
+                ctx.log(f"[EVENT] " + json.dumps({
+                    "entity": ctx.company_details.company_name,
+                    "agent": step.value,
+                    "status": "completed",
+                    "role": ctx.entity_role,
+                    "parent_entity": ctx.parent_entity
+                }))
+                
+        # Reconstruct sub-pipelines for valid hydrated steps
+        for step in hydrated_steps:
+            await spawn_sub_pipelines_for_step(step, ctx, enqueue=False)
 
     try:
         engine, summary_agent = build_engine(client)
         await neo4j.save_company_node(ctx.company_details.company_name, "PENDING")
 
         async def handle_step_complete(step: StepName, current_ctx: DDContext):
-
-            if step == StepName.SHAREHOLDERS and current_ctx.enable_parent_company:
-                parent_name = current_ctx.results[StepName.SHAREHOLDERS].structured_data.get("parent_company")
-                if parent_name:
-                    async with current_ctx.visited_lock:
-                        # Semantic Graph Deduplication
-                        similar_entity = await neo4j.find_similar_company(parent_name)
-                        canonical_parent = similar_entity if similar_entity else parent_name
-                        
-                        is_duplicate = canonical_parent.lower() in current_ctx.visited_companies
-                        if not is_duplicate:
-                            current_ctx.visited_companies.add(canonical_parent.lower())
-                            
-                    await neo4j.save_ownership_edge(canonical_parent, current_ctx.company_details.company_name)
-                    
-                    if not is_duplicate:
-                        if getattr(current_ctx, 'checkpoint_db', None) and current_ctx.run_id:
-                            await current_ctx.checkpoint_db.enqueue_entity(
-                                run_id=current_ctx.run_id,
-                                entity_name=canonical_parent,
-                                depth=1,
-                                parent=current_ctx.company_details.company_name,
-                                role='parent'
-                            )
-                        parent_ctx = DDContext(
-                            company_details=CompanyDetails(company_name=canonical_parent),
-                            use_mock=current_ctx.use_mock,
-                            tiers_to_search=current_ctx.tiers_to_search if current_ctx.enable_parent_supply_chain else 1,
-                            max_suppliers_per_node=current_ctx.max_suppliers_per_node,
-                            enable_parent_company=False,
-                            enable_parent_supply_chain=current_ctx.enable_parent_supply_chain,
-                            entity_role='parent',
-                            parent_entity=current_ctx.company_details.company_name,
-                            run_id=current_ctx.run_id,
-                            retrieval_engine=current_ctx.retrieval_engine,
-                            ingestion_pipeline=current_ctx.ingestion_pipeline,
-                            cache_gate=current_ctx.cache_gate,
-                            singleflight=current_ctx.singleflight,
-                            background_tasks=current_ctx.background_tasks,
-                        )
-                        # Assign by reference AFTER construction to bypass Pydantic's deep copy
-                        parent_ctx.execution_log = current_ctx.execution_log
-                        parent_ctx.detailed_audit_log = current_ctx.detailed_audit_log
-                        parent_ctx.visited_companies = current_ctx.visited_companies
-                        parent_ctx.visited_lock = current_ctx.visited_lock
-                        parent_ctx.screened_entities = current_ctx.screened_entities
-                        parent_ctx.screened_entities_lock = current_ctx.screened_entities_lock
-                        current_ctx.log(f"SYSTEM: Spawning sub-pipeline for parent company: {parent_name}")
-                        current_ctx.parent_task = asyncio.create_task(run_dd_with_ctx(parent_ctx))
-                    else:
-                        current_ctx.log(f"SYSTEM: Parent {canonical_parent} already visited. Linking edge only.")
-                        stub = DDReport(
-                            vendor_name=canonical_parent, overall_risk=Severity.INFO,
-                            strengths=[], red_flags=[], recommendations=[], sources=[],
-                            executive_summary="Duplicate node (already researched elsewhere in graph)."
-                        )
-                        async def return_stub_parent(s=stub): return s
-                        current_ctx.parent_task = asyncio.create_task(return_stub_parent())
-
-            if step == StepName.RESILIENCE and current_ctx.tiers_to_search > 1:
-                suppliers = current_ctx.results[StepName.RESILIENCE].structured_data.get("suppliers", [])
-                suppliers = suppliers[:current_ctx.max_suppliers_per_node]
-                
-                for supplier_name in suppliers:
-                    async with current_ctx.visited_lock:
-                        # Semantic Graph Deduplication
-                        similar_entity = await neo4j.find_similar_company(supplier_name)
-                        canonical_supplier = similar_entity if similar_entity else supplier_name
-                        
-                        is_duplicate = canonical_supplier.lower() in current_ctx.visited_companies
-                        if not is_duplicate:
-                            current_ctx.visited_companies.add(canonical_supplier.lower())
-                    
-                    await neo4j.save_supply_edge(canonical_supplier, current_ctx.company_details.company_name)
-                    
-                    if not is_duplicate:
-                        if getattr(current_ctx, 'checkpoint_db', None) and current_ctx.run_id:
-                            await current_ctx.checkpoint_db.enqueue_entity(
-                                run_id=current_ctx.run_id,
-                                entity_name=canonical_supplier,
-                                depth=current_ctx.tiers_to_search,
-                                parent=current_ctx.company_details.company_name,
-                                role='supplier'
-                            )
-                        child_ctx = DDContext(
-                            company_details=CompanyDetails(company_name=canonical_supplier),
-                            use_mock=current_ctx.use_mock,
-                            tiers_to_search=current_ctx.tiers_to_search - 1,
-                            max_suppliers_per_node=current_ctx.max_suppliers_per_node,
-                            entity_role='supplier',
-                            parent_entity=current_ctx.company_details.company_name,
-                            run_id=current_ctx.run_id,
-                            retrieval_engine=current_ctx.retrieval_engine,
-                            ingestion_pipeline=current_ctx.ingestion_pipeline,
-                            cache_gate=current_ctx.cache_gate,
-                            singleflight=current_ctx.singleflight,
-                            background_tasks=current_ctx.background_tasks,
-                        )
-                        # Assign by reference AFTER construction to bypass Pydantic's deep copy
-                        child_ctx.execution_log = current_ctx.execution_log
-                        child_ctx.detailed_audit_log = current_ctx.detailed_audit_log
-                        child_ctx.visited_companies = current_ctx.visited_companies
-                        child_ctx.visited_lock = current_ctx.visited_lock
-                        child_ctx.screened_entities = current_ctx.screened_entities
-                        child_ctx.screened_entities_lock = current_ctx.screened_entities_lock
-                        current_ctx.log(f"SYSTEM: Spawning sub-pipeline for supplier: {canonical_supplier}")
-                        task = asyncio.create_task(run_dd_with_ctx(child_ctx))
-                        current_ctx.child_tasks.append(task)
-                    else:
-                        current_ctx.log(f"SYSTEM: Supplier {canonical_supplier} already visited. Linking edge only.")
-                        stub = DDReport(
-                            vendor_name=canonical_supplier, overall_risk=Severity.INFO,
-                            strengths=[], red_flags=[], recommendations=[], sources=[],
-                            executive_summary="Duplicate node (already researched elsewhere in graph)."
-                        )
-                        async def return_stub_child(s=stub): return s
-                        current_ctx.child_tasks.append(asyncio.create_task(return_stub_child()))
+            await spawn_sub_pipelines_for_step(step, current_ctx, enqueue=True)
 
         # Pre-warm the entity resolver cache so all 9 agents hit memory instead of Neo4j on their first search
         if ctx.retrieval_engine and ctx.retrieval_engine.resolver:
@@ -219,7 +270,7 @@ async def run_dd_with_ctx(ctx: DDContext) -> DDReport:
             ctx.log(f"SYSTEM: Awaiting {len(ctx.child_tasks)} sub-pipelines for suppliers...")
             results = await asyncio.gather(*ctx.child_tasks, return_exceptions=True)
             for res in results:
-                if isinstance(res, Exception):
+                if isinstance(res, BaseException):
                     ctx.log(f"SYSTEM: Child pipeline failed with: {res}")
                 elif res:
                     report.supply_chain.append(res)

@@ -63,7 +63,7 @@ For each candidate, `fetch_and_clean_html()`:
 - **HTML**: parsed in a background thread — `trafilatura` first (best at stripping boilerplate), falling back to `BeautifulSoup` (stripping `script`/`style`/`nav`/`footer`/`header`/`aside`) if trafilatura returns nothing. Output is cleaned with `ftfy` (fixes mangled text encoding), stray list-marker lines are stripped, and whitespace is normalized.
 - Any exception (403, timeout, connection error, etc.) is caught and returns `None`, which the orchestrator treats as a dropped candidate — it logs the failure and moves to the next one without crashing.
 
-Successfully-extracted text (HTML or PDF) is passed whole to `summarize_text()`, which sends up to the first 30,000 characters to Gemini with instructions to extract concrete facts, numbers, dates, and claims and omit boilerplate.
+Successfully-extracted text (HTML or PDF) is passed to `summarize_text()`. Because the underlying Gemini LLM has a massive 1-million token context window, the **entire extracted text is sent without any truncation limits**. The LLM is instructed to read the entire document, extract concrete facts, numbers, dates, and claims, and omit boilerplate.
 
 ### 7. Early Exit
 Within each batch, tasks are consumed via `asyncio.as_completed()` so results are collected as soon as they finish rather than waiting for the slowest one. The moment `len(enriched_results) == max_results`, remaining in-flight tasks in that batch are cancelled and the loop halts — no further batches are started.

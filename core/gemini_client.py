@@ -7,12 +7,16 @@ import logging
 import os
 from pathlib import Path
 from typing import Type, TypeVar
+import threading
+import asyncio
 
 from pydantic import BaseModel
 from tenacity import retry, stop_after_attempt, wait_exponential
-import asyncio
 
 _GEMINI_SEMAPHORE = None
+_CLIENT = None
+_CREDENTIALS = None
+_TOKEN_LOCK = threading.Lock()
 
 def _get_semaphore():
     global _GEMINI_SEMAPHORE
@@ -36,27 +40,82 @@ cache_db = PersistentCache()
 
 T = TypeVar("T", bound=BaseModel)
 
+def get_shared_client() -> genai.Client:
+    global _CLIENT
+    if _CLIENT is None:
+        _init_shared_client()
+    return _CLIENT
+
+def get_shared_credentials():
+    global _CREDENTIALS
+    if _CREDENTIALS is None:
+        _init_shared_client()
+    return _CREDENTIALS
+
+def _init_shared_client(force: bool = False) -> None:
+    global _CREDENTIALS, _CLIENT
+    if force:
+        _CLIENT = None
+        _CREDENTIALS = None
+        
+    use_vertex = os.getenv("GOOGLE_GENAI_USE_ENTERPRISE", "false").lower() == "true"
+    if use_vertex:
+        project = os.getenv("GOOGLE_CLOUD_PROJECT")
+        location = os.getenv("GOOGLE_CLOUD_LOCATION")
+        
+        import google.auth
+        _CREDENTIALS, default_project = google.auth.default()
+        if not project:
+            project = default_project
+            
+        _CLIENT = genai.Client(
+            vertexai=True,
+            project=project,
+            location=location,
+            credentials=_CREDENTIALS
+        )
+    else:
+        _CLIENT = genai.Client()
+        _CREDENTIALS = None
+
+def ensure_valid_token_sync() -> None:
+    credentials = get_shared_credentials()
+    if credentials and not credentials.valid:
+        with _TOKEN_LOCK:
+            if not credentials.valid:
+                from google.auth.transport.requests import Request
+                try:
+                    credentials.refresh(Request())
+                    logger.info("Successfully refreshed Vertex AI OAuth token (sync)")
+                except Exception as e:
+                    logger.error(f"Failed to refresh token (sync): {e}")
+                    raise
+
+async def ensure_valid_token_async() -> None:
+    credentials = get_shared_credentials()
+    if credentials and not credentials.valid:
+        # Run sync refresh in background thread to avoid blocking event loop
+        await asyncio.to_thread(ensure_valid_token_sync)
+
 
 class GeminiClient:
     def __init__(self, model: str | None = None, use_cache: bool = False) -> None:
         self._model = model or os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
         self.use_cache = use_cache
-        
-        # Check if enterprise mode is enabled
-        use_vertex = os.getenv("GOOGLE_GENAI_USE_ENTERPRISE", "false").lower() == "true"
-        if use_vertex:
-            project = os.getenv("GOOGLE_CLOUD_PROJECT")
-            location = os.getenv("GOOGLE_CLOUD_LOCATION")
-            self._client = genai.Client(vertexai=True, project=project, location=location)
-        else:
-            # Assumes GOOGLE_API_KEY is available in the environment
-            self._client = genai.Client()
+        self._client = get_shared_client()
+        self._credentials = get_shared_credentials()
+
+    def _init_client(self) -> None:
+        # Re-initialize shared client if needed
+        _init_shared_client(force=True)
+        self._client = get_shared_client()
+        self._credentials = get_shared_credentials()
             
     async def close(self) -> None:
         pass
 
     @retry(
-        stop=stop_after_attempt(3),
+        stop=stop_after_attempt(5),
         wait=wait_exponential(multiplier=2, min=4, max=30),
         reraise=True,
     )
@@ -73,8 +132,7 @@ class GeminiClient:
             cache_key = f"llm|{self._model}|{system_instruction}|{prompt}|{schema.__name__}|{enable_search}"
             cached_val = cache_db.get(cache_key, use_mock=True)
             if cached_val:
-                import asyncio
-                await asyncio.sleep(0.5) # Yield to event loop and simulate network delay
+                await asyncio.sleep(0.5)
                 return schema.model_validate_json(cached_val)
                 
         config_kwargs = {
@@ -87,13 +145,18 @@ class GeminiClient:
         if enable_search:
             config_kwargs["tools"] = [{"google_search": {}}]
 
-        # Call Gemini asynchronously
-        async with _get_semaphore():
-            response = await self._client.aio.models.generate_content(
-                model=self._model,
-                contents=prompt,
-                config=types.GenerateContentConfig(**config_kwargs),
-            )
+        await ensure_valid_token_async()
+        try:
+            async with _get_semaphore():
+                response = await self._client.aio.models.generate_content(
+                    model=self._model,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(**config_kwargs),
+                )
+        except Exception as e:
+            logger.warning(f"Re-initializing Gemini client due to generation error: {e}")
+            self._init_client()
+            raise
         
         if not response.text:
             finish_reason = getattr(response.candidates[0], 'finish_reason', 'UNKNOWN') if response.candidates else 'NO_CANDIDATES'
@@ -101,7 +164,6 @@ class GeminiClient:
             raise ValueError(f"Gemini returned an empty response. Finish reason: {finish_reason}")
             
         try:
-            # Parse JSON using pydantic
             obj = schema.model_validate_json(response.text)
             if self.use_cache and cache_key:
                 cache_db.set(cache_key, obj.model_dump_json(), use_mock=True)
@@ -111,14 +173,20 @@ class GeminiClient:
             raise
 
     @retry(
-        stop=stop_after_attempt(3),
+        stop=stop_after_attempt(5),
         wait=wait_exponential(multiplier=2, min=4, max=30),
         reraise=True,
     )
     async def embed_content(self, texts: list[str]) -> list[list[float]]:
-        async with _get_semaphore():
-            response = await self._client.aio.models.embed_content(
-                model="text-embedding-004",
-                contents=texts,
-            )
+        await ensure_valid_token_async()
+        try:
+            async with _get_semaphore():
+                response = await self._client.aio.models.embed_content(
+                    model="text-embedding-004",
+                    contents=texts,
+                )
+        except Exception as e:
+            logger.warning(f"Re-initializing Gemini client due to embedding error: {e}")
+            self._init_client()
+            raise
         return [emb.values for emb in response.embeddings]

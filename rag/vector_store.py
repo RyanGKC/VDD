@@ -14,13 +14,8 @@ load_dotenv(dotenv_path=env_path)
 
 class GeminiEmbeddingFunction(EmbeddingFunction):
     def __init__(self):
-        use_vertex = os.getenv("GOOGLE_GENAI_USE_ENTERPRISE", "false").lower() == "true"
-        if use_vertex:
-            project = os.getenv("GOOGLE_CLOUD_PROJECT")
-            location = os.getenv("GOOGLE_CLOUD_LOCATION")
-            self.client = genai.Client(vertexai=True, project=project, location=location)
-        else:
-            self.client = genai.Client()
+        from core.gemini_client import get_shared_client
+        self.client = get_shared_client()
         self.model = "text-embedding-004"
         
     @retry(
@@ -29,6 +24,8 @@ class GeminiEmbeddingFunction(EmbeddingFunction):
         reraise=True,
     )
     def __call__(self, input: Documents) -> Embeddings:
+        from core.gemini_client import ensure_valid_token_sync
+        ensure_valid_token_sync()
         response = self.client.models.embed_content(
             model=self.model,
             contents=input

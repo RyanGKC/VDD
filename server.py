@@ -101,10 +101,19 @@ async def generate_dd_report(request: DDRequest, bg_tasks: BackgroundTasks):
     )
     if checkpoint_db:
         ctx.checkpoint_db = checkpoint_db
+        run_config = {
+            "use_mock": request.use_mock,
+            "tiers_to_search": request.tiers_to_search,
+            "max_suppliers_per_node": request.max_suppliers_per_node,
+            "enable_parent_company": request.enable_parent_company,
+            "enable_parent_supply_chain": request.enable_parent_supply_chain,
+            "enable_rag": request.enable_rag if request.enable_rag is not None else True
+        }
         await checkpoint_db.start_run(
             run_id=run_id,
             vendor_name=request.company_name,
-            company_details_json=ctx.company_details.model_dump_json()
+            company_details_json=ctx.company_details.model_dump_json(),
+            run_config_json=json.dumps(run_config)
         )
         await checkpoint_db.enqueue_entity(
             run_id=run_id,
@@ -397,9 +406,41 @@ async def resume_dd_report(run_id: str):
     
     # --- Rebuild DDContext from checkpoint ---
     company_details = CompanyDetails.model_validate_json(run["company_details_json"])
+    
+    # Load configuration
+    run_config = {}
+    if run.get("run_config_json"):
+        try:
+            run_config = json.loads(run["run_config_json"])
+        except Exception:
+            pass
+            
+    # Load and apply context/enrichment updates chronologically from supervisor interventions
+    enrichment = {}
+    interventions = await checkpoint_db.get_interventions(run_id)
+    for intervention in interventions:
+        if intervention["context_updates_json"]:
+            try:
+                updates = json.loads(intervention["context_updates_json"])
+                if updates.get("updated_country"):
+                    company_details.country = updates["updated_country"]
+                if updates.get("updated_registration_number"):
+                    company_details.registration_number = updates["updated_registration_number"]
+                if updates.get("updated_address"):
+                    company_details.address = updates["updated_address"]
+                if updates.get("updated_website"):
+                    company_details.website = updates["updated_website"]
+                if updates.get("updated_tax_id"):
+                    company_details.tax_id = updates["updated_tax_id"]
+                if updates.get("new_enrichment"):
+                    enrichment.update(updates["new_enrichment"])
+            except Exception:
+                pass
+                
     from core.dependencies import (
         retrieval_engine, ingestion_pipeline,
-        cache_gate, singleflight, background_tasks
+        cache_gate, singleflight, background_tasks,
+        vs, history_db
     )
     ctx = DDContext(
         company_details=company_details, 
@@ -408,7 +449,14 @@ async def resume_dd_report(run_id: str):
         ingestion_pipeline=ingestion_pipeline,
         cache_gate=cache_gate,
         singleflight=singleflight,
-        background_tasks=background_tasks
+        background_tasks=background_tasks,
+        use_mock=run_config.get("use_mock", False),
+        tiers_to_search=run_config.get("tiers_to_search", 1),
+        max_suppliers_per_node=run_config.get("max_suppliers_per_node", 3),
+        enable_parent_company=run_config.get("enable_parent_company", False),
+        enable_parent_supply_chain=run_config.get("enable_parent_supply_chain", False),
+        enable_rag=run_config.get("enable_rag", True),
+        enrichment=enrichment
     )
     ctx.checkpoint_db = checkpoint_db
     
@@ -455,7 +503,6 @@ async def resume_dd_report(run_id: str):
         await checkpoint_db.complete_run(run_id)
         
         try:
-            from core.dependencies import vs
             vs.get_collection("run_documents").delete(where={"run_id": run_id})
             print(f"SYSTEM: Cleaned up run_documents for run_id={run_id}")
         except Exception as e:

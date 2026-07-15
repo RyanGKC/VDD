@@ -244,7 +244,6 @@ class WebSearchResponse(BaseModel):
     error: Optional[str] = None
     debug_stats: dict | None = None
 
-
 async def summarize_text(text: str) -> str:
     """Summarizes a long webpage using Gemini."""
     try:

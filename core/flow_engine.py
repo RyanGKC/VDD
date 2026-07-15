@@ -145,11 +145,22 @@ class FlowEngine:
     ) -> DDContext:
         """Execute the full due-diligence flow with DAG-based parallelism and batched review."""
         plan: list[StepName] = list(IDEAL_FLOW)
+        
+        # Identify steps already completed in previous run and hydrated into ctx.results
+        hydrated_steps = set(ctx.results.keys())
+        
         replans = 0
         step_execution_counts: dict[StepName, int] = {}
         all_completed: set[StepName] = set()
 
+        first_iteration = True
         while plan:
+            if first_iteration:
+                # Exclude steps already completed in a previous run
+                plan = [s for s in plan if s not in hydrated_steps]
+                all_completed.update(hydrated_steps)
+                first_iteration = False
+
             # 1. Execute the current plan as a DAG
             ctx.log(f"SYSTEM: Spawning DAG execution for {len(plan)} steps...")
             completed_this_round = await self._execute_dag(plan, ctx, step_execution_counts, on_step_complete)

@@ -17,21 +17,12 @@ class Neo4jClient:
             logger.warning(f"Failed to initialize Neo4j driver (Graph database features will be disabled): {e}")
             self.driver = None
             
-        use_vertex = os.getenv("GOOGLE_GENAI_USE_ENTERPRISE", "false").lower() == "true"
-        if use_vertex:
-            project = os.getenv("GOOGLE_CLOUD_PROJECT")
-            location = os.getenv("GOOGLE_CLOUD_LOCATION")
-            self.genai_client = genai.Client(vertexai=True, project=project, location=location)
-        else:
-            self.genai_client = genai.Client()
-        self.embedding_model = "text-embedding-004"
+        from core.gemini_client import GeminiClient
+        self.gemini_client = GeminiClient()
 
     async def get_embedding(self, text: str) -> List[float]:
-        response = await self.genai_client.aio.models.embed_content(
-            model=self.embedding_model,
-            contents=text
-        )
-        return response.embeddings[0].values
+        res = await self.gemini_client.embed_content([text])
+        return res[0]
 
     async def close(self):
         if self.driver:
