@@ -244,7 +244,6 @@ class WebSearchResponse(BaseModel):
     error: Optional[str] = None
     debug_stats: dict | None = None
 
-MAX_SUMMARY_INPUT_CHARS = 30_000
 
 async def summarize_text(text: str) -> str:
     """Summarizes a long webpage using Gemini."""
@@ -252,8 +251,7 @@ async def summarize_text(text: str) -> str:
         gemini = GeminiClient(model="gemini-2.5-flash-lite")
         system_instruction = "You are a web scraper assistant. Summarize the following webpage text. Extract all concrete facts, numbers, dates, and claims. Omit boilerplate."
         
-        truncated = text[:MAX_SUMMARY_INPUT_CHARS]
-        prompt = f"Webpage Text:\n\n{truncated}"
+        prompt = f"Webpage Text:\n\n{text}"
         
         result = await gemini.generate_structured(
             system_instruction=system_instruction,
