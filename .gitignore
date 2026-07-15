@@ -10,3 +10,6 @@ GEMINI.md
 .aider*
 /to_view
 /audit_logs
+/logs
+checkpoint.db
+/tests
