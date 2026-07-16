@@ -92,7 +92,7 @@ class Neo4jClient:
             return None
             
         query = """
-        CALL db.index.vector.queryNodes('company_embeddings', 1, $embedding)
+        CALL db.index.vector.queryNodes('company_embeddings', 5, $embedding)
         YIELD node, score
         WHERE score >= $threshold
         RETURN node.name AS name, score
@@ -100,9 +100,23 @@ class Neo4jClient:
         try:
             async with self.driver.session() as session:
                 result = await session.run(query, embedding=embedding, threshold=threshold)
-                record = await result.single()
-                if record:
-                    return record["name"]
+                records = await result.data()
+                
+                if not records:
+                    return None
+                    
+                from core.company_name_parser import parse_company_name
+                target_parsed = parse_company_name(company_name)
+                
+                for record in records:
+                    candidate_name = record["name"]
+                    candidate_parsed = parse_company_name(candidate_name)
+                    
+                    # If jurisdictions mismatch, they are likely parent/subsidiary, not the exact same entity.
+                    if target_parsed.jurisdiction != candidate_parsed.jurisdiction:
+                        continue
+                        
+                    return candidate_name
         except Exception as e:
             logger.error(f"Failed to query similar company for {company_name}: {e}")
             

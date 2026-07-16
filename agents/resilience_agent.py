@@ -245,7 +245,9 @@ class ResilienceAgent(BaseResearchAgent):
         search_tasks = []
         from datetime import datetime, timezone
         for i, supplier_name in enumerate(brainstorm_result.probable_suppliers):
-            query = f'("{ctx.company_details.company_name}") AND ("{supplier_name}") AND (supplier OR supplies OR distributor OR partner OR vendor OR "available at" OR stocks)'
+            # Using a simplified, organic query without strict quotes or excessive booleans
+            # to prevent the search engine from choking on complex syntax.
+            query = f'{ctx.company_details.company_name} {supplier_name} supplier OR partner OR vendor'
             ctx.log(f"[{self.step.upper()}] Executing reverse disclosure search {i+1}/{len(brainstorm_result.probable_suppliers)}: '{query}'")
             search_tasks.append(perform_web_search(ctx, query))
             

@@ -341,7 +341,7 @@ const LoadingGraphNode = ({ data }) => {
                 {ping && <div className="absolute inset-0 rounded-full bg-blue-400 animate-ping opacity-75"></div>}
                 <div className={`w-3 h-3 rounded-full ${bgColor} relative z-10`}></div>
               </div>
-              <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-tighter truncate w-14 text-center">{agent.substring(0,4)}</span>
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-tighter w-full text-center">{agent}</span>
             </div>
           );
         })}
@@ -1169,14 +1169,14 @@ const Dashboard = ({ report, rootReport, onReset, onResetSupplier, theme, isGrap
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-3 justify-end">
-            {rootReport && rootReport.supply_chain && rootReport.supply_chain.length > 0 && onToggleGraph && (
+            {rootReport && ((rootReport.supply_chain && rootReport.supply_chain.length > 0) || rootReport.parent_company) && onToggleGraph && (
               <button
                 onClick={onToggleGraph}
                 className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-semibold transition border border-slate-200 dark:border-slate-700 shadow-sm"
-                title={isGraphOpen ? "Hide Supply Chain Graph" : "Show Supply Chain Graph"}
+                title={isGraphOpen ? "Hide Relationship Graph" : "Show Relationship Graph"}
               >
                 <Activity className="w-4 h-4" />
-                {isGraphOpen ? 'Hide Supply Chain' : 'Show Supply Chain'}
+                {isGraphOpen ? 'Hide Relationship Graph' : 'Show Relationship Graph'}
               </button>
             )}
             {report.audit_log && (
@@ -1487,7 +1487,7 @@ export default function App() {
     setReport(actualReport);
     setCurrentJobId(jobId);
     setView('dashboard');
-    setIsGraphOpen(actualReport.supply_chain && actualReport.supply_chain.length > 0);
+    setIsGraphOpen((actualReport.supply_chain && actualReport.supply_chain.length > 0) || !!actualReport.parent_company);
     fetchHistory(); // Refresh history
     if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
       new Notification('Research Complete', {
@@ -1535,7 +1535,7 @@ export default function App() {
         setReport(historicalReport);
         setSelectedSupplier(null);
         setCurrentJobId(jobId);
-        setIsGraphOpen(historicalReport.supply_chain && historicalReport.supply_chain.length > 0);
+        setIsGraphOpen((historicalReport.supply_chain && historicalReport.supply_chain.length > 0) || !!historicalReport.parent_company);
         setView('dashboard');
       }
     } catch (e) {

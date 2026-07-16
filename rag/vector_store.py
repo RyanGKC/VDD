@@ -14,8 +14,6 @@ load_dotenv(dotenv_path=env_path)
 
 class GeminiEmbeddingFunction(EmbeddingFunction):
     def __init__(self):
-        from core.gemini_client import get_shared_client
-        self.client = get_shared_client()
         self.model = "text-embedding-004"
         
     @retry(
@@ -24,13 +22,19 @@ class GeminiEmbeddingFunction(EmbeddingFunction):
         reraise=True,
     )
     def __call__(self, input: Documents) -> Embeddings:
-        from core.gemini_client import ensure_valid_token_sync
+        from core.gemini_client import ensure_valid_token_sync, get_shared_client, _init_shared_client
         ensure_valid_token_sync()
-        response = self.client.models.embed_content(
-            model=self.model,
-            contents=input
-        )
-        return [e.values for e in response.embeddings]
+        try:
+            client = get_shared_client()
+            response = client.models.embed_content(
+                model=self.model,
+                contents=input
+            )
+            return [e.values for e in response.embeddings]
+        except Exception as e:
+            logger.warning(f"Re-initializing shared client due to embedding error: {e}")
+            _init_shared_client(force=True)
+            raise
 
 
 class VectorStore:

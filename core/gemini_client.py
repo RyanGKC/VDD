@@ -84,8 +84,17 @@ def ensure_valid_token_sync() -> None:
         with _TOKEN_LOCK:
             if not credentials.valid:
                 from google.auth.transport.requests import Request
-                try:
+                
+                @retry(
+                    stop=stop_after_attempt(5),
+                    wait=wait_exponential(multiplier=1, min=2, max=10),
+                    reraise=True,
+                )
+                def _do_refresh():
                     credentials.refresh(Request())
+                    
+                try:
+                    _do_refresh()
                     logger.info("Successfully refreshed Vertex AI OAuth token (sync)")
                 except Exception as e:
                     logger.error(f"Failed to refresh token (sync): {e}")

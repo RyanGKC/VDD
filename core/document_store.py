@@ -7,6 +7,7 @@ from google import genai
 import logging
 from pathlib import Path
 from dotenv import load_dotenv
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 logger = logging.getLogger(__name__)
 
@@ -16,19 +17,28 @@ load_dotenv(dotenv_path=env_path)
 
 class GeminiEmbeddingFunction(EmbeddingFunction):
     def __init__(self):
-        from core.gemini_client import get_shared_client
-        self.client = get_shared_client()
         self.model = "text-embedding-004"
         
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=20),
+        reraise=True,
+    )
     def __call__(self, input: Documents) -> Embeddings:
-        from core.gemini_client import ensure_valid_token_sync
+        from core.gemini_client import ensure_valid_token_sync, get_shared_client, _init_shared_client
         ensure_valid_token_sync()
-        response = self.client.models.embed_content(
-            model=self.model,
-            contents=input
-        )
-        # response.embeddings is a list of EmbedContentResponse items
-        return [e.values for e in response.embeddings]
+        try:
+            client = get_shared_client()
+            response = client.models.embed_content(
+                model=self.model,
+                contents=input
+            )
+            # response.embeddings is a list of EmbedContentResponse items
+            return [e.values for e in response.embeddings]
+        except Exception as e:
+            logger.warning(f"Re-initializing shared client due to embedding error: {e}")
+            _init_shared_client(force=True)
+            raise
 
 
 class DocumentStore:

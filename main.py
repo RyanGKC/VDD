@@ -31,7 +31,10 @@ from core.dependencies import neo4j
 from core.document_store import DocumentStore
 from typing import Any
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 
 
 def build_engine(client: Any) -> tuple[FlowEngine, SummaryAgent]:

@@ -11,6 +11,9 @@ from typing import Optional, Dict, Any, List
 from ddgs import DDGS
 from pydantic import BaseModel
 
+# Global DDGS instance to reuse HTTP connections and TLS sessions across all queries
+_GLOBAL_DDGS = DDGS(timeout=5)
+
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -21,12 +24,38 @@ from custom_tools.query_expansion import expand_query
 from custom_tools.relevance_scorer import batch_score_all_relevance
 from core.retry import retry_async
 import json
+import contextlib
+
+_ddgs_sem: asyncio.Semaphore | None = None
+
+@contextlib.asynccontextmanager
+async def _get_ddgs_semaphore():
+    # Read the limit from the environment, defaulting to 2
+    limit_str = os.getenv("WEB_SEARCH_CONCURRENCY_LIMIT", "2")
+    try:
+        limit = int(limit_str)
+    except ValueError:
+        limit = 2
+        
+    if limit > 0:
+        global _ddgs_sem
+        if _ddgs_sem is None:
+            _ddgs_sem = asyncio.Semaphore(limit)
+        async with _ddgs_sem:
+            yield
+    else:
+        # If limit is 0 or less, disable the rate limiter (no semaphore)
+        yield
 
 logger = logging.getLogger(__name__)
 
 import trafilatura
 import ftfy
 import re
+
+# Silence trafilatura's internal noisy loggers (especially for non-HTML docs)
+logging.getLogger("trafilatura.utils").setLevel(logging.CRITICAL)
+logging.getLogger("trafilatura.core").setLevel(logging.CRITICAL)
 
 def _parse_html(html_content: str) -> Optional[str]:
     """Synchronous CPU-bound parsing of HTML."""
@@ -44,7 +73,12 @@ def _parse_html(html_content: str) -> Optional[str]:
     
     # 2. Fallback to BeautifulSoup if trafilatura fails
     if not extracted_text:
-        soup = BeautifulSoup(html_content, "html.parser")
+        # Dynamically switch to XML parser if the document is XML
+        content_stripped = html_content.strip()
+        is_xml = content_stripped.startswith("<?xml") or content_stripped.startswith("<rss") or content_stripped.startswith("<feed")
+        parser = "xml" if is_xml else "html.parser"
+        
+        soup = BeautifulSoup(html_content, parser)
         for tag in soup(["script", "style", "nav", "footer", "header", "aside", "noscript"]):
             tag.decompose()
         text = soup.get_text(separator="\n")
@@ -335,7 +369,8 @@ async def _orchestrate_search(query: str, max_results: int = 3, company_domain: 
             return sum(1 for w in q_words if w in text)
             
         async def _search_and_merge(variants: list[str]) -> list[dict]:
-            search_pool_size = min(100, max(30, max_results * 10))
+            # Drastically reduce search pool to prevent massive engine fan-out
+            search_pool_size = max(15, max_results * 3)
 
             # DDG rate-limits concurrent bursts from the same IP. Firing all variants
             # simultaneously with a long timeout + escalating backoff (the old settings)
@@ -344,7 +379,6 @@ async def _orchestrate_search(query: str, max_results: int = 3, company_domain: 
             # Fix: stagger launch times so most variants never trigger the burst limiter in
             # the first place, and keep the per-attempt timeout/retry short so that if one
             # variant does get throttled anyway, we drop it fast instead of waiting ~90s for it.
-            DDG_TIMEOUT_SECONDS = 15       # was 30 — comfortably above the ~11.5s observed baseline for one successful call
             DDG_MAX_ATTEMPTS = 2           # was 3 — one retry as a safety net, not a patience mechanism
             DDG_RETRY_DELAY_SECONDS = 2    # was escalating 1s/2s — flat delay, we're not trying to outlast the limiter
             STAGGER_SECONDS = 1.0          # spacing between concurrent variant launches to avoid a correlated burst
@@ -352,8 +386,7 @@ async def _orchestrate_search(query: str, max_results: int = 3, company_domain: 
             def _do_search(q: str) -> List[Dict[str, str]]:
                 for attempt in range(DDG_MAX_ATTEMPTS):
                     try:
-                        with DDGS(timeout=DDG_TIMEOUT_SECONDS) as ddgs:
-                            return list(ddgs.text(q, max_results=search_pool_size, backend="auto"))
+                        return list(_GLOBAL_DDGS.text(q, max_results=search_pool_size, backend="auto"))
                     except Exception as e:
                         if attempt == DDG_MAX_ATTEMPTS - 1:
                             logger.warning(f"DDG search failed for variant '{q}' after {DDG_MAX_ATTEMPTS} attempts: {e}")
@@ -363,7 +396,8 @@ async def _orchestrate_search(query: str, max_results: int = 3, company_domain: 
             async def _staggered_search(q: str, delay: float) -> List[Dict[str, str]]:
                 if delay:
                     await asyncio.sleep(delay)
-                return await asyncio.to_thread(_do_search, q)
+                async with _get_ddgs_semaphore():
+                    return await asyncio.to_thread(_do_search, q)
 
             search_tasks = [
                 asyncio.create_task(_staggered_search(q, i * STAGGER_SECONDS))
@@ -393,11 +427,11 @@ async def _orchestrate_search(query: str, max_results: int = 3, company_domain: 
                 if tier == "allow":
                     allow.append(res)
                     stats["allowlist_hits"] += 1
-                    print(f"✅ [CUSTOM] Allowed known reliable source: {url}")
+                    logger.info(f"✅ [CUSTOM] Allowed known reliable source: {url}")
                 elif tier == "block":
                     logger.info(f"Dropping blocklisted source: {url} (domain: {get_domain(url)})")
                     stats["blocklist_hits"] += 1
-                    print(f"🚫 [CUSTOM] Dropped blocklisted source: {url}")
+                    logger.info(f"🚫 [CUSTOM] Dropped blocklisted source: {url}")
                 else:
                     unknown.append(res)
             return allow, unknown
@@ -484,7 +518,7 @@ async def _orchestrate_search(query: str, max_results: int = 3, company_domain: 
                         f"Accepted evaluated domain: {domain} "
                         f"(trust: {trust_lvl}, category: {evaluation.category})"
                     )
-                    print(f"🤔 [CUSTOM] Evaluated unknown domain '{domain}': ACCEPTED (Trust: {trust_lvl})")
+                    logger.info(f"🤔 [CUSTOM] Evaluated unknown domain '{domain}': ACCEPTED (Trust: {trust_lvl})")
                 else:
                     dynamic_block.add(domain)
                     stats["domain_evaluated_rejected"] += 1
@@ -492,7 +526,7 @@ async def _orchestrate_search(query: str, max_results: int = 3, company_domain: 
                         f"Rejected evaluated domain: {domain} "
                         f"(trust: {trust_lvl}, rationale: {evaluation.rationale})"
                     )
-                    print(f"🛑 [CUSTOM] Evaluated unknown domain '{domain}': REJECTED (Trust: {trust_lvl})")
+                    logger.info(f"🛑 [CUSTOM] Evaluated unknown domain '{domain}': REJECTED (Trust: {trust_lvl})")
             
             allowed_snippets.extend(newly_accepted)
 
@@ -537,15 +571,15 @@ async def _orchestrate_search(query: str, max_results: int = 3, company_domain: 
                         raw_text = await fetch_and_clean_html(url, session)
                         
                     if not raw_text:
-                        print(f"❌ [CUSTOM] Failed to extract text from {url}")
+                        logger.warning(f"❌ [CUSTOM] Failed to extract text from {url}")
                         return None
                     elif raw_text.startswith("__PDF_ERROR__"):
-                        print(f"❌ [CUSTOM] PDF extraction failed for {url} ({raw_text})")
+                        logger.warning(f"❌ [CUSTOM] PDF extraction failed for {url} ({raw_text})")
                         return None
                     
                     # Opt 5: Removed dead truncated_content computation
                     summarized_content = await summarize_text(raw_text)
-                    print(f"📝 [CUSTOM] Successfully extracted and summarized: {url}")
+                    logger.info(f"📝 [CUSTOM] Successfully extracted and summarized: {url}")
                     
                     return {
                         "title": res.get("title", ""),
