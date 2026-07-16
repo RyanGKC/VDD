@@ -801,7 +801,8 @@ const getLayoutedElements = (nodes, edges, direction = 'LR') => {
         backgroundColor: 'rgba(241, 245, 249, 0.2)',
         border: '2px dashed rgba(148, 163, 184, 0.4)',
         borderRadius: '16px',
-        zIndex: -1
+        zIndex: -1,
+        pointerEvents: 'none'
       }
     });
   }
@@ -849,7 +850,8 @@ const getLayoutedElements = (nodes, edges, direction = 'LR') => {
             backgroundColor: 'rgba(241, 245, 249, 0.2)',
             border: '2px dashed rgba(148, 163, 184, 0.4)',
             borderRadius: '16px',
-            zIndex: -1
+            zIndex: -1,
+            pointerEvents: 'none'
           }
         });
         
