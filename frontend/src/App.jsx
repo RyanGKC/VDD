@@ -635,6 +635,8 @@ const ProcessingTerminal = ({ onComplete, onError, onCancel, companyDetails, res
             edges={layoutedEdges}
             nodeTypes={loadingNodeTypes}
             nodeOrigin={[0.5, 0.5]}
+            minZoom={0.05}
+            maxZoom={4}
             fitView
             fitViewOptions={{ padding: 0.2 }}
             attributionPosition="bottom-left"
@@ -996,6 +998,8 @@ const SupplyChainGraph = ({ report, theme, onNodeSelect }) => {
         edges={layoutedEdges}
         nodeTypes={nodeTypes}
         nodeOrigin={[0.5, 0.5]}
+        minZoom={0.05}
+        maxZoom={4}
         onNodeClick={onNodeClick}
         fitView
         fitViewOptions={{ padding: 0.2 }}
@@ -1587,7 +1591,7 @@ export default function App() {
               className={`flex-1 py-3 text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${
                 activeSidebarTab === 'history' 
                   ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-white dark:bg-slate-800' 
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 bg-slate-50 dark:bg-slate-900'
               }`}
             >
               <Clock className="w-4 h-4" /> History
@@ -1597,7 +1601,7 @@ export default function App() {
               className={`flex-1 py-3 text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${
                 activeSidebarTab === 'interrupted' 
                   ? 'text-amber-600 dark:text-amber-400 border-b-2 border-amber-600 dark:border-amber-400 bg-white dark:bg-slate-800' 
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 bg-slate-50 dark:bg-slate-900'
               }`}
             >
               <PlaySquare className="w-4 h-4" /> Interrupted
