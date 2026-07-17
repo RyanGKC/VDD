@@ -12,5 +12,6 @@ GEMINI.md
 /audit_logs
 /logs
 checkpoint.db
-/tests
 .DS_Store
+__pycache__/
+*.pyc
