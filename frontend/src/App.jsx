@@ -920,24 +920,31 @@ const SupplyChainGraph = ({ report, theme, onNodeSelect }) => {
   const seenNodes = new Set();
   const seenEdges = new Set();
 
-  // Track all raw vendor names to detect shared suppliers
-  const vendorCounts = new Map();
-  const countVendors = (node) => {
-    vendorCounts.set(node.vendor_name, (vendorCounts.get(node.vendor_name) || 0) + 1);
-    if (node.supply_chain && node.supply_chain.length > 0) {
-      node.supply_chain.forEach(child => countVendors(child));
+  // Track which network branches a vendor appears in to detect cross-group duplicates
+  const vendorBranches = new Map();
+  const markVendorBranch = (node, branch) => {
+    if (!node) return;
+    
+    if (!vendorBranches.has(node.vendor_name)) {
+      vendorBranches.set(node.vendor_name, new Set());
     }
-    if (node.parent_company) {
-      countVendors(node.parent_company);
+    vendorBranches.get(node.vendor_name).add(branch);
+    
+    if (node.supply_chain && node.supply_chain.length > 0) {
+      node.supply_chain.forEach(child => markVendorBranch(child, branch));
+    }
+    
+    if (branch === 'target' && node.parent_company) {
+      markVendorBranch(node.parent_company, 'parent');
     }
   };
-  countVendors(report);
+  markVendorBranch(report, 'target');
 
   // Build supply chain edges
   const buildGraph = (node, parentId = null, relationship = 'supply', branch = 'target') => {
     const rawNodeId = node.vendor_name;
     const nodeId = parentId ? `${branch}-${rawNodeId}` : rawNodeId;
-    const isShared = vendorCounts.get(rawNodeId) > 1 && relationship === 'supply';
+    const isShared = vendorBranches.get(rawNodeId)?.size > 1 && relationship === 'supply';
 
     if (!seenNodes.has(nodeId)) {
       seenNodes.add(nodeId);
