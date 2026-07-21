@@ -56,7 +56,7 @@ class FlowEngine:
         step_execution_counts: dict[StepName, int],
         on_step_complete: Callable[[StepName, DDContext], Awaitable[None]] | None = None
     ) -> set[StepName]:
-        pending = set(plan)
+        pending = list(plan) # Preserve IDEAL_FLOW ordering
         running_tasks = {} # Map from asyncio.Task -> StepName
         completed_this_round = set()
         
@@ -121,7 +121,8 @@ class FlowEngine:
                     if step_execution_counts.get(step, 0) < MAX_STEP_RETRIES:
                         ctx.log(f"SYSTEM: Immediately retrying {step.value} (Attempt {step_execution_counts.get(step, 0)}/{MAX_STEP_RETRIES})")
                         # Re-add to pending so it gets scheduled in the next loop iteration
-                        pending.add(step)
+                        if step not in pending:
+                            pending.append(step)
                     else:
                         ctx.log(f"SYSTEM: {step.value} exhausted all retries and has permanently failed.")
                         # Inject a dummy failed StepResult so the supervisor knows it crashed,

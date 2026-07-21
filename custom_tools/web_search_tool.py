@@ -115,6 +115,7 @@ _playwright: Playwright | None = None
 _browser: Browser | None = None
 _browser_lock = asyncio.Lock()
 _browser_context_sem = asyncio.Semaphore(MAX_CONCURRENT_CONTEXTS)
+_known_playwright_domains: set[str] = set()
 
 async def get_browser() -> Browser:
     global _playwright, _browser
@@ -229,6 +230,14 @@ async def _fetch_via_curl_cffi(url: str, session: cffi_requests.AsyncSession, ti
 
 async def fetch_and_clean_html(url: str, session: cffi_requests.AsyncSession, timeout: int = 15) -> Optional[str]:
     """Fetches a URL and extracts clean text from HTML or PDF."""
+    from urllib.parse import urlparse
+    domain = urlparse(url).netloc.lower()
+    
+    # Fast-track known protected domains
+    if domain in _known_playwright_domains and PLAYWRIGHT_ESCALATION_ENABLED:
+        logger.info(f"Direct Playwright routing for known protected domain: {domain}")
+        return await _fetch_via_playwright(url, timeout)
+
     status_code, body_text, exc, is_pdf = await _fetch_via_curl_cffi(url, session, timeout)
 
     if not _should_escalate_to_playwright(status_code, body_text, exc, is_pdf):
@@ -251,6 +260,7 @@ async def fetch_and_clean_html(url: str, session: cffi_requests.AsyncSession, ti
             return body_text if is_pdf else None
         return await asyncio.to_thread(_parse_html, body_text)
 
+    _known_playwright_domains.add(domain) # Register domain for future requests
     logger.info(f"Escalating {url} to Playwright — status={status_code}, exc={exc}")
     result = await _fetch_via_playwright(url, timeout)
     if result is not None:

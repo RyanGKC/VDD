@@ -13,16 +13,23 @@ import asyncio
 from pydantic import BaseModel
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-_GEMINI_SEMAPHORE = None
+_GENERATION_SEMAPHORE = None
+_EMBEDDING_SEMAPHORE = None
 _CLIENT = None
 _CREDENTIALS = None
 _TOKEN_LOCK = threading.Lock()
 
-def _get_semaphore():
-    global _GEMINI_SEMAPHORE
-    if _GEMINI_SEMAPHORE is None:
-        _GEMINI_SEMAPHORE = asyncio.Semaphore(10)
-    return _GEMINI_SEMAPHORE
+def _get_generation_semaphore():
+    global _GENERATION_SEMAPHORE
+    if _GENERATION_SEMAPHORE is None:
+        _GENERATION_SEMAPHORE = asyncio.Semaphore(int(os.getenv("GEMINI_GENERATION_CONCURRENCY", "50")))
+    return _GENERATION_SEMAPHORE
+
+def _get_embedding_semaphore():
+    global _EMBEDDING_SEMAPHORE
+    if _EMBEDDING_SEMAPHORE is None:
+        _EMBEDDING_SEMAPHORE = asyncio.Semaphore(int(os.getenv("GEMINI_EMBEDDING_CONCURRENCY", "100")))
+    return _EMBEDDING_SEMAPHORE
 
 from google import genai
 from google.genai import types
@@ -156,7 +163,7 @@ class GeminiClient:
 
         await ensure_valid_token_async()
         try:
-            async with _get_semaphore():
+            async with _get_generation_semaphore():
                 response = await self._client.aio.models.generate_content(
                     model=self._model,
                     contents=prompt,
@@ -189,7 +196,7 @@ class GeminiClient:
     async def embed_content(self, texts: list[str]) -> list[list[float]]:
         await ensure_valid_token_async()
         try:
-            async with _get_semaphore():
+            async with _get_embedding_semaphore():
                 response = await self._client.aio.models.embed_content(
                     model="text-embedding-004",
                     contents=texts,

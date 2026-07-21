@@ -23,6 +23,8 @@ from typing import List, Optional
 
 from rag.entity_resolver import EntityResolver
 from rag.vector_store import VectorStore
+from rag.rerank import Reranker
+from rag.cache_gate_rerank import rerank_and_group_documents
 
 logger = logging.getLogger(__name__)
 
@@ -56,9 +58,10 @@ class CacheGate:
     entity-scoped chunks matching the requested document kind.
     """
 
-    def __init__(self, vector_store: VectorStore, entity_resolver: EntityResolver) -> None:
+    def __init__(self, vector_store: VectorStore, entity_resolver: EntityResolver, reranker: Reranker) -> None:
         self.vs = vector_store
         self.resolver = entity_resolver
+        self.reranker = reranker
 
     def _freshness_cutoff(self, document_kind: str) -> str:
         """Returns an ISO-format datetime string for the oldest acceptable chunk."""
@@ -71,6 +74,7 @@ class CacheGate:
         entity_name: str,
         entity_type: str,
         document_kind: str,
+        goal_str: str,
         run_id: Optional[str] = None,
     ) -> CacheResult:
         """
@@ -91,28 +95,24 @@ class CacheGate:
             entity_id = resolved.node_id
             cutoff = self._freshness_cutoff(document_kind)
 
-            # 2. Build metadata filter
-            filter_dict: dict = {
-                "primary_entity_id": entity_id,
-                "source_type": document_kind,
+            # 2. Build metadata filter with server-side freshness
+            collection_name = _pick_collection(document_kind)
+            where_filter = {
+                "$and": [
+                    {"primary_entity_id": {"$eq": entity_id}},
+                    {"source_type": {"$eq": document_kind}},
+                    {"document_date": {"$gte": cutoff}},
+                ]
             }
             # For run-scoped collections also filter by run_id
-            # (skip for persistent collections like sanctions / historical_reports)
-            collection_name = _pick_collection(document_kind)
             if collection_name == "run_documents" and run_id:
-                filter_dict["run_id"] = run_id
-
-            if len(filter_dict) == 1:
-                where_filter = filter_dict
-            else:
-                where_filter = {"$and": [{k: v} for k, v in filter_dict.items()]}
+                where_filter["$and"].append({"run_id": {"$eq": run_id}})
 
             # 3. Query Chroma — metadata-only, no semantic embedding needed
             collection = self.vs.get_collection(collection_name)
             results = await asyncio.to_thread(
                 collection.get,
                 where=where_filter,
-                limit=10,
             )
 
             docs: List[str] = results.get("documents") or []
@@ -126,37 +126,28 @@ class CacheGate:
                 )
                 return CacheResult(status="MISS")
 
-            # 4. Freshness filter — discard stale chunks
-            fresh_docs = []
-            cutoff_dt = datetime.fromisoformat(cutoff)
+            chunks_for_rerank = []
             for doc, meta in zip(docs, metas):
-                chunk_date_str = meta.get("document_date", "")
-                if chunk_date_str:
-                    try:
-                        chunk_date = datetime.fromisoformat(chunk_date_str)
-                        if chunk_date.tzinfo is None:
-                            chunk_date = chunk_date.replace(tzinfo=timezone.utc)
-                        if chunk_date >= cutoff_dt:
-                            fresh_docs.append(doc)
-                    except ValueError:
-                        pass
+                chunks_for_rerank.append({"text": doc, "metadata": meta})
 
-            if not fresh_docs:
-                logger.debug(
-                    "CacheGate MISS: all %d chunk(s) stale for entity=%s kind=%s",
-                    len(docs),
-                    entity_id,
-                    document_kind,
-                )
+            if not goal_str:
+                # Fast check for planning bypass; no reranking needed
+                return CacheResult(status="HIT", chunks=None)
+
+            formatted_document_blocks = await rerank_and_group_documents(
+                chunks_for_rerank, goal_str, self.reranker
+            )
+
+            if not formatted_document_blocks:
                 return CacheResult(status="MISS")
 
             logger.info(
-                "CacheGate HIT: %d fresh chunk(s) for entity=%s kind=%s",
-                len(fresh_docs),
+                "CacheGate HIT: returned %d top documents for entity=%s kind=%s",
+                len(formatted_document_blocks),
                 entity_id,
                 document_kind,
             )
-            return CacheResult(status="HIT", chunks=fresh_docs)
+            return CacheResult(status="HIT", chunks=formatted_document_blocks)
 
         except Exception as exc:
             # Never block the agent on a cache check error — default MISS

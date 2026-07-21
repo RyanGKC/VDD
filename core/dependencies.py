@@ -38,6 +38,6 @@ retrieval_engine = RetrievalEngine(vs, resolver, reranker, neo4j)
 ingestion_pipeline = IngestionPipeline(vs, resolver, tagging_gemini)
 
 # Async orchestration layer
-cache_gate = CacheGate(vs, resolver)
+cache_gate = CacheGate(vs, resolver, reranker)
 singleflight = SingleFlight()
 background_tasks = BackgroundTaskRegistry()

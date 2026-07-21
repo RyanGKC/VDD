@@ -7,6 +7,7 @@ from rag.vector_store import VectorStore
 from rag.entity_resolver import EntityResolver
 from rag.rerank import Reranker
 from core.neo4j_client import Neo4jClient
+from rag.mention_index import init_mention_index, get_chunks_mentioning
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,7 @@ class RetrievalEngine:
         self.resolver = entity_resolver
         self.reranker = reranker
         self.neo4j = neo4j
+        self.mention_conn = init_mention_index()
 
     async def _query_chroma(self, collection_name: str, query: str, where_filter: dict, top_k: int) -> List[str]:
         collection = self.vs.get_collection(collection_name)
@@ -67,9 +69,32 @@ class RetrievalEngine:
         # 3. Retrieve primary chunks
         primary_chunks = await self._query_chroma(collection_name, query, where_filter, top_k)
         
+        # 3b. Retrieve mention chunks
+        mention_ids = get_chunks_mentioning(self.mention_conn, primary_id)
+        if mention_ids:
+            collection = self.vs.get_collection(collection_name)
+            # collection.get() may not support huge lists of ids, but typically it's fine.
+            # We filter by run_id if applicable.
+            mention_results = await asyncio.to_thread(collection.get, ids=mention_ids)
+            mention_docs = mention_results.get("documents") or []
+            
+            # Combine and deduplicate
+            primary_set = set(primary_chunks)
+            for doc in mention_docs:
+                if doc not in primary_set:
+                    primary_chunks.append(doc)
+                    primary_set.add(doc)
+        
         # 4. Re-rank primary chunks
         if primary_chunks:
-            primary_chunks = await self.reranker.rerank_chunks(primary_chunks, entity_name)
+            assessments = await self.reranker.assess_chunks(primary_chunks, query)
+            scored = [
+                (primary_chunks[a.index], a.score)
+                for a in assessments
+                if a.is_relevant
+            ]
+            scored.sort(key=lambda x: x[1], reverse=True)
+            primary_chunks = [chunk for chunk, _ in scored]
             
         result = RetrievalResult(primary=primary_chunks, related={})
         
@@ -112,8 +137,15 @@ class RetrievalEngine:
                             
                         rel_chunks = await self._query_chroma(collection_name, query, rel_where, top_k=2)
                         if rel_chunks:
-                            # Re-rank for the related entity
-                            rel_chunks = await self.reranker.rerank_chunks(rel_chunks, rel_name)
+                            # Re-rank for the related entity against the original query
+                            assessments = await self.reranker.assess_chunks(rel_chunks, query)
+                            scored_rel = [
+                                (rel_chunks[a.index], a.score)
+                                for a in assessments
+                                if a.is_relevant
+                            ]
+                            scored_rel.sort(key=lambda x: x[1], reverse=True)
+                            rel_chunks = [chunk for chunk, _ in scored_rel]
                             # Prefix with explicit context so agent doesn't flatten
                             for rc in rel_chunks:
                                 related_chunks_for_type.append(f"[Data for {rel_type} '{rel_name}']: {rc}")

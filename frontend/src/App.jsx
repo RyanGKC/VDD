@@ -313,12 +313,14 @@ const LoadingGraphNode = ({ data }) => {
     <div className="bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-600 rounded-lg p-3 shadow-md w-[260px] min-h-[110px] flex flex-col items-center justify-between">
       {/* Top handle: used by ownership lines (parent above, child below) */}
       <Handle type="target" position={Position.Top} id="top" className="opacity-0" />
-      {/* Left handle: supplier connects from its left side to the target */}
-      <Handle type="source" position={Position.Left} id="left" className="opacity-0" />
+      {/* Left handles */}
+      <Handle type="target" position={Position.Left} id="left-target" className="opacity-0" />
+      <Handle type="source" position={Position.Left} id="left-source" className="opacity-0" />
       {/* Bottom handle: used by ownership lines */}
       <Handle type="source" position={Position.Bottom} id="bottom" className="opacity-0" />
-      {/* Right handle: supplied company receives on its right side */}
-      <Handle type="target" position={Position.Right} id="right" className="opacity-0" />
+      {/* Right handles */}
+      <Handle type="target" position={Position.Right} id="right-target" className="opacity-0" />
+      <Handle type="source" position={Position.Right} id="right-source" className="opacity-0" />
       <div className="font-bold text-slate-800 dark:text-slate-100 mb-2 text-center w-full truncate" title={data.entity}>
         {data.entity}
       </div>
@@ -543,12 +545,22 @@ const ProcessingTerminal = ({ onComplete, onError, onCancel, companyDetails, res
         : `${entity}-supplies-${parentEntity}`; // supplier→supplied: arrow points from entity to parentEntity
       if (!seenEdges.has(edgeId)) {
         seenEdges.add(edgeId);
+        let sourceHandleId, targetHandleId;
+        if (isParent || parentEntity !== rootName) {
+            // Parent -> Target  OR  Parent's Supplier -> Parent (Left-to-Right)
+            sourceHandleId = 'right-source';
+            targetHandleId = 'left-target';
+        } else {
+            // Target's Supplier -> Target (Right-to-Left visually)
+            sourceHandleId = 'left-source';
+            targetHandleId = 'right-target';
+        }
         edges.push({
           id: edgeId,
           source: entity,
           target: parentEntity,
-          sourceHandle: isParent ? 'bottom' : 'left',
-          targetHandle: isParent ? 'top' : 'right',
+          sourceHandle: sourceHandleId,
+          targetHandle: targetHandleId,
           type: 'smoothstep',
           animated: true,
           style: { 
@@ -573,8 +585,8 @@ const ProcessingTerminal = ({ onComplete, onError, onCancel, companyDetails, res
           id: edgeId,
           source: entity,
           target: rootName,
-          sourceHandle: 'left',
-          targetHandle: 'right',
+          sourceHandle: 'left-source',
+          targetHandle: 'right-target',
           type: 'smoothstep',
           animated: true,
           style: { stroke: '#3b82f6', strokeWidth: 2, strokeDasharray: '4 4' },

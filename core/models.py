@@ -169,6 +169,8 @@ class DDContext(BaseModel):
     screened_entities: dict[str, Any] = Field(default_factory=dict, exclude=True)
     # Lock for screened_entities
     screened_entities_lock: asyncio.Lock = Field(default_factory=asyncio.Lock, exclude=True)
+    # Lock to prevent thundering-herd API calls when resolving website/CIK
+    entity_resolution_lock: asyncio.Lock = Field(default_factory=asyncio.Lock, exclude=True)
     # Checkpoint DB reference — injected at run startup
     checkpoint_db: Any = Field(default=None, exclude=True)
     # Keep track of child pipelines spawned asynchronously mid-DAG
