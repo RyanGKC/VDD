@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Encoder Comparison — LLM Judge vs Cross-Encoder</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --panel2: #1d2230;
+    --border: #2a2f3a;
+    --text: #e6e8eb;
+    --muted: #8a8f98;
+    --gemini: #7c9eff;
+    --cross: #ffb86c;
+    --danger: #ff6b6b;
+    --radius: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    padding: 40px 24px;
+    min-height: 100vh;
+  }
+  .container { max-width: 860px; margin: 0 auto; }
+
+  /* Header */
+  .header { margin-bottom: 32px; }
+  .header h1 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .header p { color: var(--muted); font-size: 13px; line-height: 1.6; }
+
+  /* Form */
+  .form-section { margin-bottom: 24px; }
+  label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  input[type=text] {
+    width: 100%;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    padding: 10px 14px;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input[type=text]:focus { border-color: var(--gemini); }
+
+  /* Chunk list */
+  #chunk-list { display: flex; flex-direction: column; gap: 10px; }
+  .chunk-item {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+  }
+  .chunk-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .chunk-num { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .remove-btn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: color 0.15s, background 0.15s;
+  }
+  .remove-btn:hover { color: var(--danger); background: rgba(255,107,107,0.08); }
+  .chunk-input {
+    width: 100%;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    padding: 10px 12px;
+    font-size: 13px;
+    font-family: inherit;
+    line-height: 1.5;
+    resize: vertical;
+    min-height: 80px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .chunk-input:focus { border-color: var(--gemini); }
+
+  /* Buttons */
+  .btn-row { display: flex; gap: 10px; margin-top: 10px; }
+  button {
+    border: none;
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 9px 18px;
+    transition: opacity 0.15s, background 0.15s;
+    font-family: inherit;
+  }
+  button:disabled { opacity: 0.45; cursor: default; }
+  #add-chunk {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  #add-chunk:hover:not(:disabled) { border-color: var(--gemini); color: var(--gemini); }
+  #submit {
+    background: var(--gemini);
+    color: #0f1115;
+  }
+  #submit:hover:not(:disabled) { opacity: 0.85; }
+
+  /* Status */
+  .status { font-size: 13px; color: var(--muted); margin-top: 14px; min-height: 20px; }
+
+  /* Legend */
+  .legend {
+    display: flex;
+    gap: 18px;
+    margin: 28px 0 16px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 7px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+  /* Result cards */
+  .results { display: flex; flex-direction: column; gap: 12px; }
+  .row {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+  .result-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .chunk-text {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.6;
+    margin-bottom: 14px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .score-line { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .score-label { width: 100px; font-size: 12px; color: var(--muted); flex-shrink: 0; }
+  .bar-track { flex: 1; background: var(--bg); border-radius: 4px; height: 8px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; transition: width 0.4s ease; }
+  .score-value { width: 48px; text-align: right; font-size: 12px; font-variant-numeric: tabular-nums; color: var(--text); }
+
+  /* Reasoning accordion */
+  .reasoning-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: var(--muted);
+    cursor: pointer;
+    margin-top: 10px;
+    user-select: none;
+    transition: color 0.15s;
+  }
+  .reasoning-toggle:hover { color: var(--gemini); }
+  .reasoning-arrow { transition: transform 0.2s; display: inline-block; }
+  .reasoning-body {
+    display: none;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.7;
+    margin-top: 8px;
+    padding: 10px 12px;
+    background: var(--bg);
+    border-radius: 6px;
+    border-left: 2px solid var(--gemini);
+  }
+  .reasoning-body.open { display: block; }
+  .reasoning-toggle.open .reasoning-arrow { transform: rotate(90deg); }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <h1>Encoder Comparison</h1>
+    <p>Compare a Gemini LLM-as-a-judge (batched, 0–10 scale) against a local cross-encoder (ms-marco-MiniLM, normalized to 0–10) on the same goal and chunks.</p>
+  </div>
+
+  <div class="form-section">
+    <label for="goal">Goal / Query</label>
+    <input type="text" id="goal" placeholder="e.g. Find evidence of regulatory sanctions against the company">
+  </div>
+
+  <div class="form-section">
+    <label>Chunks</label>
+    <div id="chunk-list"></div>
+    <div class="btn-row">
+      <button id="add-chunk" type="button">+ Add Chunk</button>
+    </div>
+  </div>
+
+  <button id="submit">Compare Scores</button>
+  <div class="status" id="status"></div>
+
+  <div class="legend" id="legend" style="display:none">
+    <span><span class="dot" style="background:var(--gemini)"></span>Gemini LLM-Judge (0–10)</span>
+    <span><span class="dot" style="background:var(--cross)"></span>Cross-Encoder (0–10 normalized)</span>
+  </div>
+
+  <div class="results" id="results"></div>
+
+</div>
+
+<script>
+let chunkCounter = 0;
+
+function addChunk() {
+  chunkCounter++;
+  const n = chunkCounter;
+  const item = document.createElement('div');
+  item.className = 'chunk-item';
+  item.dataset.chunkId = n;
+  item.innerHTML = `
+    <div class="chunk-header">
+      <span class="chunk-num">Chunk ${n}</span>
+      <button class="remove-btn" type="button" onclick="removeChunk(this)">✕ Remove</button>
+    </div>
+    <textarea class="chunk-input" placeholder="Paste chunk text here..." rows="3"></textarea>
+  `;
+  document.getElementById('chunk-list').appendChild(item);
+}
+
+function removeChunk(btn) {
+  btn.closest('.chunk-item').remove();
+  renumberChunks();
+}
+
+function renumberChunks() {
+  document.querySelectorAll('.chunk-item').forEach((item, i) => {
+    item.querySelector('.chunk-num').textContent = `Chunk ${i + 1}`;
+  });
+}
+
+document.getElementById('add-chunk').addEventListener('click', () => {
+  addChunk();
+});
+
+document.getElementById('submit').addEventListener('click', async () => {
+  const goal = document.getElementById('goal').value.trim();
+  const chunks = [...document.querySelectorAll('.chunk-input')]
+    .map(t => t.value.trim())
+    .filter(t => t.length > 0);
+
+  const statusEl = document.getElementById('status');
+  const resultsEl = document.getElementById('results');
+  const legendEl = document.getElementById('legend');
+  const submitBtn = document.getElementById('submit');
+
+  if (!goal) {
+    statusEl.textContent = 'Please enter a goal / query.';
+    return;
+  }
+  if (chunks.length === 0) {
+    statusEl.textContent = 'Please add at least one chunk.';
+    return;
+  }
+
+  submitBtn.disabled = true;
+  statusEl.textContent = 'Scoring… this may take a few seconds for Gemini.';
+  resultsEl.innerHTML = '';
+  legendEl.style.display = 'none';
+
+  try {
+    const res = await fetch('/compare', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ goal, chunks }),
+    });
+    if (!res.ok) throw new Error(`Server returned ${res.status}`);
+    const data = await res.json();
+
+    legendEl.style.display = 'flex';
+
+    data.chunks.forEach((chunk, i) => {
+      const gScore = data.gemini_scores[i].toFixed(2);
+      const cScore = data.cross_encoder_scores[i].toFixed(2);
+      const gPct = (data.gemini_scores[i] / 10 * 100).toFixed(1);
+      const cPct = (data.cross_encoder_scores[i] / 10 * 100).toFixed(1);
+      const reasoning = data.gemini_reasoning[i] || 'No reasoning returned.';
+      const displayText = chunk.length > 400 ? chunk.slice(0, 400) + '…' : chunk;
+      const accordionId = `reasoning-${i}`;
+      const toggleId = `toggle-${i}`;
+
+      const row = document.createElement('div');
+      row.className = 'row';
+      row.innerHTML = `
+        <div class="result-label">Chunk ${i + 1}</div>
+        <div class="chunk-text">${escapeHtml(displayText)}</div>
+        <div class="score-line">
+          <div class="score-label">Gemini Judge</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${gPct}%; background:var(--gemini)"></div></div>
+          <div class="score-value">${gScore}</div>
+        </div>
+        <div class="score-line">
+          <div class="score-label">Cross-Encoder</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${cPct}%; background:var(--cross)"></div></div>
+          <div class="score-value">${cScore}</div>
+        </div>
+        <div class="reasoning-toggle" id="${toggleId}" onclick="toggleReasoning('${accordionId}', '${toggleId}')">
+          <span class="reasoning-arrow">▶</span> Show Gemini reasoning
+        </div>
+        <div class="reasoning-body" id="${accordionId}">${escapeHtml(reasoning)}</div>
+      `;
+      resultsEl.appendChild(row);
+    });
+
+    statusEl.textContent = `Scored ${data.chunks.length} chunk(s).`;
+  } catch (err) {
+    statusEl.textContent = `Error: ${err.message}`;
+  } finally {
+    submitBtn.disabled = false;
+  }
+});
+
+function toggleReasoning(bodyId, toggleId) {
+  const body = document.getElementById(bodyId);
+  const toggle = document.getElementById(toggleId);
+  body.classList.toggle('open');
+  toggle.classList.toggle('open');
+}
+
+function escapeHtml(str) {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// Start with 2 pre-populated chunks
+addChunk();
+addChunk();
+</script>
+</body>
+</html>
