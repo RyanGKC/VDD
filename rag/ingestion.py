@@ -9,6 +9,7 @@ from rag.fingerprint import Fingerprinter
 from rag.cache_gate import _pick_collection
 from rag.entity_resolver import EntityResolver
 from core.gemini_client import GeminiClient
+from rag.mention_index import init_mention_index, record_mentions
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,7 @@ class IngestionPipeline:
         self.resolver = entity_resolver
         self.fingerprinter = Fingerprinter(self.vs)
         self.gemini = gemini
+        self.mention_conn = init_mention_index()
         self._inflight_fingerprints: set[str] = set()
         
         import asyncio
@@ -44,7 +46,21 @@ class IngestionPipeline:
             else:
                 if current_chunk:
                     chunks.append(current_chunk.strip())
-                current_chunk = p + "\n\n"
+                
+                # Carry over the trailing `overlap` characters from the flushed chunk
+                if overlap > 0 and len(current_chunk) > overlap:
+                    overlap_text = current_chunk[-overlap:]
+                    # Try to snap to a sentence boundary, fallback to word boundary
+                    boundary = overlap_text.find('. ')
+                    if boundary == -1:
+                        boundary = overlap_text.find(' ')
+                        
+                    if boundary != -1:
+                        overlap_text = overlap_text[boundary+1:].lstrip()
+                        
+                    current_chunk = overlap_text + " " + p + "\n\n"
+                else:
+                    current_chunk = p + "\n\n"
         if current_chunk:
             chunks.append(current_chunk.strip())
         return chunks
@@ -75,8 +91,19 @@ class IngestionPipeline:
             chunk_ids = []
             
             collection = self.vs.get_collection(collection_name)
+            
+            import asyncio
+            from rag.segmentation import segment_chunks
+            
+            # 1. Embed all chunks first to drive segmentation
+            chunk_embeddings = await self.run_background_embedding(
+                lambda: self.gemini.embed_content(chunks)
+            )
+            
+            # 2. Segment chunks by semantic similarity and entity drift
+            segments = segment_chunks(chunks, chunk_embeddings)
 
-            # 3. Entity & Temporal Tagging
+            # 3. Entity & Temporal Tagging (Run ONCE per semantic segment)
             system_instruction = (
                 "You are an entity extraction engine. For the given text passage, extract:\n"
                 "1. The primary entity (company or person) the passage is about.\n"
@@ -88,24 +115,37 @@ class IngestionPipeline:
             batch_docs = []
             batch_metas = []
             batch_ids = []
+            batch_embeddings = []
 
-            import asyncio
-            async def _process_chunk(chunk: str):
-                if not chunk.strip(): return None
+            async def _process_segment(segment_indices: List[int]):
+                segment_texts = [chunks[i] for i in segment_indices]
+                full_text = "\n\n".join(segment_texts)
+                if len(full_text) > 6000:
+                    full_text = full_text[:3000] + "\n\n...\n\n" + full_text[-3000:]
+                    
                 try:
-                    # Wrap the LLM call with the background generation semaphore via coro factory
                     tagging = await self.run_background_generation(
                         lambda: self.gemini.generate_structured(
                             system_instruction=system_instruction,
-                            prompt=f"Passage: {chunk}",
+                            prompt=f"Passage: {full_text}",
                             schema=ChunkTaggingResult,
                         )
                     )
                     
                     resolved_primary = await self.resolver.resolve_entity(tagging.primary_entity_name)
                     primary_entity_id = resolved_primary.node_id if resolved_primary.status != "pending_resolution" else "pending_resolution"
+                    
+                    # Resolve mentioned entities
+                    resolved_mentions = await asyncio.gather(
+                        *[self.resolver.resolve_entity(m) for m in tagging.mentioned_entities],
+                        return_exceptions=True
+                    )
+                    canonical_mention_ids = []
+                    for rm in resolved_mentions:
+                        if not isinstance(rm, Exception) and rm.status != "pending_resolution" and rm.node_id:
+                            canonical_mention_ids.append(rm.node_id)
                         
-                    metadata = {
+                    shared_metadata = {
                         "primary_entity_id": primary_entity_id or tagging.primary_entity_name,
                         "mentioned_entities": ",".join(tagging.mentioned_entities),
                         "relationship_context": tagging.relationship_context,
@@ -114,37 +154,49 @@ class IngestionPipeline:
                         "source_tier": source_tier,
                         "source_type": source_type,
                         "document_fingerprint": fingerprint,
+                        "source_url": source_url,
                         "run_id": run_id
                     }
-                    return (chunk, metadata, str(uuid.uuid4()))
+                    
+                    processed_items = []
+                    for idx in segment_indices:
+                        # Clone metadata to add the unique chunk_index
+                        meta = dict(shared_metadata)
+                        meta["chunk_index"] = idx
+                        chunk_id = str(uuid.uuid4())
+                        processed_items.append((chunks[idx], meta, chunk_id, chunk_embeddings[idx]))
+                        
+                        # Record secondary mentions for this chunk in SQLite
+                        if canonical_mention_ids:
+                            record_mentions(self.mention_conn, chunk_id, canonical_mention_ids)
+                            
+                    return processed_items
                 except Exception as e:
-                    logger.error(f"Error tagging chunk: {e}")
-                    return None
+                    logger.error(f"Error tagging segment: {e}")
+                    return []
 
-            results = await asyncio.gather(*[_process_chunk(c) for c in chunks])
-            for res in results:
-                if res:
-                    c, m, i = res
+            results = await asyncio.gather(*[_process_segment(seg) for seg in segments])
+            for res_group in results:
+                for c, m, i, emb in res_group:
                     batch_docs.append(c)
                     batch_metas.append(m)
                     batch_ids.append(i)
+                    batch_embeddings.append(emb)
                     chunk_ids.append(i)
 
             if batch_docs:
-                import asyncio
-                
-                # Chroma collection.add makes a synchronous network call to Vertex AI Embeddings.
-                # Wrap it in run_background_embedding and run it in a threadpool to prevent blocking the event loop.
                 def _do_embed_and_add():
+                    # Pass the pre-computed embeddings directly to ChromaDB
                     collection.add(
                         documents=batch_docs,
                         metadatas=batch_metas,
-                        ids=batch_ids
+                        ids=batch_ids,
+                        embeddings=batch_embeddings
                     )
                 
-                await self.run_background_embedding(
-                    lambda: asyncio.to_thread(_do_embed_and_add)
-                )
+                # We do not need run_background_embedding here since we are just doing local I/O
+                # collection.add with explicit embeddings does not hit the Vertex API
+                await asyncio.to_thread(_do_embed_and_add)
 
             return chunk_ids
         finally:

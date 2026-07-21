@@ -47,25 +47,29 @@ async def resolve_company(ctx: DDContext, company_name: str, country: str | None
     
     # Resolve US CIK
     if country_upper in ("US", "USA") and not ctx.company_details.cik:
-        url = "https://www.sec.gov/files/company_tickers.json"
-        headers = {"User-Agent": "VDD_Prototype/1.0 (contact@example.com)"}
-        data = await fetch_json(ctx, url, headers=headers)
-        if data:
-            search_name = company_name.lower().replace(" ", "").replace(",", "").replace(".", "")
-            for entry in data.values():
-                title = entry["title"].lower().replace(" ", "").replace(",", "").replace(".", "")
-                if title == search_name or search_name in title:
-                    ctx.company_details.cik = str(entry["cik_str"]).zfill(10)
-                    break
+        async with ctx.entity_resolution_lock:
+            if not ctx.company_details.cik:
+                url = "https://www.sec.gov/files/company_tickers.json"
+                headers = {"User-Agent": "VDD_Prototype/1.0 (contact@example.com)"}
+                data = await fetch_json(ctx, url, headers=headers)
+                if data:
+                    search_name = company_name.lower().replace(" ", "").replace(",", "").replace(".", "")
+                    for entry in data.values():
+                        title = entry["title"].lower().replace(" ", "").replace(",", "").replace(".", "")
+                        if title == search_name or search_name in title:
+                            ctx.company_details.cik = str(entry["cik_str"]).zfill(10)
+                            break
 
     # Resolve UK Company Number
     elif country_upper in ("UK", "GB", "GBR") and not ctx.company_details.company_number:
-        api_key = os.getenv("COMPANIES_HOUSE_API_KEY")
-        if api_key:
-            url = f"https://api.company-information.service.gov.uk/search/companies?q={company_name}"
-            data = await fetch_json(ctx, url, auth=(api_key, ""))
-            if data and data.get("items"):
-                ctx.company_details.company_number = data["items"][0].get("company_number")
+        async with ctx.entity_resolution_lock:
+            if not ctx.company_details.company_number:
+                api_key = os.getenv("COMPANIES_HOUSE_API_KEY")
+                if api_key:
+                    url = f"https://api.company-information.service.gov.uk/search/companies?q={company_name}"
+                    data = await fetch_json(ctx, url, auth=(api_key, ""))
+                    if data and data.get("items"):
+                        ctx.company_details.company_number = data["items"][0].get("company_number")
 
 async def fetch_corporate_registry(ctx: DDContext, company_name: str, country: str | None) -> str:
     await resolve_company(ctx, company_name, country)
@@ -415,24 +419,26 @@ async def perform_web_search(ctx: DDContext, query: str) -> str:
             # ctx.company_details.website — low-confidence resolutions are logged and
             # discarded so an ambiguous/wrong domain never enters the allowlist.
             if not ctx.company_details.website:
-                try:
-                    from custom_tools.website_resolver import resolve_company_website_with_overrides
-                    resolution = await resolve_company_website_with_overrides(ctx.company_details.company_name)
-                    if resolution["confidence"] == "high":
-                        ctx.company_details.website = f"https://{resolution['domain']}"
-                        logger.info(
-                            f"Resolved website for {ctx.company_details.company_name}: "
-                            f"{resolution['domain']} (confidence: high, source: {resolution.get('source', 'search')})"
-                        )
-                    elif resolution["confidence"] == "low":
-                        logger.warning(
-                            f"Low-confidence website resolution discarded for {ctx.company_details.company_name} — "
-                            f"top candidate was {resolution['domain']}, candidates: {resolution['candidates']}"
-                        )
-                    else:
-                        logger.warning(f"Could not resolve website for {ctx.company_details.company_name}")
-                except Exception as e:
-                    logger.warning(f"Could not auto-resolve website: {e}")
+                async with ctx.entity_resolution_lock:
+                    if not ctx.company_details.website:
+                        try:
+                            from custom_tools.website_resolver import resolve_company_website_with_overrides
+                            resolution = await resolve_company_website_with_overrides(ctx.company_details.company_name)
+                            if resolution["confidence"] == "high":
+                                ctx.company_details.website = f"https://{resolution['domain']}"
+                                logger.info(
+                                    f"Resolved website for {ctx.company_details.company_name}: "
+                                    f"{resolution['domain']} (confidence: high, source: {resolution.get('source', 'search')})"
+                                )
+                            elif resolution["confidence"] == "low":
+                                logger.warning(
+                                    f"Low-confidence website resolution discarded for {ctx.company_details.company_name} — "
+                                    f"top candidate was {resolution['domain']}, candidates: {resolution['candidates']}"
+                                )
+                            else:
+                                logger.warning(f"Could not resolve website for {ctx.company_details.company_name}")
+                        except Exception as e:
+                            logger.warning(f"Could not auto-resolve website: {e}")
 
             company_domain = None
             if ctx.company_details.website:

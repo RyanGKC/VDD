@@ -13,8 +13,9 @@ SYSTEM_INSTRUCTION = """
 You are a supply chain risk analyst. Evaluate the vendor's operational resilience, 
 supply chain dependencies, and geographic exposure using the provided web search data.
 
-Identify explicit supplier companies (Tier 1 or Tier 2 dependencies, manufacturing partners, logistics partners, etc.) mentioned in the text. 
+Identify explicit UPSTREAM supplier companies (entities the target pays or relies on for raw materials, manufacturing, software, logistics, or services) mentioned in the text. 
 CRITICAL: You must prioritize identifying the top, most critical suppliers (e.g. highest volume, strategic importance, or largest contracts). Output their details in the 'supply_items' list, ordered by importance.
+Do NOT include downstream customers, clients, generic partnerships, or companies that the target company provides services TO.
 
 If you discover a critical dependency on a high-risk or potentially sanctioned 
 jurisdiction/entity that was not previously disclosed, set 'high_risk_dependency_found' 
@@ -275,7 +276,8 @@ class ResilienceAgent(BaseResearchAgent):
                 f"Target Company: {ctx.company_details.company_name}\n"
                 f"Probable Supplier: {supplier_name}\n"
                 f"Search Results:\n{search_text}\n\n"
-                "Review these web search results. ONLY confirm the supplier if the text explicitly states a relationship (customer, vendor, partnership, distributor, or a brand stocked/sold by the target). If it is completely ambiguous, reject it."
+                "Review these web search results. ONLY confirm the supplier if the text explicitly states that the Probable Supplier provides goods, raw materials, software, or services TO the Target Company. "
+                "REJECT the relationship if the Probable Supplier is merely a downstream client, a customer of the Target Company, or a generic collaboration/partnership."
             )
             
             verification_tasks.append(

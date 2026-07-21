@@ -186,6 +186,18 @@ async def generate_dd_report(request: DDRequest, bg_tasks: BackgroundTasks):
         except Exception as e:
             print(f"SYSTEM: Failed to clean up run_documents: {e}")
             
+        # Count unique sources used (URL preferred, fallback to Title for DBs)
+        unique_sources = set()
+        for source in report.sources:
+            key = source.url if source.url else source.title
+            if key:
+                unique_sources.add(key.strip().lower())
+                
+        print(f"\n=======================================================")
+        print(f"JOB COMPLETE: {request.job_id}")
+        print(f"Total Unique Sources Utilized: {len(unique_sources)}")
+        print(f"=======================================================\n")
+
         return report
     except asyncio.CancelledError:
         print(f"Job {request.job_id} was successfully cancelled.")

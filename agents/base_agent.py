@@ -62,9 +62,10 @@ class BaseResearchAgent(AgentExecutor, abc.ABC):
                 entity_name=ctx.company_details.company_name,
                 entity_type="company",
                 document_kind=step_val,
+                goal_str="",  # Fast check, no goal yet
                 run_id=ctx.run_id,
             )
-            if cache_res.status == "HIT" and cache_res.chunks:
+            if cache_res.status == "HIT":
                 cache_hit = True
 
         queries = []
@@ -127,10 +128,11 @@ class BaseResearchAgent(AgentExecutor, abc.ABC):
                     entity_name=ctx.company_details.company_name,
                     entity_type="company",
                     document_kind=step_val,
+                    goal_str=goal_str,
                     run_id=ctx.run_id,
                 )
                 if cache_res.status == "HIT" and cache_res.chunks:
-                    result_str = "...\n".join(cache_res.chunks)
+                    result_str = "\n\n".join(cache_res.chunks)
                     ctx.log(f"RAG CACHE HIT step={step_val} — skipped external API call")
 
             # ── Step B: MISS path — singleflight-coordinated fetch ────────
@@ -141,7 +143,7 @@ class BaseResearchAgent(AgentExecutor, abc.ABC):
 
                 if sf and run_id:
                     import hashlib
-                    fp_key = hashlib.sha256(f"{step_val}|{query_str}".encode()).hexdigest()
+                    fp_key = hashlib.sha256(f"{query_str}".encode()).hexdigest()
                     outcome = await sf.acquire_or_wait(fp_key, run_id)
 
                     if outcome.role == "follower" and outcome.data is not None:
