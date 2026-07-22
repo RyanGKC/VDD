@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import logging
 from itertools import groupby
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +58,7 @@ async def rerank_and_group_documents(
     goal_str: str,
     reranker,
     top_k_docs: int = 5,
-) -> List[str]:
+) -> Tuple[List[str], List[str]]:
     """
     Selects the top_k_docs most relevant documents from the candidate pool.
 
@@ -67,10 +67,10 @@ async def rerank_and_group_documents(
     relevant chunk score (descending). Each winning document is returned in
     full with all chunks in original reading order (chunk_index).
 
-    Returns [] if no documents have any relevant chunks (caller returns MISS).
+    Returns ([], []) if no documents have any relevant chunks (caller returns MISS).
     """
     if not chunks:
-        return []
+        return [], []
 
     # 1. Score all chunks in one LLM call
     chunk_texts = [c["text"] for c in chunks]
@@ -118,7 +118,7 @@ async def rerank_and_group_documents(
     # 5. Filter: only documents with at least one relevant chunk survive
     eligible = [fp for fp, has_rel in doc_has_relevant.items() if has_rel]
     if not eligible:
-        return []  # caller converts to MISS
+        return [], []  # caller converts to MISS
 
     # 6. Rank by best relevant chunk score (descending), take top-5
     top_fingerprints = sorted(
@@ -131,12 +131,14 @@ async def rerank_and_group_documents(
     #    stripping the ~200-char overlap that chunk_text() carries forward
     #    between consecutive chunks to avoid duplicated text.
     formatted_blocks: List[str] = []
+    sources: List[str] = []
     for fingerprint in top_fingerprints:
         group_sorted = sorted(
             doc_groups[fingerprint],
             key=lambda c: c["metadata"].get("chunk_index", 0),
         )
         source = group_sorted[0]["metadata"].get("source_url", fingerprint)
+        sources.append(source)
         text = _merge_chunks_deoverlap([c["text"] for c in group_sorted])
         formatted_blocks.append(f"--- Document: {source} ---\n{text}")
 
@@ -146,4 +148,4 @@ async def rerank_and_group_documents(
         len(eligible),
         goal_str[:60],
     )
-    return formatted_blocks
+    return formatted_blocks, sources

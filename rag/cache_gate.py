@@ -48,6 +48,7 @@ _DEFAULT_FRESHNESS_HOURS = 24
 class CacheResult:
     status: str           # "HIT" | "MISS"
     chunks: Optional[List[str]] = None
+    sources: Optional[List[str]] = None
 
 
 class CacheGate:
@@ -132,9 +133,9 @@ class CacheGate:
 
             if not goal_str:
                 # Fast check for planning bypass; no reranking needed
-                return CacheResult(status="HIT", chunks=None)
+                return CacheResult(status="HIT", chunks=None, sources=None)
 
-            formatted_document_blocks = await rerank_and_group_documents(
+            formatted_document_blocks, sources = await rerank_and_group_documents(
                 chunks_for_rerank, goal_str, self.reranker
             )
 
@@ -147,7 +148,7 @@ class CacheGate:
                 entity_id,
                 document_kind,
             )
-            return CacheResult(status="HIT", chunks=formatted_document_blocks)
+            return CacheResult(status="HIT", chunks=formatted_document_blocks, sources=sources)
 
         except Exception as exc:
             # Never block the agent on a cache check error — default MISS
