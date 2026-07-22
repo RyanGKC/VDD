@@ -37,8 +37,9 @@ class Reranker:
             "You are a relevance assessment engine. For each passage, produce:\n"
             "1. score: a float from 1.0 (completely irrelevant) to 10.0 "
             "(perfectly answers the query).\n"
-            "2. is_relevant: true only if the passage meaningfully answers or "
-            "directly supports the query; false otherwise.\n"
+            "2. is_relevant: true if the passage provides any context, background, or "
+            "information related to the query, even if it doesn't directly answer it; "
+            "false only if completely unrelated.\n"
             "3. reasoning: one sentence explaining your verdict.\n"
             "Evaluate each passage independently."
         )

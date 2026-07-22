@@ -109,6 +109,7 @@ async def spawn_sub_pipelines_for_step(step: StepName, current_ctx: DDContext, e
                 parent_ctx.screened_entities = current_ctx.screened_entities
                 parent_ctx.screened_entities_lock = current_ctx.screened_entities_lock
                 parent_ctx.checkpoint_db = getattr(current_ctx, 'checkpoint_db', None)
+                parent_ctx.audit_logger = getattr(current_ctx, 'audit_logger', None)
                 current_ctx.log(f"SYSTEM: Spawning sub-pipeline for parent company: {parent_name}")
                 current_ctx.parent_task = asyncio.create_task(run_dd_with_ctx(parent_ctx))
             else:
@@ -168,6 +169,8 @@ async def spawn_sub_pipelines_for_step(step: StepName, current_ctx: DDContext, e
                 child_ctx.screened_entities = current_ctx.screened_entities
                 child_ctx.screened_entities_lock = current_ctx.screened_entities_lock
                 child_ctx.checkpoint_db = getattr(current_ctx, 'checkpoint_db', None)
+                child_ctx.audit_logger = getattr(current_ctx, 'audit_logger', None)
+                
                 current_ctx.log(f"SYSTEM: Spawning sub-pipeline for supplier: {canonical_supplier}")
                 task = asyncio.create_task(run_dd_with_ctx(child_ctx))
                 current_ctx.child_tasks.append(task)
@@ -248,9 +251,34 @@ async def run_dd_with_ctx(ctx: DDContext) -> DDReport:
 
         # Pre-warm the entity resolver cache so all 9 agents hit memory instead of Neo4j on their first search
         if ctx.retrieval_engine and ctx.retrieval_engine.resolver:
-            ctx.log("SYSTEM: Pre-warming entity resolver cache...")
-            await ctx.retrieval_engine.resolver.resolve_entity(ctx.company_details.company_name, ctx.run_id)
-
+            resolved_entity = await ctx.retrieval_engine.resolver.resolve_entity(
+                ctx.company_details.company_name, 
+                entity_type="company", 
+                run_id=ctx.run_id
+            )
+            resolved_name = resolved_entity.node_id
+            
+            if resolved_name and resolved_name != ctx.company_details.company_name:
+                ctx.log(f"SYSTEM: Entity Resolved -> {resolved_name} (from {ctx.company_details.company_name})")
+                
+                # Log entity resolution to SQLite
+                if getattr(ctx, 'audit_logger', None):
+                    await ctx.audit_logger.log_retrieval(
+                        run_id=ctx.run_id,
+                        agent_id="entity_resolver",
+                        query=ctx.company_details.company_name,
+                        chunk_ids=["resolved_name"],
+                        source_domains=["knowledge_graph_or_llm"],
+                        relevance_scores=[1.0],
+                        parent_event_id=ctx.enrichment.get("_current_start_event_id")
+                    )
+                    
+                ctx.company_details = CompanyDetails(
+                    company_name=resolved_name,
+                    country=ctx.company_details.country,
+                    registration_number=ctx.company_details.registration_number
+                )
+        
         # Optimization 2: Dynamic Search Budget
         # Complex public companies (have CIK or known to be big) get 3. Others get 2. Local/small could get 1.
         has_cik = bool(ctx.company_details.cik)
@@ -308,12 +336,25 @@ async def run_dd_with_ctx(ctx: DDContext) -> DDReport:
             
         report.audit_log = "\n".join(audit_lines)
         
+        if getattr(ctx, 'audit_logger', None) and ctx.run_id:
+            await ctx.audit_logger.log_pipeline_end(
+                run_id=ctx.run_id,
+                status="completed",
+                parent_event_id=ctx.enrichment.get("_current_start_event_id")
+            )
+        
         if getattr(ctx, 'checkpoint_db', None) and ctx.run_id:
             await ctx.checkpoint_db.mark_processed(ctx.run_id, ctx.company_details.company_name, "completed")
             
         return report
     except asyncio.CancelledError:
         ctx.log("SYSTEM: Cancellation received, aborting sub-pipelines...")
+        if getattr(ctx, 'audit_logger', None) and ctx.run_id:
+            await ctx.audit_logger.log_pipeline_end(
+                run_id=ctx.run_id,
+                status="cancelled",
+                parent_event_id=ctx.enrichment.get("_current_start_event_id")
+            )
         if getattr(ctx, 'checkpoint_db', None) and ctx.run_id:
             await ctx.checkpoint_db.mark_processed(ctx.run_id, ctx.company_details.company_name, "cancelled")
         for task in getattr(ctx, "child_tasks", []):

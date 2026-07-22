@@ -103,7 +103,7 @@ class SummaryAgent:
         """Ask the LLM to identify contradictory findings and return
         the indices of the ones that should be removed."""
         if len(all_findings) < 2:
-            return []
+            return [], None
 
         numbered = "\n".join(
             f"[{i}] (severity={f.severity.value}, "
@@ -134,11 +134,10 @@ class SummaryAgent:
                         idx, all_findings[idx].summary, explanation,
                     )
 
-            return [i for i in result.removals if 0 <= i < len(all_findings)]
-
+            return [i for i in result.removals if 0 <= i < len(all_findings)], result
         except Exception:
             logger.exception("Contradiction detection failed; skipping")
-            return []
+            return [], None
 
     async def synthesise(self, ctx: DDContext) -> DDReport:
         # Flatten findings across every completed step.
@@ -159,13 +158,36 @@ class SummaryAgent:
                 all_findings.append(f)
 
         # --- Contradiction detection pass ---
+        al = getattr(ctx, 'audit_logger', None)
+        start_event_id = None
+        if al:
+            from core.audit_logger import EventType
+            start_event_id = await al.log_dag_node(
+                run_id=ctx.run_id,
+                agent_id="summary_agent",
+                event_type=EventType.DAG_NODE_START,
+                parent_event_id=ctx.enrichment.get("_current_start_event_id")
+            )
+
         if hasattr(ctx, '_cached_contradiction_indices'):
             ctx.log("SUMMARY: Using speculative contradiction detection results from FlowEngine")
             removal_indices = ctx._cached_contradiction_indices
             all_findings = ctx._cached_all_findings
+            detect_res = getattr(ctx, '_cached_contradiction_detect_res', None)
         else:
             ctx.log("SUMMARY: Running contradiction detection across all findings")
-            removal_indices = await self._detect_contradictions(all_findings)
+            removal_indices, detect_res = await self._detect_contradictions(all_findings)
+            
+        if al and detect_res:
+            import json
+            await al.log_generation(
+                run_id=ctx.run_id,
+                agent_id="summary_agent_contradiction",
+                claim=f"Contradiction check results: {json.dumps(detect_res.model_dump())}",
+                supporting_chunk_ids=[],
+                model_version="gemini-1.5-pro",
+                parent_event_id=start_event_id
+            )
 
         if removal_indices:
             ctx.log(
@@ -223,10 +245,30 @@ class SummaryAgent:
             )
             exec_summary = summary.executive_summary
             recs = summary.recommendations
+            
+            if al:
+                await al.log_generation(
+                    run_id=ctx.run_id,
+                    agent_id="summary_agent_executive",
+                    claim=exec_summary,
+                    supporting_chunk_ids=[],
+                    model_version="gemini-1.5-pro",
+                    parent_event_id=start_event_id
+                )
         except Exception as e:
             logger.exception(f"Synthesis failed for {ctx.company_details.company_name}")
             exec_summary = f"Synthesis failed: {e}. See audit log for raw findings."
             recs = []
+
+        if al:
+            from core.audit_logger import EventType
+            await al.log_dag_node(
+                run_id=ctx.run_id,
+                agent_id="summary_agent",
+                event_type=EventType.DAG_NODE_END,
+                findings_count=len(strengths) + len(red_flags),
+                parent_event_id=start_event_id
+            )
 
         # Extract supply items from resilience structured data if available
         supply_items_data = []

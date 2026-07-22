@@ -8,6 +8,8 @@ from typing import Optional
 
 from main import run_dd_with_ctx
 from core.models import DDReport, DDContext, CompanyDetails
+from core.audit_logger import AuditLogger
+from audit_viewer.routes import router as audit_viewer_router
 from core.history_db import HistoryDB
 from datetime import datetime, timezone
 import json
@@ -39,6 +41,7 @@ async def lifespan(app: FastAPI):
     await http_client.aclose()
 
 app = FastAPI(title="VDD Prototype API", lifespan=lifespan)
+app.include_router(audit_viewer_router)
 history_db = HistoryDB()
 
 # Setup CORS to allow frontend communication
@@ -76,7 +79,7 @@ async def generate_dd_report(request: DDRequest, bg_tasks: BackgroundTasks):
     import uuid
     from core.dependencies import (
         retrieval_engine, ingestion_pipeline,
-        cache_gate, singleflight, background_tasks, vs, checkpoint_db
+        cache_gate, singleflight, background_tasks, vs, checkpoint_db, audit_logger
     )
 
     run_id = request.job_id if request.job_id else str(uuid.uuid4())
@@ -99,6 +102,8 @@ async def generate_dd_report(request: DDRequest, bg_tasks: BackgroundTasks):
         singleflight=singleflight,
         background_tasks=background_tasks,
     )
+    if audit_logger:
+        ctx.audit_logger = audit_logger
     if checkpoint_db:
         ctx.checkpoint_db = checkpoint_db
         run_config = {
@@ -115,6 +120,13 @@ async def generate_dd_report(request: DDRequest, bg_tasks: BackgroundTasks):
             company_details_json=ctx.company_details.model_dump_json(),
             run_config_json=json.dumps(run_config)
         )
+        if audit_logger:
+            start_event_id = await audit_logger.log_pipeline_start(
+                run_id=run_id,
+                company_name=request.company_name,
+                config=run_config
+            )
+            ctx.enrichment["_current_start_event_id"] = start_event_id
         await checkpoint_db.enqueue_entity(
             run_id=run_id,
             entity_name=request.company_name,

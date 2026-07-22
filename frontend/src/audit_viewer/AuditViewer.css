@@ -1,0 +1,138 @@
+.audit-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.85);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.audit-modal-content {
+  background: #1e1e24;
+  width: 95vw;
+  height: 95vh;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  position: relative;
+}
+
+.audit-modal-header {
+  padding: 1rem;
+  background: #2a2a35;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #3f3f4e;
+}
+
+.audit-modal-header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #fff;
+}
+
+.close-button {
+  background: #ff4b4b;
+  border: none;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.close-button:hover {
+  background: #ff3333;
+}
+
+.audit-modal-body {
+  display: flex;
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.audit-graph-container {
+  flex: 1;
+  height: 100%;
+}
+
+.audit-side-panel {
+  width: 400px;
+  background: #2a2a35;
+  border-left: 1px solid #3f3f4e;
+  overflow-y: auto;
+  padding: 1rem;
+  color: #ddd;
+}
+
+.audit-side-panel h3 {
+  margin-top: 0;
+  color: #fff;
+  border-bottom: 1px solid #3f3f4e;
+  padding-bottom: 0.5rem;
+}
+
+.audit-event-card {
+  background: #1e1e24;
+  border: 1px solid #3f3f4e;
+  border-radius: 6px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.audit-event-type {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  font-weight: bold;
+  color: #4da6ff;
+  margin-bottom: 0.5rem;
+}
+
+.audit-event-time {
+  font-size: 0.75rem;
+  color: #888;
+  margin-bottom: 0.5rem;
+}
+
+.audit-event-payload {
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+.audit-event-payload strong {
+  color: #fff;
+}
+
+.fetch-raw-btn {
+  background: #4da6ff;
+  color: #fff;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+}
+
+.fetch-raw-btn:hover {
+  background: #3399ff;
+}
+
+.raw-chunk-display {
+  margin-top: 1rem;
+  background: #000;
+  padding: 0.5rem;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.8rem;
+  white-space: pre-wrap;
+  overflow-x: auto;
+}

@@ -167,7 +167,7 @@ typing_extensions==4.15.0
 tzlocal==5.4.4
 urllib3==2.7.0
 uvicorn==0.49.0
-uvloop==0.22.1
+uvloop==0.21.0
 watchfiles==1.2.0
 wcwidth==0.8.2
 weasyprint==69.0
@@ -178,6 +178,5 @@ wrapt==2.2.2
 yarl==1.24.2
 yfinance==1.5.1
 zopfli==0.4.3
-requirements updated
 spacy==3.8.4
 sentence-transformers==3.3.1

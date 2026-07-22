@@ -541,7 +541,7 @@ async def _orchestrate_search(query: str, max_results: int = 3, company_domain: 
         
         eval_task = asyncio.create_task(batch_evaluate_domains(unknown_snippets)) if unknown_snippets else None
         relevance_task = asyncio.create_task(
-            batch_score_all_relevance(query, allowed_snippets, query_emb, snippet_embedding_map)
+            batch_score_all_relevance(query, list(allowed_snippets), query_emb, snippet_embedding_map)
         ) if allowed_snippets else None
         
         # Await domain evaluations

@@ -94,6 +94,17 @@ class BaseResearchAgent(AgentExecutor, abc.ABC):
                 prompt=plan_prompt,
                 schema=_PlanAndAnalysis.with_findings_schema(schema)
             )
+            
+            if getattr(ctx, 'audit_logger', None):
+                await ctx.audit_logger.log_generation(
+                    run_id=ctx.run_id,
+                    agent_id=step_val,
+                    claim=f"Generated Research Plan: {[q.query for q in plan_result.research_plan]}",
+                    supporting_chunk_ids=[],
+                    model_version="gemini-1.5-pro",
+                    parent_event_id=getattr(ctx, '_current_start_event_id', None)
+                )
+                
             queries = plan_result.research_plan[:max_searches] if plan_result.research_plan else []
         
         # If no searches needed, extract the final analysis directly
@@ -121,7 +132,7 @@ class BaseResearchAgent(AgentExecutor, abc.ABC):
             if replan_rationale:
                 goal_str += f"\n\nSUPERVISOR FEEDBACK FROM PREVIOUS FAILED ATTEMPT:\n{replan_rationale}\nAvoid the mistakes mentioned above."
                 
-            # ── Step A: Cache Gate pre-check ──────────────────────────────
+            is_cache_hit = False
             cache_gate = getattr(ctx, 'cache_gate', None)
             if cache_gate and getattr(ctx, 'enable_rag', True) and not replan_rationale:
                 cache_res = await cache_gate.check(
@@ -133,6 +144,7 @@ class BaseResearchAgent(AgentExecutor, abc.ABC):
                 )
                 if cache_res.status == "HIT" and cache_res.chunks:
                     result_str = "\n\n".join(cache_res.chunks)
+                    is_cache_hit = True
                     ctx.log(f"RAG CACHE HIT step={step_val} — skipped external API call")
 
             # ── Step B: MISS path — singleflight-coordinated fetch ────────
@@ -159,37 +171,57 @@ class BaseResearchAgent(AgentExecutor, abc.ABC):
                             raise
                 else:
                     result_str = await perform_web_search(ctx, query_str)
+            # ── Step B.5: Map URLs to source_ids and extract sources ──
+            import json
+            import hashlib
+            current_search_urls = []
+            
+            # If it's a cache hit, we already have sources from cache_res
+            if is_cache_hit and cache_res.sources:
+                current_search_urls = cache_res.sources
+            else:
+                try:
+                    data = json.loads(result_str)
+                    if "results" in data:
+                        for res in data["results"]:
+                            url = res.get("source_url") or res.get("url")
+                            if url:
+                                sid = f"src_{hashlib.md5(url.encode()).hexdigest()[:8]}"
+                                url_map[sid] = url
+                                current_search_urls.append(url)
+                                res["source_id"] = sid
+                                res.pop("source_url", None)
+                                res.pop("url", None)
+                        result_str = json.dumps(data, indent=2)
+                except Exception:
+                    pass
+
+            # ── Step B.6: Log RETRIEVAL event ──────────────
+            al = getattr(ctx, 'audit_logger', None)
+            start_event_id = getattr(ctx, '_current_start_event_id', None)
+            if al and ctx.run_id and result_str:
+                await al.log_retrieval(
+                    run_id=ctx.run_id,
+                    agent_id="cache_gate" if is_cache_hit else step_val,
+                    query=goal_str if is_cache_hit else query_str,
+                    chunk_ids=[hashlib.md5(query_str.encode()).hexdigest()],
+                    source_domains=current_search_urls,
+                    relevance_scores=[],
+                    parent_event_id=start_event_id,
+                )
 
             # ── Step C: Fire-and-forget background ingestion ──────────────
             bg = getattr(ctx, 'background_tasks', None)
             ingestion_pipeline = getattr(ctx, 'ingestion_pipeline', None)
             run_id = getattr(ctx, 'run_id', None)
 
-            if bg and ingestion_pipeline and result_str and run_id and getattr(ctx, 'enable_rag', True) and not is_sf_follower:
+            if bg and ingestion_pipeline and result_str and run_id and getattr(ctx, 'enable_rag', True) and not is_sf_follower and not is_cache_hit:
                 bg.schedule(
                     ingestion_pipeline.ingest_document(
                         text=result_str, source_url=query_str, source_type=step_val, run_id=run_id,
                     ),
                     run_id,
                 )
-
-            # ── Step C.5: Map URLs to source_ids ──────────────
-            import json
-            import hashlib
-            try:
-                data = json.loads(result_str)
-                if "results" in data:
-                    for res in data["results"]:
-                        url = res.get("source_url") or res.get("url")
-                        if url:
-                            sid = f"src_{hashlib.md5(url.encode()).hexdigest()[:8]}"
-                            url_map[sid] = url
-                            res["source_id"] = sid
-                            res.pop("source_url", None)
-                            res.pop("url", None)
-                    result_str = json.dumps(data, indent=2)
-            except Exception:
-                pass
 
             # ── Step D: Try retrieval engine for a focused context window ─
             retrieval_engine = getattr(ctx, 'retrieval_engine', None)
@@ -204,6 +236,17 @@ class BaseResearchAgent(AgentExecutor, abc.ABC):
                         retrieval_text = "...\n".join(distilled)
                         result_str = f"Raw Data:\n{result_str}\n\nRetrieved Context:\n{retrieval_text}"
                         ctx.log(f"RAG DISTILLATION step={step_val} returned targeted chunks")
+                        
+                        if getattr(ctx, 'audit_logger', None):
+                            await ctx.audit_logger.log_retrieval(
+                                run_id=ctx.run_id,
+                                agent_id=f"{step_val}_rag",
+                                query=goal_str,
+                                chunk_ids=[f"distilled_{hashlib.md5(c.encode()).hexdigest()[:8]}" for c in distilled],
+                                source_domains=retrieval_res.primary_sources,
+                                relevance_scores=[1.0] * len(distilled),
+                                parent_event_id=getattr(ctx, '_current_start_event_id', None)
+                            )
                 except Exception as rag_exc:
                     ctx.log(f"RAG DISTILLATION step={step_val} failed (non-blocking): {rag_exc}")
 
@@ -269,6 +312,21 @@ class BaseResearchAgent(AgentExecutor, abc.ABC):
         if hasattr(ctx, 'log_event'):
             ctx.log_event(ctx.company_details.company_name, self.step.value, "running")
             
+        al = getattr(ctx, 'audit_logger', None)
+        start_event_id = None
+        if al and ctx.run_id:
+            from core.audit_logger import EventType
+            # Link this agent's start event to the pipeline root (PIPELINE_START)
+            # so the audit graph traversal can reach it from the root node.
+            pipeline_start_event_id = ctx.enrichment.get("_current_start_event_id")
+            start_event_id = await al.log_dag_node(
+                run_id=ctx.run_id,
+                agent_id=self.step.value,
+                event_type=EventType.DAG_NODE_START,
+                parent_event_id=pipeline_start_event_id,
+            )
+            ctx._current_start_event_id = start_event_id
+            
         try:
             # Await the async research logic
             result = await self.research(ctx)
@@ -310,6 +368,39 @@ class BaseResearchAgent(AgentExecutor, abc.ABC):
         if result.rationale:
             print(f"  > Rationale: {result.rationale}")
             ctx.audit(f"[{self.step.value.upper()}] Rationale:\n{result.rationale}")
+            
+            if al and ctx.run_id:
+                from core.audit_logger import EventType
+                gen_event_id = await al.log_generation(
+                    run_id=ctx.run_id,
+                    agent_id=self.step.value,
+                    claim=result.rationale,
+                    supporting_chunk_ids=[], # Future: map from url_map
+                    model_version=getattr(self.gemini, '_model', 'unknown'),
+                    prompt_version=None,
+                    parent_event_id=start_event_id,
+                )
+                
+                for f in result.findings:
+                    if f.severity.value != "info":
+                        await al.log_risk_flag(
+                            run_id=ctx.run_id,
+                            agent_id=self.step.value,
+                            risk_type=f.category or f.severity.value,
+                            detail=f.summary,
+                            confidence={"low":0.4,"medium":0.6,"high":0.8,"critical":0.95}.get(f.severity.value, 0.5),
+                            parent_event_id=gen_event_id,
+                        )
+                if result.anomaly:
+                    await al.log_risk_flag(
+                        run_id=ctx.run_id,
+                        agent_id=self.step.value,
+                        risk_type="anomaly",
+                        detail=result.anomaly.reason,
+                        confidence=0.9,
+                        parent_event_id=gen_event_id,
+                    )
+
         if result.raw_data:
             snippet = result.raw_data[:300].replace('\n', ' ')
             print(f"  > Raw Data: {snippet}...")
@@ -326,6 +417,17 @@ class BaseResearchAgent(AgentExecutor, abc.ABC):
             ctx.audit(f"[{self.step.value.upper()}] Raw Data:\n{formatted_data}")
         for f in result.findings:
             print(f"  - [{f.severity.value.upper()}] {f.summary}")
+            
+        if al and ctx.run_id:
+            from core.audit_logger import EventType
+            await al.log_dag_node(
+                run_id=ctx.run_id,
+                agent_id=self.step.value,
+                event_type=EventType.DAG_NODE_END,
+                findings_count=len(result.findings),
+                anomaly=result.anomaly.reason if result.anomaly else None,
+                parent_event_id=start_event_id,
+            )
             
         return result
 

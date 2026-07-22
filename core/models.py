@@ -194,6 +194,8 @@ class DDContext(BaseModel):
     singleflight: Any = Field(default=None, exclude=True)
     background_tasks: Any = Field(default=None, exclude=True)
     saved_to_history: bool = Field(default=False, exclude=True)
+    # Structured SQLite audit logger (compliance chain of custody)
+    audit_logger: Any = Field(default=None, exclude=True)
 
     def log(self, message: str) -> None:
         stamped = f"{datetime.now(timezone.utc).isoformat()} | {message}"

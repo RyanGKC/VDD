@@ -188,11 +188,12 @@ class FlowEngine:
                         all_findings.append(f)
                         
                 contradiction_task = self._summary._detect_contradictions(all_findings)
-                (new_plan, is_anomaly), removal_indices = await asyncio.gather(supervisor_task, contradiction_task)
+                (new_plan, is_anomaly), (removal_indices, detect_res) = await asyncio.gather(supervisor_task, contradiction_task)
                 
                 # Store it in ctx so synthesise can skip the LLM call
                 ctx._cached_contradiction_indices = removal_indices
                 ctx._cached_all_findings = all_findings
+                ctx._cached_contradiction_detect_res = detect_res
             else:
                 new_plan, is_anomaly = await supervisor_task
 
@@ -207,7 +208,10 @@ class FlowEngine:
                     if hasattr(ctx, '_cached_contradiction_indices'):
                         del ctx._cached_contradiction_indices
                         del ctx._cached_all_findings
+                        if hasattr(ctx, '_cached_contradiction_detect_res'):
+                            del ctx._cached_contradiction_detect_res
                         
+                    ctx.log(f"SUPERVISOR Review Complete: is_anomaly={is_anomaly}")
                     uncompleted_original = [s for s in IDEAL_FLOW if s not in all_completed and s not in new_plan]
                     plan = new_plan + uncompleted_original
                     ctx.log(f"NEW PLAN: {[s.value for s in plan]}")

@@ -3,8 +3,9 @@ import {
   ShieldAlert, ShieldCheck, Shield, AlertTriangle, 
   CheckCircle, Info, Building2, Globe, FileText, 
   MapPin, Landmark, ArrowRight, Loader2, PlaySquare,
-  Activity, FileSearch, ShieldX, Sun, Moon, ChevronLeft, ChevronRight, Home, History, Clock, Edit2, Trash2, Copy
+  Activity, FileSearch, ShieldX, Sun, Moon, ChevronLeft, ChevronRight, Home, History, Clock, Edit2, Trash2, Copy, Network
 } from 'lucide-react';
+import AuditViewerModal from './audit_viewer/AuditViewerModal';
 import { 
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, 
   CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar
@@ -1150,6 +1151,7 @@ const SupplyInputsSection = ({ supplyItems }) => {
 };
 
 const Dashboard = ({ report, rootReport, onReset, onResetSupplier, theme, isGraphOpen, onToggleGraph, jobId }) => {
+  const [isAuditViewerOpen, setIsAuditViewerOpen] = useState(false);
   // Data prep for charts
   const severityCounts = report.red_flags.reduce((acc, flag) => {
     acc[flag.severity] = (acc[flag.severity] || 0) + 1;
@@ -1241,9 +1243,15 @@ const Dashboard = ({ report, rootReport, onReset, onResetSupplier, theme, isGrap
               </button>
             )}
             {report.audit_log && (
+              <button onClick={() => setIsAuditViewerOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-indigo-100 hover:bg-indigo-200 dark:bg-indigo-900/50 dark:hover:bg-indigo-800/50 text-indigo-700 dark:text-indigo-300 rounded-lg text-sm font-semibold transition border border-indigo-200 dark:border-indigo-800 shadow-sm">
+                <Network className="w-4 h-4" />
+                Audit Trail
+              </button>
+            )}
+            {report.audit_log && (
               <button onClick={handleDownloadAuditLog} className="flex items-center gap-2 px-4 py-2 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/50 dark:hover:bg-blue-800/50 text-blue-700 dark:text-blue-300 rounded-lg text-sm font-semibold transition border border-blue-200 dark:border-blue-800 shadow-sm">
                 <FileText className="w-4 h-4" />
-                Audit Log
+                Audit Log (TXT)
               </button>
             )}
             {jobId && (
@@ -1255,6 +1263,14 @@ const Dashboard = ({ report, rootReport, onReset, onResetSupplier, theme, isGrap
           </div>
         </div>
       </div>
+      
+      {isAuditViewerOpen && (
+        <AuditViewerModal 
+          runId={jobId} 
+          companyName={report.vendor_name} 
+          onClose={() => setIsAuditViewerOpen(false)} 
+        />
+      )}
 
       {/* Exec Summary */}
       <div className="bg-slate-800 dark:bg-slate-900/50 dark:border dark:border-slate-800 text-white p-6 rounded-xl shadow-sm transition-all duration-300">

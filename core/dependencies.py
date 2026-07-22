@@ -24,6 +24,9 @@ history_db = HistoryDB()
 from core.checkpoint_db import CheckpointDB
 checkpoint_db = CheckpointDB()
 
+from core.audit_logger import AuditLogger
+audit_logger = AuditLogger(db_path="structured_audit.db")
+
 # Opt 5: Faster/cheaper model for simple entity extraction/tagging
 tagging_gemini = GeminiClient(model=os.getenv("GEMINI_TAGGING_MODEL", "gemini-2.5-flash-lite"))
 
