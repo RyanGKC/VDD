@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { segmentAttempts, tierRanks } from './auditModel';
+import { segmentAttempts, tierRanks, supervisorReviews, contradictionRemovals } from './auditModel';
 
 const ev = (type, ts, extra = {}) => ({ event_type: type, timestamp: ts, payload: {}, ...extra });
 
@@ -27,5 +27,25 @@ describe('tierRanks', () => {
   it('computes dependency depth', () => {
     const dag = { shareholders: [], kyb: ['shareholders'], sanctions: ['kyb'], profile: [], esg: ['profile'] };
     expect(tierRanks(dag)).toEqual({ shareholders: 0, kyb: 1, sanctions: 2, profile: 0, esg: 1 });
+  });
+});
+
+describe('supervisorReviews', () => {
+  it('extracts and orders review rounds', () => {
+    const events = [
+      { event_type: 'supervisor_review', timestamp: '2026-01-01T00:00:02Z', event_id: 'r2', payload: { round: 2, is_anomaly: false, rationale: 'Clear.', steps_to_run: [], updated_params: {}, verification_searches: 0 } },
+      { event_type: 'supervisor_review', timestamp: '2026-01-01T00:00:01Z', event_id: 'r1', payload: { round: 1, is_anomaly: true, rationale: 'Re-run media.', steps_to_run: ['media'], updated_params: { country: 'UK' }, verification_searches: 2 } },
+    ];
+    const revs = supervisorReviews(events);
+    expect(revs.map((r) => r.round)).toEqual([1, 2]);
+    expect(revs[0].isAnomaly).toBe(true);
+    expect(revs[0].steps).toEqual(['media']);
+  });
+});
+
+describe('contradictionRemovals', () => {
+  it('reads removed findings from the contradiction event', () => {
+    const events = [{ agent_id: 'summary_agent_contradiction', event_type: 'generation', payload: { removed_findings: ['Privately held'] } }];
+    expect(contradictionRemovals(events)).toEqual(['Privately held']);
   });
 });

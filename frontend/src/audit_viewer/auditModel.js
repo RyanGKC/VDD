@@ -156,6 +156,28 @@ export function segmentAttempts(agentEvents) {
   return attempts;
 }
 
+// Batched supervisor review rounds, timestamp-ordered.
+export function supervisorReviews(events) {
+  return events
+    .filter((e) => e.event_type === 'supervisor_review')
+    .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp))
+    .map((e) => ({
+      round: e.payload.round,
+      isAnomaly: e.payload.is_anomaly,
+      rationale: e.payload.rationale,
+      steps: e.payload.steps_to_run || [],
+      updatedParams: e.payload.updated_params || {},
+      verificationSearches: e.payload.verification_searches || 0,
+      eventId: e.event_id,
+    }));
+}
+
+// Findings the contradiction-check pass dropped, from the summary_agent_contradiction event.
+export function contradictionRemovals(events) {
+  const e = events.find((x) => x.agent_id === 'summary_agent_contradiction' && x.event_type === 'generation');
+  return e?.payload?.removed_findings || [];
+}
+
 // Dependency depth per step (0 = no dependencies), from the dependency DAG.
 export function tierRanks(dag) {
   const memo = {};
