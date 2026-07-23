@@ -1,6 +1,6 @@
 import { groupByAgent, tierRanks, segmentAttempts, agentCounts, agentStatus } from './auditModel';
 
-const SUMMARY = 'summary';
+const SUMMARY = 'summary_agent';
 
 // Build the structural model for the tiered provenance board: agents placed in
 // dependency tiers, a synthetic review column (when supervisor reviews exist) between
@@ -13,7 +13,7 @@ export function buildGraphModel(events, dagDependencies, reviews = []) {
 
   const agents = [];
   for (const [id, evs] of groups) {
-    if (id === 'system') continue;
+    if (id === 'system' || id === 'supervisor') continue;
     const attempts = segmentAttempts(evs);
     agents.push({
       id,

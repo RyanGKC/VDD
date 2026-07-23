@@ -1,13 +1,34 @@
 import { useState, useEffect } from 'react';
 import { fetchRawChunks } from './api';
 
-const AuditSidePanel = ({ event }) => {
+const AuditSidePanel = ({ event, reviewView = false, reviews = [], contradictions = [] }) => {
   const [evidence, setEvidence] = useState(null);
   const [loading, setLoading] = useState(false);
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setEvidence(null);
   }, [event?.event_id]);
+
+  if (reviewView) {
+    return <aside className="audit-side-panel" aria-live="polite">
+      <p className="audit-event-type">Supervisor · batch quality control</p>
+      <h3>Review timeline</h3>
+      {reviews.length === 0 && <p>No supervisor review rounds recorded for this run.</p>}
+      {reviews.map((r) => <div key={r.eventId || r.round} className={`audit-sup-round ${r.isAnomaly ? 'anomaly' : 'clear'}`}>
+        <div className="audit-sup-round__head">
+          <span className={`audit-sup-pill ${r.isAnomaly ? 'rej' : 'acc'}`}>{r.isAnomaly ? '⚠ Anomaly' : '✓ Clear'}</span>
+          <span className="audit-sup-round__n">Round {r.round}</span>
+        </div>
+        <p>{r.rationale}</p>
+        {r.steps.length > 0 && <div className="audit-sup-steps">Re-ran: {r.steps.join(', ')}</div>}
+        {Object.keys(r.updatedParams || {}).length > 0 && <div className="audit-sup-steps">Updated: {Object.entries(r.updatedParams).map(([k, v]) => `${k}=${v}`).join(', ')}</div>}
+      </div>)}
+      {contradictions.length > 0 && <section className="audit-sup-contra">
+        <h4>Contradiction check</h4>
+        {contradictions.map((c, i) => <p key={i}>Removed: {c}</p>)}
+      </section>}
+    </aside>;
+  }
 
   if (!event) return <aside className="audit-side-panel"><p>Select an event to inspect its provenance.</p></aside>;
   const loadEvidence = async () => {

@@ -4,6 +4,7 @@ import { fetchAuditGraph } from './api';
 import AuditGraph from './AuditGraph';
 import AuditTimeline from './AuditTimeline';
 import AuditSidePanel from './AuditSidePanel';
+import { supervisorReviews, contradictionRemovals } from './auditModel';
 import './AuditViewer.css';
 
 const ROLE_ORDER = ['root', 'supplier', 'parent', 'legacy', 'unknown'];
@@ -36,6 +37,8 @@ const AuditViewerModal = ({ runId, companyName, onClose }) => {
     return [...byRole.entries()].sort((a, b) => ROLE_ORDER.indexOf(a[0]) - ROLE_ORDER.indexOf(b[0]));
   }, [data]);
   const eventTypes = useMemo(() => [...new Set((data?.events || []).map((e) => e.event_type))].sort(), [data]);
+  const reviews = useMemo(() => supervisorReviews(events), [events]);
+  const contradictions = useMemo(() => contradictionRemovals(data?.events || []), [data]);
 
   const selected = events.find((event) => event.event_id === selectedId) || null;
   const summary = data?.summary;
@@ -60,9 +63,9 @@ const AuditViewerModal = ({ runId, companyName, onClose }) => {
       </div>
       <main className="audit-modal-body"><div className="audit-graph-container">
         {view === 'graph'
-          ? <AuditGraph events={events} dagDependencies={data.dag_dependencies} selectedId={selectedId} onNodeClick={setSelectedId} collapseTrigger={collapseTrigger} />
+          ? <AuditGraph events={events} dagDependencies={data.dag_dependencies} selectedId={selectedId} onNodeClick={setSelectedId} collapseTrigger={collapseTrigger} reviews={reviews} />
           : <AuditTimeline events={events} selectedId={selectedId} onSelect={setSelectedId} />}
-      </div><AuditSidePanel event={selected} /></main>
+      </div><AuditSidePanel event={selected} reviewView={selectedId === '__review__'} reviews={reviews} contradictions={contradictions} /></main>
     </>}</section></div>, document.body);
 };
 export default AuditViewerModal;

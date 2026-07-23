@@ -244,3 +244,29 @@
 .audit-tl-row__head strong { text-transform: capitalize; }
 .audit-tl-row__head time { color: #94a3b8; font-size: .72rem; flex-shrink: 0; }
 .audit-tl-row__preview { font-size: .78rem; color: #cbd5e1; margin-top: .15rem; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+
+/* ── Supervisor surfacing: re-run token, review lane node, review timeline ── */
+.audit-node-agent__rerun { color: #e0a458; }
+
+.audit-node-review {
+  background: #1c1f28; border: 1px dashed #e0a45888; border-radius: 10px;
+  padding: 9px 14px; min-width: 190px; cursor: pointer; color: #e2e8f0;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4); text-align: center;
+}
+.audit-node-review__title { font-weight: 700; font-size: 13px; }
+.audit-node-review__meta { font-size: 11px; color: #94a3b8; margin-top: 3px; }
+.audit-node-review__flag { color: #e0a458; }
+
+.audit-sup-round { border: 1px solid #3f3f4e; border-left: 3px solid #64748b; border-radius: 8px; padding: 10px 12px; margin-bottom: 9px; background: #12141a; }
+.audit-sup-round.anomaly { border-left-color: #e5484d; }
+.audit-sup-round.clear { border-left-color: #3fb27f; }
+.audit-sup-round__head { display: flex; align-items: center; gap: 9px; }
+.audit-sup-round__n { font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: #94a3b8; }
+.audit-sup-round p { margin: 8px 0 0; font-size: .82rem; color: #cbd5e1; line-height: 1.5; }
+.audit-sup-pill { font-family: ui-monospace, Menlo, monospace; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; padding: 2px 7px; border-radius: 5px; }
+.audit-sup-pill.rej { color: #ffb3b6; background: #e5484d1f; border: 1px solid #e5484d55; }
+.audit-sup-pill.acc { color: #86e0b8; background: #3fb27f14; border: 1px solid #3fb27f44; }
+.audit-sup-steps { font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: #94a3b8; margin-top: 8px; }
+.audit-sup-contra { margin-top: 12px; border-top: 1px solid #3f3f4e; padding-top: 10px; }
+.audit-sup-contra h4 { margin: 0 0 6px; font-size: .78rem; color: #94a3b8; text-transform: uppercase; letter-spacing: .06em; }
+.audit-sup-contra p { margin: 4px 0; font-size: .8rem; color: #cbd5e1; }

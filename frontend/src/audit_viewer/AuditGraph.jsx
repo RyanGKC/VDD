@@ -4,8 +4,9 @@ import dagre from 'dagre';
 import 'reactflow/dist/style.css';
 import {
   EVENT_COLORS, STATUS_COLORS, groupByAgent, ancestorChain, transitiveDeps,
-  resolveAgent, agentCounts, agentStatus, agentDuration, countsLabel,
+  resolveAgent, agentDuration, countsLabel,
 } from './auditModel';
+import { buildGraphModel } from './auditGraphModel';
 
 // ─── Sub-graph layout (an agent's internal causal trace) ─────────────────────
 
@@ -33,6 +34,7 @@ function layoutAgentSubgraph(agentEvents) {
     maxX = Math.max(maxX, pos.x + pos.width / 2);
     maxY = Math.max(maxY, pos.y + pos.height / 2);
   }
+  if (!Number.isFinite(minX)) { minX = minY = 0; maxX = 180; maxY = 46; }
 
   const headerHeight = 34, padX = 16, padY = 12;
   const groupWidth = (maxX - minX) + padX * 2;
@@ -68,6 +70,7 @@ function CollapsedAgentNode({ data }) {
       <div className="audit-node-agent__meta">{data.summary}</div>
       <div className="audit-node-agent__foot">
         {data.duration && <span>{data.duration}</span>}
+        {data.attemptCount > 1 && <span className="audit-node-agent__rerun">⟲ {data.attemptCount - 1} re-run</span>}
         <span className="audit-node-agent__hint">▸ expand</span>
       </div>
     </div>
@@ -85,10 +88,23 @@ function ExpandedEventNode({ data }) {
 }
 
 function PipelineNode({ data }) {
-  const isStart = data.event.event_type === 'pipeline_start';
+  const isStart = data.kind === 'start';
   return (
     <div className={nodeClass(`audit-node-pipeline ${isStart ? '' : 'audit-node-pipeline--end'}`, data)}>
-      {isStart ? '▶ Pipeline Start' : '■ Pipeline End'}
+      {isStart ? '▶ Pipeline Start' : '■ Report compiled'}
+    </div>
+  );
+}
+
+function ReviewLaneNode({ data }) {
+  return (
+    <div className={nodeClass('audit-node-review', data)}>
+      <div className="audit-node-review__title">⚖ Supervisor</div>
+      <div className="audit-node-review__meta">
+        {data.rounds} round{data.rounds === 1 ? '' : 's'}
+        {data.anomalies > 0 && <span className="audit-node-review__flag"> · {data.anomalies} anomaly</span>}
+      </div>
+      <div className="audit-node-agent__hint">▸ review timeline</div>
     </div>
   );
 }
@@ -104,17 +120,23 @@ function AgentGroupNode({ data }) {
   );
 }
 
-const nodeTypes = { collapsed: CollapsedAgentNode, expanded: ExpandedEventNode, pipeline: PipelineNode, group: AgentGroupNode };
+const nodeTypes = {
+  collapsed: CollapsedAgentNode, expanded: ExpandedEventNode, pipeline: PipelineNode,
+  review: ReviewLaneNode, group: AgentGroupNode,
+};
 
-const DEP_EDGE = (id, source, target, focused) => ({
-  id, source, target, animated: true,
-  style: { stroke: '#3b82f6', strokeWidth: 2, opacity: focused ? 1 : 0.15 },
-  markerEnd: { type: MarkerType.ArrowClosed, width: 12, height: 12, color: '#3b82f6' },
-});
+// Edge styling per model edge kind.
+const EDGE_STYLE = {
+  start: { stroke: '#3b82f6', arrow: '#3b82f6' },
+  dep: { stroke: '#3b82f6', arrow: '#3b82f6' },
+  bus: { stroke: '#3b82f6', arrow: '#3b82f6' },
+  reviewToSummary: { stroke: '#22c55e', arrow: '#22c55e' },
+  summaryToEnd: { stroke: '#22c55e', arrow: '#22c55e' },
+};
 
 // ─── Main component ──────────────────────────────────────────────────────────
 
-const AuditGraph = ({ events, dagDependencies, selectedId, onNodeClick, collapseTrigger }) => {
+const AuditGraph = ({ events, dagDependencies, selectedId, onNodeClick, collapseTrigger, reviews = [] }) => {
   const [expandedAgents, setExpandedAgents] = useState(new Set());
 
   useEffect(() => {
@@ -132,60 +154,75 @@ const AuditGraph = ({ events, dagDependencies, selectedId, onNodeClick, collapse
 
   const { nodes, flowEdges } = useMemo(() => {
     const dag = dagDependencies || {};
-    const { groups, maps } = groupByAgent(events);
+    const model = buildGraphModel(events, dag, reviews);
+    const { maps } = groupByAgent(events);
 
-    // Focus/trace: light up the selected event's causal ancestry and the
-    // dependency chain of prerequisites that fed the agent it belongs to.
-    const selectedEvent = selectedId ? events.find((e) => e.event_id === selectedId) : null;
+    // Focus/trace: light up the selected event's causal ancestry + prerequisite agents.
+    const selectedEvent = selectedId && selectedId !== '__review__' ? events.find((e) => e.event_id === selectedId) : null;
     const hasFocus = Boolean(selectedEvent);
     const selectedAgent = selectedEvent ? resolveAgent(selectedEvent.agent_id, selectedEvent.event_id, maps) : null;
     const ancestors = selectedEvent ? ancestorChain(selectedId, maps) : new Set();
     const focusAgents = selectedAgent ? new Set([selectedAgent, ...transitiveDeps(selectedAgent, dag)]) : new Set();
-    const agentFocused = (agent) => !hasFocus || focusAgents.has(agent);
 
     const startEvent = events.find((e) => e.event_type === 'pipeline_start');
     const endEvents = events.filter((e) => e.event_type === 'pipeline_end');
     const endEvent = endEvents[endEvents.length - 1];
+    const hasReview = model.columns.some((c) => c.kind === 'review');
 
-    const stepAgents = [...groups.keys()].filter((key) => key in dag);
-    const present = new Set(stepAgents);
-    const dependedOn = new Set();
-    for (const step of stepAgents) for (const dep of (dag[step] || [])) if (present.has(dep)) dependedOn.add(dep);
-    const terminals = stepAgents.filter((step) => !dependedOn.has(step));
+    // Map a model token to a React Flow node id (undefined when its node is absent).
+    const rfId = (token) => {
+      if (token === '__start__') return startEvent?.event_id;
+      if (token === '__report__') return endEvent?.event_id;
+      if (token === '__review__') return hasReview ? 'review' : undefined;
+      return `agent-${token}`;
+    };
 
     const g = new dagre.graphlib.Graph();
     g.setDefaultEdgeLabel(() => ({}));
-    g.setGraph({ rankdir: 'LR', ranksep: 140, nodesep: 40, marginx: 30, marginy: 30 });
+    g.setGraph({ rankdir: 'LR', ranksep: 130, nodesep: 40, marginx: 30, marginy: 30 });
 
     const resultNodes = [];
     const resultEdges = [];
-    const addNode = (node, dimmed, opts = {}) => resultNodes.push({
-      ...node, data: { ...node.data, dimmed, ...opts },
-      style: { ...(node.style || {}), opacity: dimmed ? 0.28 : 1 },
-    });
+    const nodeIds = new Set();
+    const addNode = (node, dimmed, opts = {}) => {
+      nodeIds.add(node.id);
+      resultNodes.push({
+        ...node, data: { ...node.data, dimmed, ...opts },
+        style: { ...(node.style || {}), opacity: dimmed ? 0.28 : 1 },
+      });
+    };
 
     if (startEvent) {
       g.setNode(startEvent.event_id, { width: 160, height: 50 });
-      addNode({ id: startEvent.event_id, type: 'pipeline', position: { x: 0, y: 0 }, data: { event: startEvent } }, false);
+      addNode({ id: startEvent.event_id, type: 'pipeline', position: { x: 0, y: 0 }, data: { kind: 'start' } }, false);
+    }
+    if (endEvent) {
+      g.setNode(endEvent.event_id, { width: 160, height: 50 });
+      addNode({ id: endEvent.event_id, type: 'pipeline', position: { x: 0, y: 0 }, data: { kind: 'end' } }, false);
+    }
+    if (hasReview) {
+      g.setNode('review', { width: 210, height: 96 });
+      const anomalies = reviews.filter((r) => r.isAnomaly).length;
+      addNode({ id: 'review', type: 'review', position: { x: 0, y: 0 }, data: { rounds: reviews.length, anomalies } },
+        false, { selected: selectedId === '__review__' });
     }
 
-    for (const [agentId, agentEvents] of groups) {
-      if (agentId === 'system') continue;
-
-      const isExpanded = expandedAgents.has(agentId);
-      const focused = agentFocused(agentId);
+    for (const agent of model.agents) {
+      const finalEvents = agent.attempts[agent.attempts.length - 1]?.events || [];
+      const isExpanded = expandedAgents.has(agent.id);
+      const focused = !hasFocus || focusAgents.has(agent.id);
       const dimmed = hasFocus && !focused;
-      const agentNodeId = `agent-${agentId}`;
-      const { groupWidth, groupHeight, childPositions } = layoutAgentSubgraph(agentEvents);
+      const agentNodeId = `agent-${agent.id}`;
+      const { groupWidth, groupHeight, childPositions } = layoutAgentSubgraph(finalEvents);
       g.setNode(agentNodeId, { width: groupWidth, height: groupHeight });
 
       if (isExpanded) {
         addNode({
           id: agentNodeId, type: 'group', position: { x: 0, y: 0 },
-          data: { agentId, onCollapse: toggleAgent }, style: { width: groupWidth, height: groupHeight },
-        }, dimmed, { focused, selected: agentId === selectedAgent && !selectedEvent?.event_id });
+          data: { agentId: agent.id, onCollapse: toggleAgent }, style: { width: groupWidth, height: groupHeight },
+        }, dimmed, { focused, selected: agent.id === selectedAgent });
 
-        for (const event of agentEvents) {
+        for (const event of finalEvents) {
           const pos = childPositions.get(event.event_id);
           if (!pos) continue;
           const onPath = ancestors.has(event.event_id);
@@ -197,8 +234,8 @@ const AuditGraph = ({ events, dagDependencies, selectedId, onNodeClick, collapse
           });
         }
 
-        const ids = new Set(agentEvents.map((e) => e.event_id));
-        for (const event of agentEvents) {
+        const ids = new Set(finalEvents.map((e) => e.event_id));
+        for (const event of finalEvents) {
           if (event.parent_event_id && ids.has(event.parent_event_id)) {
             const onPath = ancestors.has(event.event_id) && ancestors.has(event.parent_event_id);
             resultEdges.push({
@@ -208,53 +245,31 @@ const AuditGraph = ({ events, dagDependencies, selectedId, onNodeClick, collapse
           }
         }
       } else {
-        const counts = agentCounts(agentEvents);
-        const representative = agentEvents.find((e) => e.event_type === 'dag_node_start') || agentEvents[0];
+        const representative = finalEvents.find((e) => e.event_type === 'dag_node_start') || finalEvents[0];
         addNode({
           id: agentNodeId, type: 'collapsed', position: { x: 0, y: 0 },
           data: {
-            agentId, summary: countsLabel(counts), highFlags: counts.highFlags,
-            status: agentStatus(agentEvents), duration: agentDuration(agentEvents),
+            agentId: agent.id, summary: countsLabel(agent.counts), highFlags: agent.counts.highFlags,
+            status: agent.status, duration: agentDuration(finalEvents), attemptCount: agent.attempts.length,
             representativeId: representative?.event_id,
           },
-        }, dimmed, { focused, selected: agentId === selectedAgent });
-      }
-
-      // Inter-agent dependency edges, sourced from the real dependency DAG.
-      const deps = (dag[agentId] || []).filter((d) => present.has(d));
-      if (deps.length === 0 && startEvent) {
-        g.setEdge(startEvent.event_id, agentNodeId);
-        resultEdges.push(DEP_EDGE(`dep-start-${agentId}`, startEvent.event_id, agentNodeId, agentFocused(agentId)));
-      }
-      for (const dep of deps) {
-        g.setEdge(`agent-${dep}`, agentNodeId);
-        resultEdges.push(DEP_EDGE(`dep-${dep}-${agentId}`, `agent-${dep}`, agentNodeId, focused && agentFocused(dep)));
+        }, dimmed, { focused, selected: agent.id === selectedAgent });
       }
     }
 
-    // Terminal steps fan into the summary agent (or the pipeline end).
-    const hasSummary = groups.has('summary_agent');
-    const summaryNodeId = 'agent-summary_agent';
-    for (const terminal of terminals) {
-      const target = hasSummary ? summaryNodeId : (endEvent ? endEvent.event_id : null);
-      if (!target) continue;
-      g.setEdge(`agent-${terminal}`, target);
-      const focused = agentFocused(terminal);
+    // Inter-node edges from the model, mapped to real node ids (skip missing endpoints; feedback handled below).
+    for (const edge of model.edges) {
+      if (edge.kind === 'feedback') continue;
+      const source = rfId(edge.from);
+      const target = rfId(edge.to);
+      if (!source || !target || !nodeIds.has(source) || !nodeIds.has(target)) continue;
+      g.setEdge(source, target);
+      const involves = !hasFocus || [edge.from, edge.to].some((t) => focusAgents.has(t));
+      const s = EDGE_STYLE[edge.kind] || EDGE_STYLE.dep;
       resultEdges.push({
-        id: `dep-${terminal}-terminal`, source: `agent-${terminal}`, target, animated: true,
-        style: { stroke: '#22c55e', strokeWidth: 2, opacity: focused ? 1 : 0.15 },
-        markerEnd: { type: MarkerType.ArrowClosed, width: 12, height: 12, color: '#22c55e' },
-      });
-    }
-
-    if (endEvent && hasSummary) {
-      g.setNode(endEvent.event_id, { width: 160, height: 50 });
-      addNode({ id: endEvent.event_id, type: 'pipeline', position: { x: 0, y: 0 }, data: { event: endEvent } }, false);
-      g.setEdge(summaryNodeId, endEvent.event_id);
-      resultEdges.push({
-        id: 'dep-summary-end', source: summaryNodeId, target: endEvent.event_id, animated: true,
-        style: { stroke: '#22c55e', strokeWidth: 2 },
-        markerEnd: { type: MarkerType.ArrowClosed, width: 12, height: 12, color: '#22c55e' },
+        id: `dep-${edge.kind}-${edge.from}-${edge.to}`, source, target, animated: true,
+        style: { stroke: s.stroke, strokeWidth: 2, opacity: involves ? 1 : 0.15 },
+        markerEnd: { type: MarkerType.ArrowClosed, width: 12, height: 12, color: s.arrow },
       });
     }
 
@@ -265,14 +280,32 @@ const AuditGraph = ({ events, dagDependencies, selectedId, onNodeClick, collapse
       if (pos) node.position = { x: pos.x - (pos.width || 0) / 2, y: pos.y - (pos.height || 0) / 2 };
     }
 
+    // Feedback edges (review → re-run agents) are visual-only, added after layout so they never
+    // create dagre cycles. Dashed amber, drawn on top.
+    for (const edge of model.edges) {
+      if (edge.kind !== 'feedback') continue;
+      const source = rfId(edge.from);
+      const target = rfId(edge.to);
+      if (!source || !target || !nodeIds.has(source) || !nodeIds.has(target)) continue;
+      resultEdges.push({
+        id: `feedback-${edge.to}`, source, target, animated: false,
+        style: { stroke: '#e0a458', strokeWidth: 1.5, strokeDasharray: '5 4', opacity: 0.85 },
+        markerEnd: { type: MarkerType.ArrowClosed, width: 11, height: 11, color: '#e0a458' },
+      });
+    }
+
     return { nodes: resultNodes, flowEdges: resultEdges };
-  }, [events, dagDependencies, selectedId, expandedAgents, toggleAgent]);
+  }, [events, dagDependencies, reviews, selectedId, expandedAgents, toggleAgent]);
 
   const handleNodeClick = useCallback((_, node) => {
     if (node.type === 'collapsed') {
       toggleAgent(node.data.agentId);
       if (node.data.representativeId) onNodeClick(node.data.representativeId);
-    } else if (node.type === 'expanded' || node.type === 'pipeline') {
+    } else if (node.type === 'group') {
+      onNodeClick(node.data.agentId);
+    } else if (node.type === 'review') {
+      onNodeClick('__review__');
+    } else if (node.type === 'expanded') {
       onNodeClick(node.data.event.event_id);
     }
   }, [onNodeClick, toggleAgent]);
@@ -285,7 +318,7 @@ const AuditGraph = ({ events, dagDependencies, selectedId, onNodeClick, collapse
       <Background color="#475569" gap={24} />
       <Controls />
       <MiniMap
-        nodeColor={(n) => n.type === 'collapsed' || n.type === 'group' ? '#1e293b' : (EVENT_COLORS[n.data?.event?.event_type] || '#475569')}
+        nodeColor={(n) => (n.type === 'collapsed' || n.type === 'group' || n.type === 'review') ? '#1e293b' : (EVENT_COLORS[n.data?.event?.event_type] || '#475569')}
         style={{ background: '#0f172a' }}
       />
       <div className="audit-graph-legend">
@@ -293,7 +326,7 @@ const AuditGraph = ({ events, dagDependencies, selectedId, onNodeClick, collapse
         <span style={{ '--dot-color': '#4f46e5' }}>Retrieval</span>
         <span style={{ '--dot-color': '#7c3aed' }}>Generation</span>
         <span style={{ '--dot-color': '#dc2626' }}>Risk Flag</span>
-        <span style={{ '--dot-color': '#334155' }}>Pipeline</span>
+        <span style={{ '--dot-color': '#e0a458' }}>Re-run</span>
       </div>
     </ReactFlow>
   );
