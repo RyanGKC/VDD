@@ -68,3 +68,15 @@ def test_supervisor_logs_review_event(monkeypatch):
     asyncio.run(sup.review(ctx=ctx, completed=set(), review_round=1))
     revs = [e for e in logger._chain_for_run_sync("run3") if e["event_type"] == "supervisor_review"]
     assert len(revs) == 1 and revs[0]["payload"]["is_anomaly"] is False
+
+def test_generation_extra_merges_into_payload():
+    logger, _ = _logger()
+    async def go():
+        await logger.log_generation(
+            run_id="run4", agent_id="summary_agent_contradiction",
+            claim="Contradiction check", supporting_chunk_ids=[], model_version="x",
+            extra={"removed_findings": ["Company is privately held"]},
+        )
+    asyncio.run(go())
+    e = logger._chain_for_run_sync("run4")[0]
+    assert e["payload"]["removed_findings"] == ["Company is privately held"]

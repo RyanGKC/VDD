@@ -180,19 +180,6 @@ class SummaryAgent:
             ctx.log("SUMMARY: Running contradiction detection across all findings")
             removal_indices, detect_res = await self._detect_contradictions(all_findings)
             
-        if al and detect_res:
-            import json
-            await al.log_generation(
-                run_id=ctx.run_id,
-                agent_id="summary_agent_contradiction",
-                claim=f"Contradiction check results: {json.dumps(detect_res.model_dump())}",
-                supporting_chunk_ids=[],
-                model_version=getattr(self.gemini, '_model', 'unknown'),
-                parent_event_id=start_event_id
-                ,entity_name=ctx.company_details.company_name,
-                entity_role=ctx.entity_role,
-            )
-
         if removal_indices:
             ctx.log(
                 f"SUMMARY: Removed {len(removal_indices)} contradictory "
@@ -204,6 +191,21 @@ class SummaryAgent:
             ]
         else:
             cleaned_findings = all_findings
+
+        if al and detect_res:
+            import json
+            removed = [all_findings[i].summary for i in removal_indices if i < len(all_findings)]
+            await al.log_generation(
+                run_id=ctx.run_id,
+                agent_id="summary_agent_contradiction",
+                claim=f"Contradiction check results: {json.dumps(detect_res.model_dump())}",
+                supporting_chunk_ids=[],
+                model_version=getattr(self.gemini, '_model', 'unknown'),
+                parent_event_id=start_event_id,
+                entity_name=ctx.company_details.company_name,
+                entity_role=ctx.entity_role,
+                extra={"removed_findings": removed},
+            )
 
         strengths = [f for f in cleaned_findings if f.is_strength]
         red_flags = [f for f in cleaned_findings if f.is_red_flag]
