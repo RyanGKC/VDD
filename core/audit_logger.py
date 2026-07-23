@@ -22,6 +22,7 @@ class EventType(str, Enum):
     TOOL_CALL = "tool_call"            # When an agent invokes a specific tool (e.g., custom integrations)
     GENERATION = "generation"          # When an LLM generates a claim, rationale, or structured data
     RISK_FLAG = "risk_flag"            # When a finding is identified as a risk or anomaly
+    SUPERVISOR_REVIEW = "supervisor_review"  # Batch QC verdict from the supervisor agent (per review round)
 
 
 @dataclass
@@ -47,6 +48,9 @@ class AuditEvent:
     parent_event_id: Optional[str] = None
     model_version: Optional[str] = None
     prompt_version: Optional[str] = None
+    entity_name: Optional[str] = None
+    entity_role: Optional[str] = None
+    status: Optional[str] = None
     event_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     timestamp: str = field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
@@ -63,11 +67,24 @@ CREATE TABLE IF NOT EXISTS audit_events (
     model_version TEXT,
     prompt_version TEXT,
     payload TEXT NOT NULL,
-    timestamp TEXT NOT NULL
+    timestamp TEXT NOT NULL,
+    entity_name TEXT,
+    entity_role TEXT,
+    status TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_audit_run_id ON audit_events(run_id);
 CREATE INDEX IF NOT EXISTS idx_audit_agent_id ON audit_events(agent_id);
 CREATE INDEX IF NOT EXISTS idx_audit_event_type ON audit_events(event_type);
+CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_events(run_id, entity_name);
+CREATE TABLE IF NOT EXISTS audit_evidence (
+    evidence_id TEXT PRIMARY KEY,
+    event_id TEXT NOT NULL,
+    run_id TEXT NOT NULL,
+    text TEXT NOT NULL,
+    metadata TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_audit_evidence_event ON audit_evidence(event_id);
 """
 
 
@@ -84,6 +101,19 @@ class AuditLogger:
         Initializes the SQLite database, creating the schema if it does not exist.
         """
         self._conn = sqlite3.connect(db_path, check_same_thread=False)
+        # On a legacy database the new entity index cannot be created until
+        # after its columns exist. Run the migration below and retry schema setup.
+        try:
+            self._conn.executescript(SCHEMA)
+        except sqlite3.OperationalError as exc:
+            if "entity_name" not in str(exc):
+                raise
+        # Existing prototype databases predate the entity/status columns. SQLite
+        # has no ADD COLUMN IF NOT EXISTS, so migrate only columns that are absent.
+        columns = {row[1] for row in self._conn.execute("PRAGMA table_info(audit_events)")}
+        for column in ("entity_name", "entity_role", "status"):
+            if column not in columns:
+                self._conn.execute(f"ALTER TABLE audit_events ADD COLUMN {column} TEXT")
         self._conn.executescript(SCHEMA)
         self._conn.commit()
         self._executor = ThreadPoolExecutor(max_workers=1)
@@ -98,8 +128,9 @@ class AuditLogger:
         self._conn.execute(
             """INSERT INTO audit_events
                (event_id, run_id, agent_id, event_type, parent_event_id,
-                model_version, prompt_version, payload, timestamp)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                model_version, prompt_version, payload, timestamp, entity_name,
+                entity_role, status)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 event.event_id,
                 event.run_id,
@@ -110,6 +141,9 @@ class AuditLogger:
                 event.prompt_version,
                 json.dumps(event.payload, default=str),
                 event.timestamp,
+                event.entity_name,
+                event.entity_role,
+                event.status,
             ),
         )
         self._conn.commit()
@@ -122,18 +156,24 @@ class AuditLogger:
         """
         return await self._run_in_executor(self._log_sync, event)
 
-    async def log_pipeline_start(self, run_id: str, company_name: str, config: dict[str, Any]) -> str:
+    async def log_pipeline_start(self, run_id: str, company_name: str, config: dict[str, Any],
+                                 entity_role: str = "root", parent_event_id: Optional[str] = None) -> str:
         """Logs the initialization of a full pipeline run."""
         return await self.log(
             AuditEvent(
                 run_id=run_id,
                 agent_id="system",
                 event_type=EventType.PIPELINE_START,
+                parent_event_id=parent_event_id,
+                entity_name=company_name,
+                entity_role=entity_role,
+                status="running",
                 payload={"company_name": company_name, "config": config},
             )
         )
 
-    async def log_pipeline_end(self, run_id: str, status: str, parent_event_id: Optional[str] = None) -> str:
+    async def log_pipeline_end(self, run_id: str, status: str, parent_event_id: Optional[str] = None,
+                               entity_name: Optional[str] = None, entity_role: Optional[str] = None) -> str:
         """Logs the completion of a full pipeline run."""
         return await self.log(
             AuditEvent(
@@ -141,7 +181,44 @@ class AuditLogger:
                 agent_id="system",
                 event_type=EventType.PIPELINE_END,
                 parent_event_id=parent_event_id,
+                entity_name=entity_name,
+                entity_role=entity_role,
+                status=status,
                 payload={"status": status},
+            )
+        )
+
+    async def log_supervisor_review(
+        self,
+        run_id: str,
+        review_round: int,
+        is_anomaly: bool,
+        rationale: str,
+        steps_to_run: list[str],
+        updated_params: Optional[dict[str, Any]] = None,
+        verification_searches: int = 0,
+        parent_event_id: Optional[str] = None,
+        entity_name: Optional[str] = None,
+        entity_role: Optional[str] = None,
+    ) -> str:
+        """Logs one batched supervisor review round (anomaly verdict + re-plan)."""
+        return await self.log(
+            AuditEvent(
+                run_id=run_id,
+                agent_id="supervisor",
+                event_type=EventType.SUPERVISOR_REVIEW,
+                parent_event_id=parent_event_id,
+                entity_name=entity_name,
+                entity_role=entity_role,
+                status="anomaly" if is_anomaly else "clear",
+                payload={
+                    "round": review_round,
+                    "is_anomaly": is_anomaly,
+                    "rationale": rationale,
+                    "steps_to_run": steps_to_run,
+                    "updated_params": updated_params or {},
+                    "verification_searches": verification_searches,
+                },
             )
         )
 
@@ -153,6 +230,9 @@ class AuditLogger:
         findings_count: int = 0,
         anomaly: Optional[str] = None,
         parent_event_id: Optional[str] = None,
+        entity_name: Optional[str] = None,
+        entity_role: Optional[str] = None,
+        status: Optional[str] = None,
     ) -> str:
         """
         Logs the start or completion of a DAG node (agent execution).
@@ -178,6 +258,9 @@ class AuditLogger:
                 event_type=event_type,
                 parent_event_id=parent_event_id,
                 payload=payload,
+                entity_name=entity_name,
+                entity_role=entity_role,
+                status=status or ("running" if event_type == EventType.DAG_NODE_START else "completed"),
             )
         )
 
@@ -190,6 +273,9 @@ class AuditLogger:
         source_domains: list[str],
         relevance_scores: list[float],
         parent_event_id: Optional[str] = None,
+        entity_name: Optional[str] = None,
+        entity_role: Optional[str] = None,
+        evidence: Optional[list[dict[str, Any]]] = None,
     ) -> str:
         """
         Logs a data retrieval action, such as a web search or RAG query.
@@ -206,7 +292,7 @@ class AuditLogger:
         Returns:
             The newly created event_id.
         """
-        return await self.log(
+        event_id = await self.log(
             AuditEvent(
                 run_id=run_id,
                 agent_id=agent_id,
@@ -218,8 +304,14 @@ class AuditLogger:
                     "source_domains": source_domains,
                     "relevance_scores": relevance_scores,
                 },
+                entity_name=entity_name,
+                entity_role=entity_role,
+                status="completed",
             )
         )
+        if evidence:
+            await self.retain_evidence(event_id, run_id, evidence)
+        return event_id
 
     async def log_generation(
         self,
@@ -230,6 +322,8 @@ class AuditLogger:
         model_version: str,
         prompt_version: Optional[str] = None,
         parent_event_id: Optional[str] = None,
+        entity_name: Optional[str] = None,
+        entity_role: Optional[str] = None,
     ) -> str:
         """
         Logs text, rationales, or structured data generated by the LLM.
@@ -254,6 +348,9 @@ class AuditLogger:
                 parent_event_id=parent_event_id,
                 model_version=model_version,
                 prompt_version=prompt_version,
+                entity_name=entity_name,
+                entity_role=entity_role,
+                status="completed",
                 payload={
                     "claim": claim,
                     "supporting_chunk_ids": supporting_chunk_ids,
@@ -268,7 +365,10 @@ class AuditLogger:
         risk_type: str,
         detail: str,
         confidence: float,
+        severity: Optional[str] = None,
         parent_event_id: Optional[str] = None,
+        entity_name: Optional[str] = None,
+        entity_role: Optional[str] = None,
     ) -> str:
         """
         Logs a specific risk or anomaly identified by the agent during generation.
@@ -279,6 +379,7 @@ class AuditLogger:
             risk_type: Category of the risk (e.g., 'sanctions', 'anomaly').
             detail: Detailed description of what triggered the risk flag.
             confidence: Float representing the agent's confidence in this risk flag (0.0 to 1.0).
+            severity: The severity of the risk flag (e.g., 'high', 'critical').
             parent_event_id: The ID of the generation event that produced this flag.
             
         Returns:
@@ -294,21 +395,52 @@ class AuditLogger:
                     "risk_type": risk_type,
                     "detail": detail,
                     "confidence": confidence,
+                    "severity": severity,
                 },
+                entity_name=entity_name,
+                entity_role=entity_role,
+                status="flagged",
             )
         )
+
+    def _retain_evidence_sync(self, event_id: str, run_id: str, evidence: list[dict[str, Any]]) -> None:
+        now = datetime.now(timezone.utc).isoformat()
+        for item in evidence:
+            text = str(item.get("text") or "").strip()
+            if not text:
+                continue
+            self._conn.execute(
+                "INSERT OR REPLACE INTO audit_evidence (evidence_id, event_id, run_id, text, metadata, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+                (str(item.get("id") or uuid.uuid4()), event_id, run_id, text, json.dumps(item.get("metadata") or {}, default=str), now),
+            )
+        self._conn.commit()
+
+    async def retain_evidence(self, event_id: str, run_id: str, evidence: list[dict[str, Any]]) -> None:
+        """Persist the small evidence set actually attached to an audit event."""
+        await self._run_in_executor(self._retain_evidence_sync, event_id, run_id, evidence)
+
+    def _evidence_for_event_sync(self, event_id: str) -> list[dict[str, Any]]:
+        rows = self._conn.execute(
+            "SELECT evidence_id, text, metadata FROM audit_evidence WHERE event_id = ? ORDER BY created_at", (event_id,)
+        ).fetchall()
+        return [{"id": row[0], "text": row[1], "metadata": json.loads(row[2])} for row in rows]
+
+    async def evidence_for_event(self, event_id: str) -> list[dict[str, Any]]:
+        return await self._run_in_executor(self._evidence_for_event_sync, event_id)
 
     def _chain_for_run_sync(self, run_id: str) -> list[dict[str, Any]]:
         """Synchronously retrieves the complete chronological event history for a given run_id."""
         rows = self._conn.execute(
-            """SELECT event_id, agent_id, event_type, parent_event_id,
-                      model_version, prompt_version, payload, timestamp
+            """SELECT event_id, run_id, agent_id, event_type, parent_event_id,
+                      model_version, prompt_version, payload, timestamp, entity_name,
+                      entity_role, status
                FROM audit_events WHERE run_id = ? ORDER BY timestamp ASC""",
             (run_id,),
         ).fetchall()
         cols = [
-            "event_id", "agent_id", "event_type", "parent_event_id",
-            "model_version", "prompt_version", "payload", "timestamp",
+            "event_id", "run_id", "agent_id", "event_type", "parent_event_id",
+            "model_version", "prompt_version", "payload", "timestamp", "entity_name",
+            "entity_role", "status",
         ]
         events = [dict(zip(cols, row)) for row in rows]
         for e in events:
