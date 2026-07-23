@@ -342,6 +342,7 @@ class BaseResearchAgent(AgentExecutor, abc.ABC):
                 parent_event_id=pipeline_start_event_id,
                 entity_name=ctx.company_details.company_name,
                 entity_role=ctx.entity_role,
+                replan_reason=getattr(ctx, '_replan_rationale', {}).get(self.step.value),
             )
             ctx.audit_agent_event_ids[self.step.value] = start_event_id
             

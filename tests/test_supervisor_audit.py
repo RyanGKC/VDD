@@ -24,3 +24,14 @@ def test_log_supervisor_review_roundtrips():
     assert e["payload"]["round"] == 1
     assert e["payload"]["steps_to_run"] == ["media", "finances"]
     assert e["payload"]["updated_params"]["country"] == "United Kingdom"
+
+def test_dag_node_carries_replan_reason():
+    logger, _ = _logger()
+    async def go():
+        await logger.log_dag_node(
+            run_id="run2", agent_id="media", event_type=EventType.DAG_NODE_START,
+            replan_reason="Re-run against tier-1 outlets.",
+        )
+    asyncio.run(go())
+    e = logger._chain_for_run_sync("run2")[0]
+    assert e["payload"]["replan_reason"] == "Re-run against tier-1 outlets."

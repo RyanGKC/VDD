@@ -233,6 +233,7 @@ class AuditLogger:
         entity_name: Optional[str] = None,
         entity_role: Optional[str] = None,
         status: Optional[str] = None,
+        replan_reason: Optional[str] = None,
     ) -> str:
         """
         Logs the start or completion of a DAG node (agent execution).
@@ -251,6 +252,8 @@ class AuditLogger:
         payload = {"findings_count": findings_count}
         if anomaly:
             payload["anomaly"] = anomaly
+        if replan_reason:
+            payload["replan_reason"] = replan_reason
         return await self.log(
             AuditEvent(
                 run_id=run_id,
