@@ -196,6 +196,11 @@ class DDContext(BaseModel):
     saved_to_history: bool = Field(default=False, exclude=True)
     # Structured SQLite audit logger (compliance chain of custody)
     audit_logger: Any = Field(default=None, exclude=True)
+    # Audit IDs are per execution scope. Do not use one mutable ID for all
+    # concurrent agents: that corrupts parent/child causality.
+    audit_pipeline_event_id: str | None = Field(default=None, exclude=True)
+    audit_parent_event_id: str | None = Field(default=None, exclude=True)
+    audit_agent_event_ids: dict[str, str] = Field(default_factory=dict, exclude=True)
 
     def log(self, message: str) -> None:
         stamped = f"{datetime.now(timezone.utc).isoformat()} | {message}"
@@ -259,4 +264,3 @@ class DDReport(BaseModel):
     # New: direct (Tier-1) supplier items, populated from ResilienceAgent
     supply_items: list[SupplierItem] = Field(default_factory=list)
     has_identifiable_third_party_suppliers: bool = Field(default=True)
-

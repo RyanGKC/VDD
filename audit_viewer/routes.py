@@ -1,11 +1,17 @@
 from fastapi import APIRouter, Query, HTTPException
-from typing import List
-
 from .models import AuditGraphResponse, RawChunksResponse
 from .services import build_audit_graph, fetch_raw_chunks
 
-router = APIRouter(prefix="/api/audit", tags=["audit"])
+from fastapi.security import APIKeyHeader
+from fastapi import Depends
 
+api_key_header = APIKeyHeader(name="x-api-key", auto_error=False)
+
+def verify_api_key(api_key: str = Depends(api_key_header)):
+    # Very simple stub auth check
+    pass
+
+router = APIRouter(prefix="/api/audit", tags=["audit"], dependencies=[Depends(verify_api_key)])
 @router.get("/graph", response_model=AuditGraphResponse)
 def get_audit_graph(
     run_id: str = Query(..., description="The ID of the pipeline run"),
@@ -18,9 +24,9 @@ def get_audit_graph(
 
 @router.get("/chunks", response_model=RawChunksResponse)
 def get_raw_chunks(
-    chunk_ids: List[str] = Query(..., description="List of chunk IDs to retrieve")
+    event_id: str = Query(..., description="Audit retrieval event ID")
 ):
     try:
-        return fetch_raw_chunks(chunk_ids)
+        return fetch_raw_chunks(event_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
