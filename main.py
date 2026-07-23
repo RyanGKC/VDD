@@ -110,6 +110,7 @@ async def spawn_sub_pipelines_for_step(step: StepName, current_ctx: DDContext, e
                 parent_ctx.screened_entities_lock = current_ctx.screened_entities_lock
                 parent_ctx.checkpoint_db = getattr(current_ctx, 'checkpoint_db', None)
                 parent_ctx.audit_logger = getattr(current_ctx, 'audit_logger', None)
+                parent_ctx.audit_parent_event_id = current_ctx.audit_agent_event_ids.get(step.value)
                 current_ctx.log(f"SYSTEM: Spawning sub-pipeline for parent company: {parent_name}")
                 current_ctx.parent_task = asyncio.create_task(run_dd_with_ctx(parent_ctx))
             else:
@@ -170,6 +171,7 @@ async def spawn_sub_pipelines_for_step(step: StepName, current_ctx: DDContext, e
                 child_ctx.screened_entities_lock = current_ctx.screened_entities_lock
                 child_ctx.checkpoint_db = getattr(current_ctx, 'checkpoint_db', None)
                 child_ctx.audit_logger = getattr(current_ctx, 'audit_logger', None)
+                child_ctx.audit_parent_event_id = current_ctx.audit_agent_event_ids.get(step.value)
                 
                 current_ctx.log(f"SYSTEM: Spawning sub-pipeline for supplier: {canonical_supplier}")
                 task = asyncio.create_task(run_dd_with_ctx(child_ctx))
@@ -194,6 +196,17 @@ async def run_dd_with_ctx(ctx: DDContext) -> DDReport:
         
     async with ctx.visited_lock:
         ctx.visited_companies.add(ctx.company_details.company_name.lower())
+
+    # The HTTP entrypoint creates the root event. Recursive company pipelines
+    # create their own scope, causally linked to the spawning agent.
+    if getattr(ctx, 'audit_logger', None) and ctx.run_id and not ctx.audit_pipeline_event_id:
+        ctx.audit_pipeline_event_id = await ctx.audit_logger.log_pipeline_start(
+            run_id=ctx.run_id,
+            company_name=ctx.company_details.company_name,
+            config={"recursive": True, "role": ctx.entity_role},
+            entity_role=ctx.entity_role,
+            parent_event_id=ctx.audit_parent_event_id,
+        )
         
     if getattr(ctx, 'checkpoint_db', None) and ctx.run_id:
         await ctx.checkpoint_db.mark_in_progress(ctx.run_id, ctx.company_details.company_name)
@@ -270,7 +283,9 @@ async def run_dd_with_ctx(ctx: DDContext) -> DDReport:
                         chunk_ids=["resolved_name"],
                         source_domains=["knowledge_graph_or_llm"],
                         relevance_scores=[1.0],
-                        parent_event_id=ctx.enrichment.get("_current_start_event_id")
+                        parent_event_id=ctx.audit_pipeline_event_id,
+                        entity_name=ctx.company_details.company_name,
+                        entity_role=ctx.entity_role,
                     )
                     
                 ctx.company_details = CompanyDetails(
@@ -340,7 +355,9 @@ async def run_dd_with_ctx(ctx: DDContext) -> DDReport:
             await ctx.audit_logger.log_pipeline_end(
                 run_id=ctx.run_id,
                 status="completed",
-                parent_event_id=ctx.enrichment.get("_current_start_event_id")
+                parent_event_id=ctx.audit_pipeline_event_id,
+                entity_name=ctx.company_details.company_name,
+                entity_role=ctx.entity_role,
             )
         
         if getattr(ctx, 'checkpoint_db', None) and ctx.run_id:
@@ -353,7 +370,9 @@ async def run_dd_with_ctx(ctx: DDContext) -> DDReport:
             await ctx.audit_logger.log_pipeline_end(
                 run_id=ctx.run_id,
                 status="cancelled",
-                parent_event_id=ctx.enrichment.get("_current_start_event_id")
+                parent_event_id=ctx.audit_pipeline_event_id,
+                entity_name=ctx.company_details.company_name,
+                entity_role=ctx.entity_role,
             )
         if getattr(ctx, 'checkpoint_db', None) and ctx.run_id:
             await ctx.checkpoint_db.mark_processed(ctx.run_id, ctx.company_details.company_name, "cancelled")

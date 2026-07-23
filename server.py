@@ -47,7 +47,7 @@ history_db = HistoryDB()
 # Setup CORS to allow frontend communication
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, restrict this to the frontend origin
+    allow_origins=os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000").split(","),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -126,7 +126,7 @@ async def generate_dd_report(request: DDRequest, bg_tasks: BackgroundTasks):
                 company_name=request.company_name,
                 config=run_config
             )
-            ctx.enrichment["_current_start_event_id"] = start_event_id
+            ctx.audit_pipeline_event_id = start_event_id
         await checkpoint_db.enqueue_entity(
             run_id=run_id,
             entity_name=request.company_name,
