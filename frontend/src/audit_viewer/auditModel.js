@@ -127,3 +127,48 @@ export function payloadPreview(event) {
   const p = event.payload || {};
   return p.detail || p.query || p.claim || p.risk_type || `${p.findings_count ?? 0} findings`;
 }
+
+// Split an agent's events into attempts at each dag_node_start (re-runs). The last
+// attempt is the accepted/final run; each earlier attempt's supersededReason is the
+// replan_reason recorded on the following attempt's start.
+export function segmentAttempts(agentEvents) {
+  const sorted = [...agentEvents].sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
+  const attempts = [];
+  let cur = null;
+  for (const e of sorted) {
+    if (e.event_type === 'dag_node_start') {
+      cur = { start: e, events: [e], replanReason: e.payload?.replan_reason || null };
+      attempts.push(cur);
+    } else if (cur) {
+      cur.events.push(e);
+    } else {
+      cur = { start: null, events: [e], replanReason: null };
+      attempts.push(cur);
+    }
+  }
+  attempts.forEach((a, i) => {
+    const end = a.events.find((e) => e.event_type === 'dag_node_end');
+    a.status = end?.status || (a.events.some((e) => e.status === 'failed') ? 'failed' : 'completed');
+    a.index = i;
+    a.isFinal = i === attempts.length - 1;
+    a.supersededReason = attempts[i + 1]?.replanReason || null;
+  });
+  return attempts;
+}
+
+// Dependency depth per step (0 = no dependencies), from the dependency DAG.
+export function tierRanks(dag) {
+  const memo = {};
+  const depth = (s, stack) => {
+    if (s in memo) return memo[s];
+    if (stack.has(s)) return 0;
+    stack.add(s);
+    const deps = dag?.[s] || [];
+    const d = deps.length ? 1 + Math.max(...deps.map((x) => depth(x, stack))) : 0;
+    stack.delete(s);
+    memo[s] = d;
+    return d;
+  };
+  Object.keys(dag || {}).forEach((s) => depth(s, new Set()));
+  return memo;
+}
