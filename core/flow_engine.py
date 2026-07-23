@@ -153,6 +153,7 @@ class FlowEngine:
         replans = 0
         step_execution_counts: dict[StepName, int] = {}
         all_completed: set[StepName] = set()
+        review_round = 0
 
         first_iteration = True
         while plan:
@@ -169,9 +170,10 @@ class FlowEngine:
 
             # 2. Batched Supervisor Review & Speculative Contradiction Detection
             ctx.log("SUPERVISOR batch reviewing all completed results...")
-            
+            review_round += 1
+
             import asyncio
-            supervisor_task = self._supervisor.review(ctx=ctx, completed=all_completed)
+            supervisor_task = self._supervisor.review(ctx=ctx, completed=all_completed, review_round=review_round)
             
             # Speculative contradiction detection: If no replan occurs, we keep the cleaned findings.
             if self._summary:

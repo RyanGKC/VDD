@@ -93,6 +93,7 @@ class SupervisorAgent:
         *,
         ctx: DDContext,
         completed: set[StepName],
+        review_round: int = 1,
     ) -> tuple[list[StepName], bool]:
         
         # Calculate which steps actually completed successfully vs crashed
@@ -202,6 +203,27 @@ class SupervisorAgent:
 
         ctx.log(f"SUPERVISOR rationale: {decision.rationale}")
         ctx.audit(f"[SUPERVISOR] Decision Rationale:\n{decision.rationale}")
+
+        al = getattr(ctx, 'audit_logger', None)
+        if al and getattr(ctx, 'run_id', None):
+            await al.log_supervisor_review(
+                run_id=ctx.run_id,
+                review_round=review_round,
+                is_anomaly=decision.is_anomaly,
+                rationale=decision.rationale,
+                steps_to_run=[s.value for s in decision.steps_to_run],
+                updated_params={k: v for k, v in {
+                    "country": decision.updated_country,
+                    "registration_number": decision.updated_registration_number,
+                    "address": decision.updated_address,
+                    "website": decision.updated_website,
+                    "tax_id": decision.updated_tax_id,
+                }.items() if v},
+                verification_searches=len(queries),
+                parent_event_id=getattr(ctx, 'audit_pipeline_event_id', None),
+                entity_name=ctx.company_details.company_name,
+                entity_role=getattr(ctx, 'entity_role', None),
+            )
 
         if not decision.is_anomaly:
             return [], False

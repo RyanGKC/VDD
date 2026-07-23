@@ -35,3 +35,36 @@ def test_dag_node_carries_replan_reason():
     asyncio.run(go())
     e = logger._chain_for_run_sync("run2")[0]
     assert e["payload"]["replan_reason"] == "Re-run against tier-1 outlets."
+
+class _FakeCtx:
+    def __init__(self, logger, run_id):
+        self.audit_logger = logger; self.run_id = run_id
+        self.entity_role = "root"; self.audit_pipeline_event_id = None
+        self.results = {}; self.enrichment = {}; self.execution_log = []
+        class _CD: company_name = "Acme"
+        self.company_details = _CD()
+    def log(self, *a, **k): pass
+    def audit(self, *a, **k): pass
+
+def test_supervisor_logs_review_event(monkeypatch):
+    logger, _ = _logger()
+    from agents import supervisor_agent as sa
+    # Stub the LLM + neo4j so review() runs offline and returns a clear decision.
+    async def fake_gen(**kwargs):
+        schema = kwargs["schema"]
+        if schema is sa._ReviewPlan: return sa._ReviewPlan(research_plan=[])
+        return sa._ReviewDecision(is_anomaly=False, rationale="All consistent.", steps_to_run=[])
+    class _Client:
+        async def generate_structured(self, **k): return await fake_gen(**k)
+    import rag.rate_limiter as rl
+    monkeypatch.setattr(rl, "run_foreground_generation", lambda fn: fn(), raising=False)
+    class _Neo:
+        async def get_risky_neighbors(self, *a, **k): return []
+    import core.dependencies as deps
+    monkeypatch.setattr(deps, "neo4j", _Neo(), raising=False)
+
+    sup = sa.SupervisorAgent(_Client())
+    ctx = _FakeCtx(logger, "run3")
+    asyncio.run(sup.review(ctx=ctx, completed=set(), review_round=1))
+    revs = [e for e in logger._chain_for_run_sync("run3") if e["event_type"] == "supervisor_review"]
+    assert len(revs) == 1 and revs[0]["payload"]["is_anomaly"] is False
