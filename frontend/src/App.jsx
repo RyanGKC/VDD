@@ -1,16 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { 
-  ShieldAlert, ShieldCheck, Shield, AlertTriangle, 
+  ShieldAlert, Shield, AlertTriangle, 
   CheckCircle, Info, Building2, Globe, FileText, 
   MapPin, Landmark, ArrowRight, Loader2, PlaySquare,
-  Activity, FileSearch, ShieldX, Sun, Moon, ChevronLeft, ChevronRight, Home, History, Clock, Edit2, Trash2, Copy, Network
+  Activity, FileSearch, ShieldX, Sun, Moon, ChevronRight, Home, History, Clock, Edit2, Trash2, Copy, Network
 } from 'lucide-react';
 import AuditViewerModal from './audit_viewer/AuditViewerModal';
 import { 
-  PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, 
-  CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar
+  PieChart, Pie, Cell, 
+  Tooltip as RechartsTooltip, Legend, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar
 } from 'recharts';
-import ReactFlow, { Controls, Background, MarkerType, BaseEdge, getSmoothStepPath, Handle, Position } from 'reactflow';
+import ReactFlow, { Controls, Background, MarkerType, Handle, Position } from 'reactflow';
 import 'reactflow/dist/style.css';
 import dagre from 'dagre';
 
@@ -23,17 +23,6 @@ const Severity = {
   CRITICAL: 'critical'
 };
 
-const StepName = {
-  SHAREHOLDERS: 'shareholders',
-  KYB: 'kyb',
-  SANCTIONS: 'sanctions',
-  PROFILE: 'profile',
-  LICENSES: 'licenses',
-  FINANCES: 'finances',
-  RESILIENCE: 'resilience',
-  ESG: 'esg',
-  MEDIA: 'media'
-};
 
 const SEVERITY_COLORS = {
   [Severity.INFO]: '#3b82f6',    // blue-500
@@ -139,7 +128,7 @@ const generateMockReport = (companyDetails) => {
 };
 
 // --- Components ---
-export const getSeverityIcon = (sev) => {
+const getSeverityIcon = (sev) => {
   switch(sev) {
     case Severity.CRITICAL: return <ShieldX className="w-8 h-8 text-red-900 animate-pulse drop-shadow-md" />;
     case Severity.HIGH: return <ShieldAlert className="w-8 h-8 text-red-500" />;
@@ -413,7 +402,7 @@ const ProcessingTerminal = ({ onComplete, onError, onCancel, companyDetails, res
                     newMeta[entity] = { role: role || 'root', parentEntity: parent_entity || null };
                     stateChanged = true;
                   }
-                } catch (e) {}
+                } catch { /* ignore parse error */ }
               }
             }
             if (stateChanged) {
@@ -1150,7 +1139,7 @@ const SupplyInputsSection = ({ supplyItems }) => {
   );
 };
 
-const Dashboard = ({ report, rootReport, onReset, onResetSupplier, theme, isGraphOpen, onToggleGraph, jobId }) => {
+const Dashboard = ({ report, rootReport, onResetSupplier, theme, isGraphOpen, onToggleGraph, jobId }) => {
   const [isAuditViewerOpen, setIsAuditViewerOpen] = useState(false);
   // Data prep for charts
   const severityCounts = report.red_flags.reduce((acc, flag) => {
@@ -1507,7 +1496,7 @@ export default function App() {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  const fetchHistory = async () => {
+  const fetchHistory = useCallback(async () => {
     try {
       const res = await fetch('/api/history');
       if (res.ok) {
@@ -1517,9 +1506,9 @@ export default function App() {
     } catch (e) {
       console.error("Failed to fetch history", e);
     }
-  };
+  }, []);
 
-  const fetchInterrupted = async () => {
+  const fetchInterrupted = useCallback(async () => {
     try {
       const res = await fetch('/api/dd_report/interrupted');
       if (res.ok) {
@@ -1529,12 +1518,13 @@ export default function App() {
     } catch (e) {
       console.error("Failed to fetch interrupted runs", e);
     }
-  };
+  }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchHistory();
     fetchInterrupted();
-  }, []);
+  }, [fetchHistory, fetchInterrupted]);
 
   const toggleTheme = () => {
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');

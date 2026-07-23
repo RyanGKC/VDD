@@ -12,5 +12,9 @@ export default defineConfig({
         ws: true,
       }
     }
-  }
+  },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+  },
 })

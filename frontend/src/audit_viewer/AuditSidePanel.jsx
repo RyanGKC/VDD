@@ -1,85 +1,37 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { fetchRawChunks } from './api';
 
-const AuditSidePanel = ({ node, events }) => {
-  const [rawChunks, setRawChunks] = useState({});
-  const [loadingChunks, setLoadingChunks] = useState({});
+const AuditSidePanel = ({ event }) => {
+  const [evidence, setEvidence] = useState(null);
+  const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setEvidence(null);
+  }, [event?.event_id]);
 
-  if (!node) {
-    return (
-      <div className="audit-side-panel">
-        <p>Select a node to view audit events.</p>
-      </div>
-    );
-  }
-
-  const handleFetchChunks = async (eventId, chunkIds) => {
-    setLoadingChunks((prev) => ({ ...prev, [eventId]: true }));
-    try {
-      const data = await fetchRawChunks(chunkIds);
-      setRawChunks((prev) => ({ ...prev, [eventId]: data.chunks }));
-    } catch (error) {
-      setRawChunks((prev) => ({
-        ...prev,
-        [eventId]: [{ id: 'error', text: 'Raw text no longer available (Retention period expired or cleared)' }],
-      }));
-    } finally {
-      setLoadingChunks((prev) => ({ ...prev, [eventId]: false }));
-    }
+  if (!event) return <aside className="audit-side-panel"><p>Select an event to inspect its provenance.</p></aside>;
+  const loadEvidence = async () => {
+    setLoading(true);
+    try { setEvidence(await fetchRawChunks(event.event_id)); } catch { setEvidence({ available: false, chunks: [] }); }
+    setLoading(false);
   };
-
-  return (
-    <div className="audit-side-panel">
-      <h3>{node.data.label} ({events.length} Events)</h3>
-      {events.map((event) => (
-        <div key={event.event_id} className="audit-event-card">
-          <div className="audit-event-type">{event.event_type}</div>
-          <div className="audit-event-time">{new Date(event.timestamp).toLocaleString()}</div>
-          
-          {Object.entries(event.payload).map(([key, value]) => {
-            if (key === 'chunk_ids' || key === 'relevance_scores') return null; // Handle separately
-            
-            let displayValue = value;
-            if (Array.isArray(value)) displayValue = value.join(', ');
-            else if (typeof value === 'object') displayValue = JSON.stringify(value);
-
-            return (
-              <div key={key} className="audit-event-payload">
-                <strong>{key}:</strong> {displayValue}
-              </div>
-            );
-          })}
-
-          {event.payload.chunk_ids && event.payload.chunk_ids.length > 0 && (
-            <div style={{ marginTop: '10px' }}>
-              <button 
-                className="fetch-raw-btn"
-                onClick={() => handleFetchChunks(event.event_id, event.payload.chunk_ids)}
-                disabled={loadingChunks[event.event_id]}
-              >
-                {loadingChunks[event.event_id] ? 'Fetching...' : 'View Raw Text'}
-              </button>
-
-              {rawChunks[event.event_id] && (
-                <div className="raw-chunk-display">
-                  {rawChunks[event.event_id].length === 0 ? (
-                    <span>Raw text no longer available (Retention period expired or cleared)</span>
-                  ) : (
-                    rawChunks[event.event_id].map((c, idx) => (
-                      <div key={idx} style={{ marginBottom: '10px', borderBottom: '1px solid #333', paddingBottom: '10px' }}>
-                        <div><strong>ID:</strong> {c.id}</div>
-                        <div>{c.text}</div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-  );
+  return <aside className="audit-side-panel" aria-live="polite">
+    <p className="audit-event-type">{event.event_type.replaceAll('_', ' ')}</p>
+    <h3>{event.agent_id.replaceAll('_', ' ')}</h3>
+    <p className="audit-event-time">{new Date(event.timestamp).toLocaleString()} · {event.status || 'recorded'}</p>
+    <dl className="audit-details">
+      <dt>Entity</dt><dd>{event.entity_name || 'Unknown'} ({event.entity_role || 'legacy'})</dd>
+      {event.model_version && <><dt>Model</dt><dd>{event.model_version}</dd></>}
+      {Object.entries(event.payload || {}).filter(([key]) => !['chunk_ids', 'supporting_chunk_ids'].includes(key)).map(([key, value]) =>
+        <><dt key={`${key}-term`}>{key.replaceAll('_', ' ')}</dt><dd key={`${key}-value`}>{typeof value === 'object' ? JSON.stringify(value) : String(value)}</dd></>)}
+    </dl>
+    {event.event_type === 'retrieval' && !evidence && <button className="fetch-raw-btn" onClick={loadEvidence} disabled={loading}>{loading ? 'Loading evidence…' : 'View retained evidence'}</button>}
+    {evidence && <>
+      <button className="fetch-raw-btn" onClick={() => setEvidence(null)} style={{ marginTop: '0.5rem', background: '#64748b' }}>Hide evidence</button>
+      <section className="raw-chunk-display">
+      {!evidence.available ? <p>Evidence is unavailable for this legacy or non-retained event.</p> : evidence.chunks.map((chunk) => <article key={chunk.id}><small>{chunk.metadata.source_domains?.join(', ') || chunk.metadata.source || 'Recorded source'}</small><p>{chunk.text}</p></article>)}
+      </section>
+    </>}
+  </aside>;
 };
-
 export default AuditSidePanel;
