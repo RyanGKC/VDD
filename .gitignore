@@ -19,3 +19,4 @@ __pycache__/
 structured_audit.db
 CLAUDE.md
 mention_index.db
+/.claude
