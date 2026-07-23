@@ -101,8 +101,10 @@ class BaseResearchAgent(AgentExecutor, abc.ABC):
                     agent_id=step_val,
                     claim=f"Generated Research Plan: {[q.query for q in plan_result.research_plan]}",
                     supporting_chunk_ids=[],
-                    model_version="gemini-1.5-pro",
-                    parent_event_id=getattr(ctx, '_current_start_event_id', None)
+                    model_version=getattr(self.gemini, '_model', 'unknown'),
+                    parent_event_id=ctx.audit_agent_event_ids.get(step_val, ctx.audit_pipeline_event_id),
+                    entity_name=ctx.company_details.company_name,
+                    entity_role=ctx.entity_role,
                 )
                 
             queries = plan_result.research_plan[:max_searches] if plan_result.research_plan else []
@@ -198,8 +200,13 @@ class BaseResearchAgent(AgentExecutor, abc.ABC):
 
             # ── Step B.6: Log RETRIEVAL event ──────────────
             al = getattr(ctx, 'audit_logger', None)
-            start_event_id = getattr(ctx, '_current_start_event_id', None)
+            start_event_id = ctx.audit_agent_event_ids.get(step_val, ctx.audit_pipeline_event_id)
             if al and ctx.run_id and result_str:
+                evidence = [{
+                    "id": chunk_id,
+                    "text": result_str[:12000],
+                    "metadata": {"query": query_str, "source_domains": current_search_urls, "kind": "web_search"},
+                } for chunk_id in [hashlib.md5(query_str.encode()).hexdigest()]]
                 await al.log_retrieval(
                     run_id=ctx.run_id,
                     agent_id="cache_gate" if is_cache_hit else step_val,
@@ -208,6 +215,9 @@ class BaseResearchAgent(AgentExecutor, abc.ABC):
                     source_domains=current_search_urls,
                     relevance_scores=[],
                     parent_event_id=start_event_id,
+                    entity_name=ctx.company_details.company_name,
+                    entity_role=ctx.entity_role,
+                    evidence=evidence,
                 )
 
             # ── Step C: Fire-and-forget background ingestion ──────────────
@@ -238,14 +248,20 @@ class BaseResearchAgent(AgentExecutor, abc.ABC):
                         ctx.log(f"RAG DISTILLATION step={step_val} returned targeted chunks")
                         
                         if getattr(ctx, 'audit_logger', None):
+                            ctx.current_chunk_ids = getattr(ctx, 'current_chunk_ids', []) + retrieval_res.primary_ids
                             await ctx.audit_logger.log_retrieval(
                                 run_id=ctx.run_id,
                                 agent_id=f"{step_val}_rag",
                                 query=goal_str,
-                                chunk_ids=[f"distilled_{hashlib.md5(c.encode()).hexdigest()[:8]}" for c in distilled],
+                                chunk_ids=retrieval_res.primary_ids,
                                 source_domains=retrieval_res.primary_sources,
                                 relevance_scores=[1.0] * len(distilled),
-                                parent_event_id=getattr(ctx, '_current_start_event_id', None)
+                                parent_event_id=ctx.audit_agent_event_ids.get(step_val, ctx.audit_pipeline_event_id),
+                                entity_name=ctx.company_details.company_name,
+                                entity_role=ctx.entity_role,
+                                evidence=[{"id": cid, "text": c,
+                                           "metadata": {"source": s, "kind": "rag"}}
+                                          for c, s, cid in zip(distilled, retrieval_res.primary_sources, retrieval_res.primary_ids)],
                             )
                 except Exception as rag_exc:
                     ctx.log(f"RAG DISTILLATION step={step_val} failed (non-blocking): {rag_exc}")
@@ -318,14 +334,16 @@ class BaseResearchAgent(AgentExecutor, abc.ABC):
             from core.audit_logger import EventType
             # Link this agent's start event to the pipeline root (PIPELINE_START)
             # so the audit graph traversal can reach it from the root node.
-            pipeline_start_event_id = ctx.enrichment.get("_current_start_event_id")
+            pipeline_start_event_id = ctx.audit_pipeline_event_id
             start_event_id = await al.log_dag_node(
                 run_id=ctx.run_id,
                 agent_id=self.step.value,
                 event_type=EventType.DAG_NODE_START,
                 parent_event_id=pipeline_start_event_id,
+                entity_name=ctx.company_details.company_name,
+                entity_role=ctx.entity_role,
             )
-            ctx._current_start_event_id = start_event_id
+            ctx.audit_agent_event_ids[self.step.value] = start_event_id
             
         try:
             # Await the async research logic
@@ -336,8 +354,14 @@ class BaseResearchAgent(AgentExecutor, abc.ABC):
             if hasattr(ctx, 'log_event'):
                 ctx.log_event(ctx.company_details.company_name, self.step.value, "error")
             print(f"[{self.step.value.upper()}] Agent failed with error: {exc}")
-            # Return an empty-but-valid result so the flow can continue
-            return StepResult(step=self.step)
+            if al and ctx.run_id:
+                from core.audit_logger import EventType
+                await al.log_dag_node(
+                    run_id=ctx.run_id, agent_id=self.step.value, event_type=EventType.DAG_NODE_END,
+                    parent_event_id=start_event_id, entity_name=ctx.company_details.company_name,
+                    entity_role=ctx.entity_role, status="failed", anomaly=str(exc),
+                )
+            raise exc
 
         # Mutate the context memory locally
         ctx.results[self.step] = result
@@ -375,10 +399,12 @@ class BaseResearchAgent(AgentExecutor, abc.ABC):
                     run_id=ctx.run_id,
                     agent_id=self.step.value,
                     claim=result.rationale,
-                    supporting_chunk_ids=[], # Future: map from url_map
+                    supporting_chunk_ids=getattr(ctx, 'current_chunk_ids', []),
                     model_version=getattr(self.gemini, '_model', 'unknown'),
                     prompt_version=None,
                     parent_event_id=start_event_id,
+                    entity_name=ctx.company_details.company_name,
+                    entity_role=ctx.entity_role,
                 )
                 
                 for f in result.findings:
@@ -387,9 +413,12 @@ class BaseResearchAgent(AgentExecutor, abc.ABC):
                             run_id=ctx.run_id,
                             agent_id=self.step.value,
                             risk_type=f.category or f.severity.value,
+                            severity=f.severity.value,
                             detail=f.summary,
                             confidence={"low":0.4,"medium":0.6,"high":0.8,"critical":0.95}.get(f.severity.value, 0.5),
                             parent_event_id=gen_event_id,
+                            entity_name=ctx.company_details.company_name,
+                            entity_role=ctx.entity_role,
                         )
                 if result.anomaly:
                     await al.log_risk_flag(
@@ -399,6 +428,8 @@ class BaseResearchAgent(AgentExecutor, abc.ABC):
                         detail=result.anomaly.reason,
                         confidence=0.9,
                         parent_event_id=gen_event_id,
+                        entity_name=ctx.company_details.company_name,
+                        entity_role=ctx.entity_role,
                     )
 
         if result.raw_data:
@@ -414,6 +445,9 @@ class BaseResearchAgent(AgentExecutor, abc.ABC):
             except Exception:
                 pass
                 
+            if len(formatted_data) > 1000:
+                formatted_data = f"[REDACTED: {len(formatted_data)} bytes of raw data]"
+                
             ctx.audit(f"[{self.step.value.upper()}] Raw Data:\n{formatted_data}")
         for f in result.findings:
             print(f"  - [{f.severity.value.upper()}] {f.summary}")
@@ -427,6 +461,8 @@ class BaseResearchAgent(AgentExecutor, abc.ABC):
                 findings_count=len(result.findings),
                 anomaly=result.anomaly.reason if result.anomaly else None,
                 parent_event_id=start_event_id,
+                entity_name=ctx.company_details.company_name,
+                entity_role=ctx.entity_role,
             )
             
         return result

@@ -166,7 +166,9 @@ class SummaryAgent:
                 run_id=ctx.run_id,
                 agent_id="summary_agent",
                 event_type=EventType.DAG_NODE_START,
-                parent_event_id=ctx.enrichment.get("_current_start_event_id")
+                parent_event_id=ctx.audit_pipeline_event_id,
+                entity_name=ctx.company_details.company_name,
+                entity_role=ctx.entity_role,
             )
 
         if hasattr(ctx, '_cached_contradiction_indices'):
@@ -185,8 +187,10 @@ class SummaryAgent:
                 agent_id="summary_agent_contradiction",
                 claim=f"Contradiction check results: {json.dumps(detect_res.model_dump())}",
                 supporting_chunk_ids=[],
-                model_version="gemini-1.5-pro",
+                model_version=getattr(self.gemini, '_model', 'unknown'),
                 parent_event_id=start_event_id
+                ,entity_name=ctx.company_details.company_name,
+                entity_role=ctx.entity_role,
             )
 
         if removal_indices:
@@ -252,8 +256,10 @@ class SummaryAgent:
                     agent_id="summary_agent_executive",
                     claim=exec_summary,
                     supporting_chunk_ids=[],
-                    model_version="gemini-1.5-pro",
+                    model_version=getattr(self.gemini, '_model', 'unknown'),
                     parent_event_id=start_event_id
+                    ,entity_name=ctx.company_details.company_name,
+                    entity_role=ctx.entity_role,
                 )
         except Exception as e:
             logger.exception(f"Synthesis failed for {ctx.company_details.company_name}")
@@ -267,7 +273,9 @@ class SummaryAgent:
                 agent_id="summary_agent",
                 event_type=EventType.DAG_NODE_END,
                 findings_count=len(strengths) + len(red_flags),
-                parent_event_id=start_event_id
+                parent_event_id=start_event_id,
+                entity_name=ctx.company_details.company_name,
+                entity_role=ctx.entity_role,
             )
 
         # Extract supply items from resilience structured data if available
