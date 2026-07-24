@@ -20,3 +20,7 @@ structured_audit.db
 CLAUDE.md
 mention_index.db
 /.claude
+/.playwright-mcp
+/.pytest_cache
+/.superpowers
+/docs
