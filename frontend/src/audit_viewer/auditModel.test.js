@@ -1,5 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { segmentAttempts, tierRanks, supervisorReviews, contradictionRemovals } from './auditModel';
+import {
+  segmentAttempts,
+  tierRanks,
+  supervisorReviews,
+  contradictionRemovals,
+  GLYPH,
+  agentSeverityStatus,
+  agentTopFlag,
+  threadTree,
+} from './auditModel';
 
 const ev = (type, ts, extra = {}) => ({ event_type: type, timestamp: ts, payload: {}, ...extra });
 
@@ -47,5 +56,81 @@ describe('contradictionRemovals', () => {
   it('reads removed findings from the contradiction event', () => {
     const events = [{ agent_id: 'summary_agent_contradiction', event_type: 'generation', payload: { removed_findings: ['Privately held'] } }];
     expect(contradictionRemovals(events)).toEqual(['Privately held']);
+  });
+});
+
+describe('GLYPH', () => {
+  it('maps event types to correct unicode glyphs', () => {
+    expect(GLYPH.dag_node_start).toBe('◇');
+    expect(GLYPH.retrieval).toBe('⌕');
+    expect(GLYPH.generation).toBe('✎');
+    expect(GLYPH.risk_flag).toBe('▲');
+  });
+});
+
+describe('agentSeverityStatus', () => {
+  it('returns clear when no events or no risk_flag events are present', () => {
+    expect(agentSeverityStatus([])).toBe('clear');
+    expect(agentSeverityStatus([ev('retrieval', '2026-01-01T00:00:00Z')])).toBe('clear');
+  });
+
+  it('returns caution when low or medium risk_flag events exist', () => {
+    const events = [
+      ev('risk_flag', '2026-01-01T00:00:01Z', { payload: { severity: 'LOW' } }),
+      ev('risk_flag', '2026-01-01T00:00:02Z', { payload: { severity: 'medium' } }),
+    ];
+    expect(agentSeverityStatus(events)).toBe('caution');
+  });
+
+  it('returns risk when high or critical risk_flag events exist', () => {
+    const events = [
+      ev('risk_flag', '2026-01-01T00:00:01Z', { payload: { severity: 'medium' } }),
+      ev('risk_flag', '2026-01-01T00:00:02Z', { payload: { severity: 'HIGH' } }),
+    ];
+    expect(agentSeverityStatus(events)).toBe('risk');
+
+    const criticalEvents = [
+      ev('risk_flag', '2026-01-01T00:00:01Z', { payload: { severity: 'CRITICAL' } }),
+    ];
+    expect(agentSeverityStatus(criticalEvents)).toBe('risk');
+  });
+});
+
+describe('agentTopFlag', () => {
+  it('returns null when no risk_flag events exist', () => {
+    expect(agentTopFlag([])).toBe(null);
+    expect(agentTopFlag([ev('retrieval', '2026-01-01T00:00:00Z')])).toBe(null);
+  });
+
+  it('picks the highest severity risk_flag event', () => {
+    const events = [
+      ev('risk_flag', '2026-01-01T00:00:01Z', { payload: { severity: 'low', detail: 'Low risk item' } }),
+      ev('risk_flag', '2026-01-01T00:00:02Z', { payload: { severity: 'critical', detail: 'Critical sanctions hit' } }),
+      ev('risk_flag', '2026-01-01T00:00:03Z', { payload: { severity: 'high', detail: 'High risk finding' } }),
+    ];
+    const top = agentTopFlag(events);
+    expect(top).toEqual({ sev: 'critical', label: 'Critical sanctions hit' });
+  });
+
+  it('resolves label fallback hierarchy (detail -> risk_type -> summary)', () => {
+    const ev1 = ev('risk_flag', '2026-01-01T00:00:01Z', { payload: { severity: 'high', risk_type: 'Sanctions Violation' } });
+    expect(agentTopFlag([ev1])).toEqual({ sev: 'high', label: 'Sanctions Violation' });
+
+    const ev2 = ev('risk_flag', '2026-01-01T00:00:01Z', { summary: 'Summary label', payload: { severity: 'medium' } });
+    expect(agentTopFlag([ev2])).toEqual({ sev: 'medium', label: 'Summary label' });
+  });
+});
+
+describe('threadTree', () => {
+  it('groups child events under their parent event id', () => {
+    const events = [
+      { event_id: 'e1', event_type: 'dag_node_start' },
+      { event_id: 'e2', parent_event_id: 'e1', event_type: 'retrieval' },
+    ];
+    const tree = threadTree(events);
+    expect(tree).toHaveLength(1);
+    expect(tree[0].event_id).toBe('e1');
+    expect(tree[0].children).toHaveLength(1);
+    expect(tree[0].children[0].event_id).toBe('e2');
   });
 });

@@ -194,3 +194,97 @@ export function tierRanks(dag) {
   Object.keys(dag || {}).forEach((s) => depth(s, new Set()));
   return memo;
 }
+
+// Module constant mapping internal event_type to display glyphs
+export const GLYPH = {
+  dag_node_start: '◇',
+  retrieval: '⌕',
+  generation: '✎',
+  risk_flag: '▲',
+};
+
+/**
+ * Computes card severity status ('risk' | 'caution' | 'clear') for an agent's final attempt events.
+ * - 'risk': if any risk_flag event has severity high or critical
+ * - 'caution': if any risk_flag event has severity low or medium (and none high/critical)
+ * - 'clear': otherwise
+ */
+export function agentSeverityStatus(events = []) {
+  let hasCaution = false;
+  for (const e of events) {
+    if (e.event_type !== 'risk_flag') continue;
+    const sev = String(e.payload?.severity || '').toLowerCase();
+    if (sev === 'high' || sev === 'critical') {
+      return 'risk';
+    }
+    if (sev === 'low' || sev === 'medium') {
+      hasCaution = true;
+    }
+  }
+  return hasCaution ? 'caution' : 'clear';
+}
+
+const SEVERITY_RANK = {
+  critical: 4,
+  high: 3,
+  medium: 2,
+  low: 1,
+};
+
+/**
+ * Returns the highest-severity risk_flag event for an agent's final attempt as { sev, label } or null.
+ * Label fallback: payload.detail -> payload.risk_type -> event.summary -> payload.summary -> 'Risk Flag'.
+ */
+export function agentTopFlag(events = []) {
+  let topEvent = null;
+  let topRank = 0;
+
+  for (const e of events) {
+    if (e.event_type !== 'risk_flag') continue;
+    const sev = String(e.payload?.severity || '').toLowerCase();
+    const rank = SEVERITY_RANK[sev] || 0;
+
+    if (!topEvent || rank > topRank) {
+      topEvent = e;
+      topRank = rank;
+    }
+  }
+
+  if (!topEvent) return null;
+
+  const p = topEvent.payload || {};
+  const label = p.detail || p.risk_type || topEvent.summary || p.summary || 'Risk Flag';
+  return {
+    sev: p.severity || '',
+    label,
+  };
+}
+
+/**
+ * Groups events by parent_event_id into a hierarchical tree structure.
+ */
+export function threadTree(events = []) {
+  const childrenMap = new Map();
+  const roots = [];
+  const eventIds = new Set(events.map((e) => e.event_id));
+
+  for (const e of events) {
+    const parentId = e.parent_event_id;
+    if (parentId && eventIds.has(parentId)) {
+      if (!childrenMap.has(parentId)) childrenMap.set(parentId, []);
+      childrenMap.get(parentId).push(e);
+    } else {
+      roots.push(e);
+    }
+  }
+
+  function attachChildren(node) {
+    const kids = childrenMap.get(node.event_id) || [];
+    return {
+      ...node,
+      children: kids.map(attachChildren),
+    };
+  }
+
+  return roots.map(attachChildren);
+}
